@@ -1,5 +1,5 @@
 
-#include "./pars_config/config.hpp"
+#include "./config/pars_config/config.hpp"
 #include <string>
 
 int Printall = 0;
