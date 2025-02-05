@@ -1,4 +1,4 @@
-DCONF = ./pars_config/
+DCONF = ./config/pars_config/
 DOBJ = ./obj/
 
 OBJ = $(DOBJ)/config.o  $(DOBJ)/main.o
