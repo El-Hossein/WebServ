@@ -128,42 +128,52 @@ void checkContent(ConfigNode &ConfTree, const std::string& buffer)
     std::string text;
     std::vector<ConfigNode*> nodeStack;
     nodeStack.push_back(&ConfTree);
+    bool isRootNameSet = false;
 
     while (pos < buffer.size())
-	{
+    {
         size_t delimiterPos = buffer.find_first_of(delimiters, pos);
         if (delimiterPos == std::string::npos)
             throw std::runtime_error("Error: Could not find any delimiters '{};'");
-
         text = buffer.substr(pos, delimiterPos - pos);
         std::string delimiter = buffer.substr(delimiterPos, 1);
-
+        
         if (delimiter == "{")
-		{
-			CheckStartServer(text, pos);
-            ConfigNode newNode(text);
-            nodeStack.back()->addChild(newNode);
-            nodeStack.push_back(&nodeStack.back()->getLastChild());
-        } else if (delimiter == "}")
-		{
-            if (nodeStack.size() > 1)
+        {
+            CheckStartServer(text, pos);
+            if (nodeStack.size() == 1 && !isRootNameSet)
+            {
+                nodeStack.back()->PutName(text);
+                isRootNameSet = true;
+            }
+            else
+            {
+                nodeStack.back()->addChild(ConfigNode(text));
+                ConfigNode* childPtr = &(nodeStack.back()->getLastChild());
+                nodeStack.push_back(childPtr);
+            }
+        }
+        else if (delimiter == "}")
+        {
+            if (!nodeStack.empty())
                 nodeStack.pop_back();
             else
-                throw std::runtime_error("Error: Unmatched closing brace.");
-        } else if (delimiter == ";")
-		{
-			if (!(nodeStack.size() > 1))
-                throw std::runtime_error("Error: key-value are outside.");
+                throw std::runtime_error("Error: Unmatched closing brace '}'.");
+        }
+        else if (delimiter == ";")
+        {
+            if (nodeStack.empty())
+                throw std::runtime_error("Error: No active node for key-value pair.");
             std::vector<std::string> words = split(text);
             if (!words.empty())
                 AddKV(*nodeStack.back(), words);
         }
         pos = delimiterPos + 1;
     }
-
-    if (nodeStack.size() != 1)
-        throw std::runtime_error("Error: Unmatched opening brace.");
+    if (nodeStack.size() != 0)
+        throw std::runtime_error("Error: Unmatched opening brace '{'.");
 }
+
 
 void StructConf(ConfigNode &ConfTree, std::string ConfigFilePath)
 {
