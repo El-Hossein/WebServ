@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include <vector>
 
 ConfigNode::ConfigNode(){}
 
@@ -33,13 +34,29 @@ const std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& k
 {
     std::map<std::string, std::vector<std::string> >::const_iterator it = values.find(key);
     if (it != values.end())
-        return &(it->second);  // Return pointer to the vector of strings
-    return NULL;  // Use NULL instead of nullptr (C++98 doesn't have nullptr)
+        return &(it->second);
+    return NULL;
 }
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
 
 //////////////////////////////////////////
+
+
+// std::string trimSpaces(const std::string& str) {
+void trimSpaces(std::string &str)
+{
+    size_t first = str.find_first_not_of(" \t\n\r");
+    size_t last = str.find_last_not_of(" \t\n\r");
+
+    if (first == std::string::npos)
+    {
+        str.clear();
+        return;
+    }
+
+    str = str.substr(first, last - first + 1);
+}
 
 std::vector<std::string> split(std::string text)
 {
@@ -51,13 +68,12 @@ std::vector<std::string> split(std::string text)
 	return words;
 }
 
-std::string removeSpaces(const std::string &input) {
+std::string removeSpaces(const std::string &input)
+{
 	std::string result = "";
-	for (size_t i = 0; i < input.length(); i++) {
-		if (input[i] != ' ') {
+	for (size_t i = 0; i < input.length(); i++)
+		if (input[i] != ' ')
 			result += input[i];
-		}
-	}
 	return result;
 }
 
@@ -113,21 +129,77 @@ void CheckStartServer(std::string text, size_t pos)
         throw std::runtime_error("Error: invalid syntax.");
 }
 
-void AddKV(ConfigNode &ConfTree, const std::vector<std::string>& words)
+void AddKV(ConfigNode &ConfNode, const std::vector<std::string>& words)
 {
+    static bool initialized = false;
+    
+    static std::vector<std::string> SERVER_VALID_KEYS;
+    static std::vector<std::string> LOCATION_VALID_KEYS;
+
+    if (!initialized)
+    {
+        SERVER_VALID_KEYS.push_back("listen");
+        SERVER_VALID_KEYS.push_back("server_name");
+        SERVER_VALID_KEYS.push_back("error_page");
+        SERVER_VALID_KEYS.push_back("client_max_body_size");
+        SERVER_VALID_KEYS.push_back("root");
+        SERVER_VALID_KEYS.push_back("index");
+        SERVER_VALID_KEYS.push_back("autoindex");
+        SERVER_VALID_KEYS.push_back("return");
+
+        LOCATION_VALID_KEYS.push_back("autoindex");
+        LOCATION_VALID_KEYS.push_back("allow_methods");
+        LOCATION_VALID_KEYS.push_back("return");
+        LOCATION_VALID_KEYS.push_back("php-cgi");
+        LOCATION_VALID_KEYS.push_back("root");
+        LOCATION_VALID_KEYS.push_back("index");
+        LOCATION_VALID_KEYS.push_back("py-cgi");
+        LOCATION_VALID_KEYS.push_back("upload_store");
+
+        initialized = true;
+    }
+
     if (words.size() < 2)
         throw std::runtime_error("Error: Invalid key-value pair.");
-    for (size_t i = 1; i < words.size(); i++)
-        ConfTree.addValue(words[0], words[i]);
+
+    std::string key = words[0];
+    trimSpaces(key);
+    std::string nodeName = ConfNode.getName();
+    trimSpaces(nodeName);
+
+    std::vector<std::string> locations = split(nodeName);
+    if (nodeName == "server")
+    {
+        std::vector<std::string>::const_iterator it;
+        for (it = SERVER_VALID_KEYS.begin(); it != SERVER_VALID_KEYS.end(); ++it)
+            if (*it == key) 
+                break;
+        if (it == SERVER_VALID_KEYS.end())
+            throw std::runtime_error("Error: Invalid key '" + key + "' for server block. Allowed keys: listen, server_name, etc.");
+    }
+    else if (locations[0] == "location")
+    {
+        std::vector<std::string>::const_iterator it;
+        for (it = LOCATION_VALID_KEYS.begin(); it != LOCATION_VALID_KEYS.end(); ++it)
+            if (*it == key) 
+                break;
+        if (it == LOCATION_VALID_KEYS.end())
+            throw std::runtime_error("Error: Invalid key '" + key + "' for location block. Allowed keys: autoindex, allow_methods, etc.");
+    }
+
+    for (size_t i = 1; i < words.size(); ++i)
+    {
+        ConfNode.addValue(key, words[i]);
+    }
 }
 
-void checkContent(ConfigNode &ConfTree, const std::string& buffer)
+void checkContent(ConfigNode &ConfNode, const std::string& buffer)
 {
     std::string delimiters = "{};";
     size_t pos = 0;
     std::string text;
     std::vector<ConfigNode*> nodeStack;
-    nodeStack.push_back(&ConfTree);
+    nodeStack.push_back(&ConfNode);
     bool isRootNameSet = false;
 
     while (pos < buffer.size())
@@ -141,6 +213,8 @@ void checkContent(ConfigNode &ConfTree, const std::string& buffer)
         if (delimiter == "{")
         {
             CheckStartServer(text, pos);
+            trimSpaces(text);
+            // std::cout << "[" << text << "]" << std::endl;
             if (nodeStack.size() == 1 && !isRootNameSet)
             {
                 nodeStack.back()->PutName(text);
@@ -174,8 +248,7 @@ void checkContent(ConfigNode &ConfTree, const std::string& buffer)
         throw std::runtime_error("Error: Unmatched opening brace '{'.");
 }
 
-
-void StructConf(ConfigNode &ConfTree, std::string ConfigFilePath)
+void StructConf(ConfigNode &ConfNode, std::string ConfigFilePath)
 {
 	std::ifstream infile(ConfigFilePath);
 	if (!infile.is_open())
@@ -183,23 +256,24 @@ void StructConf(ConfigNode &ConfTree, std::string ConfigFilePath)
 	std::stringstream buffer;
 	buffer << infile.rdbuf();
 	infile.close();
-	checkContent(ConfTree, RmComments(buffer.str()));
+	checkContent(ConfNode, RmComments(buffer.str()));
 }
 
 void ConfigNode::print() const {
     std::cout << name << " {" << std::endl;
 
-    // Print key-value pairs
-    for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it) {
+    for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
+    {
         std::cout << "  " << it->first;
-        for (size_t i = 0; i < it->second.size(); i++) {
+        for (size_t i = 0; i < it->second.size(); i++)
+        {
             std::cout << " " << it->second[i];
         }
         std::cout << ";" << std::endl;
     }
 
-    // Print child nodes
-    for (size_t i = 0; i < children.size(); i++) {
+    for (size_t i = 0; i < children.size(); i++)
+    {
         std::cout << "  ";
         children[i].print();
     }
