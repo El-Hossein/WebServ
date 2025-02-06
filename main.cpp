@@ -6,7 +6,7 @@ int Printall = 0;
 
 void GetContent(ConfTree &TreeConf, ConfigNode ParsConf)
 {
-    std::cout << "----------------->" << std::endl;
+    std::cout << "-------------------------------------------------------------------->" << std::endl;
 	(void)TreeConf;
     const std::map<std::string, std::vector<std::string> >& currentValues = ParsConf.getValues();
     std::map<std::string, std::vector<std::string> >::const_iterator it;
