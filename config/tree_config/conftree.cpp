@@ -22,10 +22,3 @@ ConfTree& ConfTree::operator=(const ConfTree& other){
     return *this;
 }
 
-
-
-int ConfTree::GetPort() {return Port;}
-void ConfTree::SetPort(int Port) {this->Port = Port;}
-
-std::string ConfTree::GetAddress() {return Address;}
-void ConfTree::SetAddress(std::string Address) {this->Address = Address;}
