@@ -1,40 +1,37 @@
 #include "./config/pars_config/config.hpp"
 #include "./config/tree_config/conftree.hpp"
-#include <cstddef>
-#include <vector>
 
 
 int Printall = 0;
 
 void GetContent(ConfTree &TreeConf, ConfigNode ParsConf)
 {
+    std::cout << "----------------->" << std::endl;
 	(void)TreeConf;
-    // Iterate over the current node values first
     const std::map<std::string, std::vector<std::string> >& currentValues = ParsConf.getValues();
     std::map<std::string, std::vector<std::string> >::const_iterator it;
-    std::cout << ParsConf.getName() << std::endl;
-    for (it = currentValues.begin(); it != currentValues.end(); ++it) {
-        std::cout << "  " << it->first; // Print the key
+    std::cout << "[" << ParsConf.getName() << "]"  << std::endl;
+    int a= 1;
+    for (it = currentValues.begin(); it != currentValues.end(); ++it)
+	{
+        std::cout << " [" << a << "] "  << "[" << it->first << "]";
         size_t i;
-        for (i = 0; i < it->second.size(); i++) {
-            std::cout << " " << it->second[i]; // Print the values
-        }
+        for (i = 0; i < it->second.size(); i++)
+            std::cout << "  [" << it->second[i] << "]"; 
         std::cout << ";" << std::endl;
+        a++;
     }
 
-    // // Now, loop through the children nodes of ParsConf recursively
-    // const std::vector<ConfigNode>& children = ParsConf.getChildren();
-    // size_t i;
-    // for (i = 0; i < children.size(); ++i) {
-	// 	std::cout << "----------------_>" << std::endl;
-    //     GetContent(TreeConf, children[i]);
-    // }
+    const std::vector<ConfigNode>& children = ParsConf.getChildren();
+    size_t i;
+    for (i = 0; i < children.size(); ++i)
+	{
+        GetContent(TreeConf, children[i]);
+    }
 }
-
 
 int main(int argc, char **argv)
 {
-
 	if (argc != 2)
 	{
 		std::cerr << "./webserv [configuration file]" << std::endl;
@@ -45,11 +42,12 @@ int main(int argc, char **argv)
 	ConfTree TreeConf;
 	try
 	{
+		if (ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
+	        throw std::runtime_error("Error: Config file does not have the correct extension.");
 		StructConf(ParsConf, ConfigFilePath);
 		if(Printall)
 			ParsConf.print();
 		GetContent(TreeConf, ParsConf);
-
 	}
 	catch (const std::exception &e)
 	{
@@ -58,3 +56,7 @@ int main(int argc, char **argv)
 	}
 	return 0; 
 }
+
+
+
+
