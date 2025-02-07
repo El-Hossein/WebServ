@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include <cstddef>
 
 ConfigNode::ConfigNode(){}
 
@@ -67,7 +68,7 @@ std::vector<std::string> split(std::string text)
 	return words;
 }
 
-std::string removeSpaces(const std::string &input)
+std::string removeSpaces( std::string &input)
 {
 	std::string result = "";
 	for (size_t i = 0; i < input.length(); i++)
@@ -91,7 +92,7 @@ std::string removeExtraSpaces(std::string line)
 	return result.str();
 }
 
-std::string RmComments(const std::string &buffer)
+std::string RmComments( std::string buffer)
 {
 	std::string result;
 	size_t start = 0;
@@ -123,10 +124,24 @@ void CheckStartServer(std::string text, size_t pos)
 {
     std::vector<std::string> words = split(text);
 
-    if ((pos == 0 && (words[0] != "server" || words.size() != 1)) || 
-        (pos != 0 && (words.size() != 2 || words[0] != "location")))
-        throw std::runtime_error("Error: invalid syntax.");
+    if (pos == 0) {
+        if (words.size() != 1) {
+            throw std::runtime_error("Error: Expected exactly one word when pos is 0.");
+        }
+        if (words[0] != "server") {
+            throw std::runtime_error("Error: The first word must be 'server' when pos is 0.");
+        }
+    }
+    else {
+        if (words.size() != 2) {
+            throw std::runtime_error("Error: Expected exactly two words when pos is not 0.");
+        }
+        if (words[0] != "location") {
+            throw std::runtime_error("Error: The first word must be 'location' when pos is not 0.");
+        }
+    }
 }
+
 
 void AddKV(ConfigNode &ConfNode, const std::vector<std::string>& words)
 {
@@ -192,11 +207,16 @@ void AddKV(ConfigNode &ConfNode, const std::vector<std::string>& words)
     }
 }
 
-void checkContent(ConfigNode &ConfNode, const std::string& buffer)
+
+
+
+
+void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
 {
     std::string delimiters = "{};";
     size_t pos = 0;
     std::string text;
+    ConfigNode ConfNode;
     std::vector<ConfigNode*> nodeStack;
     nodeStack.push_back(&ConfNode);
     bool isRootNameSet = false;
@@ -211,6 +231,17 @@ void checkContent(ConfigNode &ConfNode, const std::string& buffer)
         
         if (delimiter == "{")
         {
+            if (nodeStack.empty())
+            {
+                ConfigPars.push_back(ConfNode);
+                ConfNode = ConfigNode();
+                nodeStack.push_back(&ConfNode);
+                buffer = buffer.substr(pos);
+                pos = 0;
+                delimiterPos = 0;
+                isRootNameSet = false;
+                continue;
+            }
             CheckStartServer(text, pos);
             trimSpaces(text);
             // std::cout << "[" << text << "]" << std::endl;
@@ -243,11 +274,13 @@ void checkContent(ConfigNode &ConfNode, const std::string& buffer)
         }
         pos = delimiterPos + 1;
     }
+    ConfigPars.push_back(ConfNode);
     if (nodeStack.size() != 0)
         throw std::runtime_error("Error: Unmatched opening brace '{'.");
 }
 
-void StructConf(ConfigNode &ConfNode, std::string ConfigFilePath)
+
+void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	std::ifstream infile(ConfigFilePath);
 	if (!infile.is_open())
@@ -255,18 +288,18 @@ void StructConf(ConfigNode &ConfNode, std::string ConfigFilePath)
 	std::stringstream buffer;
 	buffer << infile.rdbuf();
 	infile.close();
-	checkContent(ConfNode, RmComments(buffer.str()));
+	checkContent(RmComments(buffer.str()), ConfigPars);
 }
 
 void ConfigNode::print() const {
-    std::cout << name << " {" << std::endl;
+    std::cout << "[" << name << "] {" << std::endl;
 
     for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
     {
-        std::cout << "  " << it->first;
+        std::cout << "  [" << it->first << "]";
         for (size_t i = 0; i < it->second.size(); i++)
         {
-            std::cout << " " << it->second[i];
+            std::cout <<  " [" << it->second[i] << "]";
         }
         std::cout << ";" << std::endl;
     }

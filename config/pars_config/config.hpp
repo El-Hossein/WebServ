@@ -31,7 +31,7 @@ class ConfigNode {
 };
 
 
-void StructConf(ConfigNode &ConfTree, std::string ConfigFilePath);
+void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars);
 
 
 #endif
