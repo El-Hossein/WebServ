@@ -3,7 +3,7 @@
 #include <vector>
 
 
-int Printall = 0;
+int Printall = 1;
 
 void GetContent(ConfTree &TreeConf, std::vector<ConfigNode> ConfigPars)
 {
