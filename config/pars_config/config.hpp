@@ -23,10 +23,11 @@ class ConfigNode {
 		const std::vector<ConfigNode>& getChildren() const;
 		const std::string& getName() const;
 		void PutName(const std::string& name);
-		const std::map<std::string, std::vector<std::string> >& getValues() const;
+		
+		std::map<std::string, std::vector<std::string> >& getValues() ;
 
 		const std::vector<std::string>* getValuesForKey(const std::string& key) const ;
-
+		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };
 
