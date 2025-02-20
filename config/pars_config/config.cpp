@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include <cstddef>
+#include <string>
 
 ConfigNode::ConfigNode(){}
 
@@ -28,7 +29,7 @@ const std::vector<ConfigNode>& ConfigNode::getChildren() const {return children;
 
 const std::string& ConfigNode::getName() const {return name;}
 
-const std::map<std::string, std::vector<std::string> >& ConfigNode::getValues() const {return values;}
+std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
 const std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& key) const
 {
@@ -40,7 +41,7 @@ const std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& k
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
 
-//////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // std::string trimSpaces(const std::string& str) {
@@ -124,29 +125,109 @@ void CheckStartServer(std::string text, size_t pos)
 {
     std::vector<std::string> words = split(text);
 
-    if (pos == 0) {
-        if (words.size() != 1) {
-            throw std::runtime_error("Error: Expected exactly one word when pos is 0.");
-        }
-        if (words[0] != "server") {
-            throw std::runtime_error("Error: The first word must be 'server' when pos is 0.");
-        }
+    if (pos == 0)
+    {
+        if (words.size() != 1)
+            throw std::runtime_error("Error: Expected exactly one word in server.");
+        if (words[0] != "server")
+            throw std::runtime_error("Error: The first word must be 'server'.");
     }
-    else {
-        if (words.size() != 2) {
-            throw std::runtime_error("Error: Expected exactly two words when pos is not 0.");
-        }
-        if (words[0] != "location") {
-            throw std::runtime_error("Error: The first word must be 'location' when pos is not 0.");
-        }
+    else
+    {
+        if (words.size() != 2)
+            throw std::runtime_error("Error: Expected exactly two words in location");
+        if (words[0] != "location")
+            throw std::runtime_error("Error: The first word must be 'location'.");
     }
 }
 
+void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t duplicates, std::string blockType)
+{
+    (void)StringTest;
+    (void)blockType;
+    (void)duplicates;
+    (void)ConfNode;
+    (void)KV;
+    if (blockType == "server")
+    {
+        std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
+        std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
+        
+        // std::cout << std::endl;
+        if (it == currentValues.end()) {
+            return;
+        }
+        size_t a  = 0;
+        a = it->second.size();
+        if (StringTest == "error_page")
+        {
+            if (it->second.size() %2 == 0)
+                a = (it->second.size() / 2) + 1;
+            else
+                a = it->second.size() / 2;
+        }
+        else if (StringTest == "allow_methods")
+        {
+            if (it->second.size() %2 == 0)
+                a = (it->second.size() / 3) + 1;
+            else
+                a = it->second.size() / 3;
+        }
+        if (duplicates < a)
+            throw std::runtime_error(StringTest + " take only " + std::to_string(duplicates) + " one param!");
+    }
+    else {
+        // const std::vector<ConfigNode>& children = ConfNode.getChildren();
+        // size_t i;
+        // for (i = 0; i < children.size(); ++i)
+        // {
+        //     GetContent(ConfNode, children[i]);
+        // }
+    }
+}
 
-void AddKV(ConfigNode &ConfNode, const std::vector<std::string>& words)
+void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string blockType)
+{
+    if (blockType == "server")
+    {
+        // CheckAllError(KV, "listen", ConfNode, 2, blockType);
+        // CheckAllError(KV, "server_name", ConfNode, 1, blockType);
+        // CheckAllError(KV, "error_page", ConfNode, 3, blockType);
+        // CheckAllError(KV, "client_max_body_size", ConfNode, 1, blockType);
+        // CheckAllError(KV, "root", ConfNode, 1, blockType);
+        // CheckAllError(KV, "index", ConfNode, 1, blockType);
+        // CheckAllError(KV, "autoindex", ConfNode, 1, blockType);
+        // CheckAllError(KV, "return", ConfNode, 1, blockType);
+    }
+    else {
+        CheckAllError(KV, "allow_methods", ConfNode, 1, blockType);
+        // CheckAllError(KV, "autoindex", ConfNode, 1, blockType);
+        // CheckAllError(KV, "allow_methods", ConfNode, 1, blockType);
+        // CheckAllError(KV, "return", ConfNode, 1, blockType);
+        // CheckAllError(KV, "php-cgi", ConfNode, 1, blockType);
+        // CheckAllError(KV, "root", ConfNode, 1, blockType);
+        // CheckAllError(KV, "index", ConfNode, 1, blockType);
+        // CheckAllError(KV, "py-cgi", ConfNode, 1, blockType);
+        // CheckAllError(KV, "upload_store", ConfNode, 1, blockType);
+    }
+}
+
+void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& words, ConfigNode &ConfNode, const std::string& blockType)
+{
+    std::vector<std::string>::const_iterator it;
+    for (it = VALID_KEYS.begin(); it != VALID_KEYS.end(); ++it)
+        if (*it == words[0]) 
+            break;
+    if (it == VALID_KEYS.end())
+        throw std::runtime_error("Error: Invalid key '" + words[0] + "' for " + blockType + " block");
+    ErrorHandle(words, ConfNode, blockType);
+}
+
+
+void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
     static bool initialized = false;
-    
+
     static std::vector<std::string> SERVER_VALID_KEYS;
     static std::vector<std::string> LOCATION_VALID_KEYS;
 
@@ -176,40 +257,55 @@ void AddKV(ConfigNode &ConfNode, const std::vector<std::string>& words)
     if (words.size() < 2)
         throw std::runtime_error("Error: Invalid key-value pair.");
 
-    std::string key = words[0];
-    trimSpaces(key);
     std::string nodeName = ConfNode.getName();
     trimSpaces(nodeName);
 
     std::vector<std::string> locations = split(nodeName);
     if (nodeName == "server")
-    {
-        std::vector<std::string>::const_iterator it;
-        for (it = SERVER_VALID_KEYS.begin(); it != SERVER_VALID_KEYS.end(); ++it)
-            if (*it == key) 
-                break;
-        if (it == SERVER_VALID_KEYS.end())
-            throw std::runtime_error("Error: Invalid key '" + key + "' for server block. Allowed keys: listen, server_name, etc.");
-    }
+        AllowedIn(SERVER_VALID_KEYS, words, ConfNode, "server");
     else if (locations[0] == "location")
-    {
-        std::vector<std::string>::const_iterator it;
-        for (it = LOCATION_VALID_KEYS.begin(); it != LOCATION_VALID_KEYS.end(); ++it)
-            if (*it == key) 
-                break;
-        if (it == LOCATION_VALID_KEYS.end())
-            throw std::runtime_error("Error: Invalid key '" + key + "' for location block. Allowed keys: autoindex, allow_methods, etc.");
-    }
+        AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, "location");
+        // AllowedInLocation(LOCATION_VALID_KEYS, words, ConfNode);
+    else
+        throw std::runtime_error("Error: Unknown block type in configuration.");
 
     for (size_t i = 1; i < words.size(); ++i)
-    {
-        ConfNode.addValue(key, words[i]);
-    }
+        ConfNode.addValue(words[0], words[i]);
 }
 
+void processClosingBrace(std::vector<ConfigNode*> &nodeStack)
+{
+    if (!nodeStack.empty())
+        nodeStack.pop_back();
+    else
+        throw std::runtime_error("Error: Unmatched closing brace '}'.");
+}
 
+void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
+{
+    if (nodeStack.empty())
+        throw std::runtime_error("Error: No active node for key-value pair.");
+    std::vector<std::string> words = split(text);
+    if (!words.empty())
+        AddKV(*nodeStack.back(), words);
+}
 
-
+void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack, bool &isRootNameSet, size_t pos)
+{
+    CheckStartServer(text, pos);
+    trimSpaces(text);
+    if (nodeStack.size() == 1 && !isRootNameSet)
+    {
+        nodeStack.back()->PutName(text);
+        isRootNameSet = true;
+    }
+    else
+    {
+        nodeStack.back()->addChild(ConfigNode(text));
+        ConfigNode* childPtr = &(nodeStack.back()->getLastChild());
+        nodeStack.push_back(childPtr);
+    }
+}
 
 void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
 {
@@ -242,43 +338,18 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
                 isRootNameSet = false;
                 continue;
             }
-            CheckStartServer(text, pos);
-            trimSpaces(text);
-            // std::cout << "[" << text << "]" << std::endl;
-            if (nodeStack.size() == 1 && !isRootNameSet)
-            {
-                nodeStack.back()->PutName(text);
-                isRootNameSet = true;
-            }
-            else
-            {
-                nodeStack.back()->addChild(ConfigNode(text));
-                ConfigNode* childPtr = &(nodeStack.back()->getLastChild());
-                nodeStack.push_back(childPtr);
-            }
+            processOpeningBrace(text, nodeStack, isRootNameSet, pos);
         }
         else if (delimiter == "}")
-        {
-            if (!nodeStack.empty())
-                nodeStack.pop_back();
-            else
-                throw std::runtime_error("Error: Unmatched closing brace '}'.");
-        }
+            processClosingBrace(nodeStack);
         else if (delimiter == ";")
-        {
-            if (nodeStack.empty())
-                throw std::runtime_error("Error: No active node for key-value pair.");
-            std::vector<std::string> words = split(text);
-            if (!words.empty())
-                AddKV(*nodeStack.back(), words);
-        }
+            processSemicolon(text, nodeStack);
         pos = delimiterPos + 1;
     }
     ConfigPars.push_back(ConfNode);
     if (nodeStack.size() != 0)
         throw std::runtime_error("Error: Unmatched opening brace '{'.");
 }
-
 
 void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
@@ -292,7 +363,7 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 }
 
 void ConfigNode::print() const {
-    std::cout << "[" << name << "] {" << std::endl;
+    std::cout << "--------------------->[" << name << "] {" << std::endl;
 
     for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
     {

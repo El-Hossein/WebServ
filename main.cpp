@@ -3,14 +3,13 @@
 #include <vector>
 
 
-int Printall = 1;
+int Printall = 0;
 
-void GetContent(ConfTree &TreeConf, ConfigNode ParsConf)
+void GetContent(ConfTree &TreeConf, std::vector<ConfigNode> ConfigPars)
 {
     (void)TreeConf;
-    (void)ParsConf;
+    (void)ConfigPars;
 }
-
 
 int main(int argc, char **argv)
 {
@@ -25,16 +24,20 @@ int main(int argc, char **argv)
 	try
 	{
 		if (ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
-	        throw std::runtime_error("Error: Config file does not have the correct extension.");
+	        throw std::runtime_error("Error: Config file does not have the correct extension. {.conf}");
 		StructConf(ConfigFilePath, ConfigPars);
-		if(Printall)
+		if(Printall == 0)
+		{
+			std::cout << "--------------------------------------------------------------------|" << std::endl;
+			std::cout << "--------------------------------------------------------------------|" << std::endl;
 			for (size_t i = 0; i < ConfigPars.size(); i++)
 			{
 				ConfigPars[i].print();
 				std::cout << "--------------------------------------------------------------------|" << std::endl;
 				std::cout << "--------------------------------------------------------------------|" << std::endl;
 			}
-		// GetContent(TreeConf, ParsConf);
+		}
+		GetContent(TreeConf, ConfigPars);
 	}
 	catch (const std::exception &e)
 	{
@@ -43,7 +46,5 @@ int main(int argc, char **argv)
 	}
 	return 0; 
 }
-
-
 
 
