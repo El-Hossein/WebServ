@@ -14,6 +14,7 @@ ConfTree::~ConfTree(){
     // std::cout << "destructor called" << std::endl;
 }
 
+
 ConfTree& ConfTree::operator=(const ConfTree& other){
     // std::cout << "Copy assignment operator called" << std::endl;
     if (this != &other) {
