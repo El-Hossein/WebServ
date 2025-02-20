@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include <cstddef>
 #include <string>
+#include <vector>
 
 ConfigNode::ConfigNode(){}
 
@@ -141,74 +142,71 @@ void CheckStartServer(std::string text, size_t pos)
     }
 }
 
-void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t duplicates, std::string blockType)
+void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t max, size_t multip)
 {
-    (void)StringTest;
-    (void)blockType;
-    (void)duplicates;
-    (void)ConfNode;
-    (void)KV;
-    if (blockType == "server")
+    std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
+    std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
+
+    size_t KVLen = KV.empty() ? 0 : KV.size() - 1;
+    std::vector<std::string> doubl;
+    doubl.push_back("error_page");
+    doubl.push_back("return");
+
+    if (it == currentValues.end())
     {
-        std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
-        std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
-        
-        // std::cout << std::endl;
-        if (it == currentValues.end()) {
-            return;
-        }
-        size_t a  = 0;
-        a = it->second.size();
-        if (StringTest == "error_page")
+        // std::cout << max << " " << multip << " " << KVLen << std::endl;
+        std::vector<std::string>::iterator b = std::find(doubl.begin(), doubl.end(), KV[0]);
+        if (b != doubl.end())
         {
-            if (it->second.size() %2 == 0)
-                a = (it->second.size() / 2) + 1;
+            if (KVLen % 2 != 0)
+                throw std::runtime_error("number of parameters of " +KV[0] + " are not correct1");
             else
-                a = it->second.size() / 2;
+             return;
         }
-        else if (StringTest == "allow_methods")
+        if (KVLen > max)
         {
-            if (it->second.size() %2 == 0)
-                a = (it->second.size() / 3) + 1;
-            else
-                a = it->second.size() / 3;
+            if (KV[0] != StringTest)
+                return;
+            std::cout << KV[0] << " " << StringTest << " " << std::endl;
+            throw std::runtime_error("number of parameters of " +KV[0] + " are not correct2");
         }
-        if (duplicates < a)
-            throw std::runtime_error(StringTest + " take only " + std::to_string(duplicates) + " one param!");
+
+        return;
     }
-    else {
-        // const std::vector<ConfigNode>& children = ConfNode.getChildren();
-        // size_t i;
-        // for (i = 0; i < children.size(); ++i)
-        // {
-        //     GetContent(ConfNode, children[i]);
-        // }
-    }
+    if (it->first != KV[0])
+        return;
+    for (size_t i = 1; i <KV.size(); i++ )
+        for (size_t j = 0; j <it->second.size(); j++ )
+            if (KV[i] == it->second[j])
+                throw std::runtime_error("dumplicate param");
+    
+    if (max < it->second.size() + KVLen || it->second.size() % multip != 0 || KVLen % multip != 0)
+        throw std::runtime_error("number of parameters of " +KV[0] + " are not correct3");
 }
+
 
 void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string blockType)
 {
     if (blockType == "server")
     {
-        // CheckAllError(KV, "listen", ConfNode, 2, blockType);
-        // CheckAllError(KV, "server_name", ConfNode, 1, blockType);
-        // CheckAllError(KV, "error_page", ConfNode, 3, blockType);
-        // CheckAllError(KV, "client_max_body_size", ConfNode, 1, blockType);
-        // CheckAllError(KV, "root", ConfNode, 1, blockType);
-        // CheckAllError(KV, "index", ConfNode, 1, blockType);
-        // CheckAllError(KV, "autoindex", ConfNode, 1, blockType);
-        // CheckAllError(KV, "return", ConfNode, 1, blockType);
+        CheckAllError(KV, "listen", ConfNode, 1, 1);
+        CheckAllError(KV, "server_name", ConfNode, 1, 1);
+        CheckAllError(KV, "error_page", ConfNode, 4*2, 2);
+        CheckAllError(KV, "client_max_body_size", ConfNode, 1, 1);
+        CheckAllError(KV, "root", ConfNode, 1, 1);
+        CheckAllError(KV, "index", ConfNode, 1, 1);
+        CheckAllError(KV, "autoindex", ConfNode, 1, 1);
+        CheckAllError(KV, "return", ConfNode, 1*2, 2);
     }
     else {
-        CheckAllError(KV, "allow_methods", ConfNode, 1, blockType);
-        // CheckAllError(KV, "autoindex", ConfNode, 1, blockType);
-        // CheckAllError(KV, "allow_methods", ConfNode, 1, blockType);
-        // CheckAllError(KV, "return", ConfNode, 1, blockType);
-        // CheckAllError(KV, "php-cgi", ConfNode, 1, blockType);
-        // CheckAllError(KV, "root", ConfNode, 1, blockType);
-        // CheckAllError(KV, "index", ConfNode, 1, blockType);
-        // CheckAllError(KV, "py-cgi", ConfNode, 1, blockType);
-        // CheckAllError(KV, "upload_store", ConfNode, 1, blockType);
+        CheckAllError(KV, "allow_methods", ConfNode, 3, 1);
+        CheckAllError(KV, "autoindex", ConfNode, 1, 1);
+        CheckAllError(KV, "return", ConfNode, 1*2, 1);
+        CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
+        CheckAllError(KV, "root", ConfNode, 1, 1);
+        CheckAllError(KV, "index", ConfNode, 1, 1);
+        CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
+        CheckAllError(KV, "upload_store", ConfNode, 1, 1);
     }
 }
 
@@ -259,16 +257,14 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 
     std::string nodeName = ConfNode.getName();
     trimSpaces(nodeName);
-
     std::vector<std::string> locations = split(nodeName);
-    if (nodeName == "server")
-        AllowedIn(SERVER_VALID_KEYS, words, ConfNode, "server");
+
+    if (locations[0] == "server")
+        AllowedIn(SERVER_VALID_KEYS, words, ConfNode, locations[0]);
     else if (locations[0] == "location")
-        AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, "location");
-        // AllowedInLocation(LOCATION_VALID_KEYS, words, ConfNode);
+        AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, locations[0]);
     else
         throw std::runtime_error("Error: Unknown block type in configuration.");
-
     for (size_t i = 1; i < words.size(); ++i)
         ConfNode.addValue(words[0], words[i]);
 }
