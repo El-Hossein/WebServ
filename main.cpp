@@ -1,33 +1,14 @@
 #include "./config/pars_config/config.hpp"
 #include "./config/tree_config/conftree.hpp"
+#include <vector>
 
 
-int Printall = 0;
+int Printall = 1;
 
-void GetContent(ConfTree &TreeConf, ConfigNode ParsConf)
+void GetContent(ConfTree &TreeConf, std::vector<ConfigNode> ConfigPars)
 {
-    std::cout << "-------------------------------------------------------------------->" << std::endl;
-	(void)TreeConf;
-    const std::map<std::string, std::vector<std::string> >& currentValues = ParsConf.getValues();
-    std::map<std::string, std::vector<std::string> >::const_iterator it;
-    std::cout << "[" << ParsConf.getName() << "]"  << std::endl;
-    int a= 1;
-    for (it = currentValues.begin(); it != currentValues.end(); ++it)
-	{
-        std::cout << " [" << a << "] "  << "[" << it->first << "]";
-        size_t i;
-        for (i = 0; i < it->second.size(); i++)
-            std::cout << "  [" << it->second[i] << "]"; 
-        std::cout << ";" << std::endl;
-        a++;
-    }
-
-    const std::vector<ConfigNode>& children = ParsConf.getChildren();
-    size_t i;
-    for (i = 0; i < children.size(); ++i)
-	{
-        GetContent(TreeConf, children[i]);
-    }
+    (void)TreeConf;
+    (void)ConfigPars;
 }
 
 int main(int argc, char **argv)
@@ -38,16 +19,25 @@ int main(int argc, char **argv)
 		return (1);
 	}
 	std::string ConfigFilePath = argv[1];
-	ConfigNode ParsConf;
+	std::vector<ConfigNode> ConfigPars;
 	ConfTree TreeConf;
 	try
 	{
 		if (ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
-	        throw std::runtime_error("Error: Config file does not have the correct extension.");
-		StructConf(ParsConf, ConfigFilePath);
-		if(Printall)
-			ParsConf.print();
-		GetContent(TreeConf, ParsConf);
+	        throw std::runtime_error("Error: Config file does not have the correct extension. {.conf}");
+		StructConf(ConfigFilePath, ConfigPars);
+		if(Printall == 0)
+		{
+			std::cout << "--------------------------------------------------------------------|" << std::endl;
+			std::cout << "--------------------------------------------------------------------|" << std::endl;
+			for (size_t i = 0; i < ConfigPars.size(); i++)
+			{
+				ConfigPars[i].print();
+				std::cout << "--------------------------------------------------------------------|" << std::endl;
+				std::cout << "--------------------------------------------------------------------|" << std::endl;
+			}
+		}
+		GetContent(TreeConf, ConfigPars);
 	}
 	catch (const std::exception &e)
 	{
@@ -56,7 +46,5 @@ int main(int argc, char **argv)
 	}
 	return 0; 
 }
-
-
 
 
