@@ -2,7 +2,7 @@
 #define CONFIG_HPP
 
 
-#include "../../allincludes.hpp"
+#include "../allincludes.hpp"
 
 
 class ConfigNode {
