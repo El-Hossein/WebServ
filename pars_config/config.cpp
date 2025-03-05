@@ -5,20 +5,10 @@
 
 ConfigNode::ConfigNode(){}
 
-ConfigNode::ConfigNode(const ConfigNode & other) {*this = other;}
 
 ConfigNode::~ConfigNode(){}
 
 ConfigNode::ConfigNode(const std::string& name) : name(name) {}
-
-ConfigNode& ConfigNode::operator=(const ConfigNode& other) {
-    if (this != &other) {
-        this->name = other.name;
-        this->values = other.values;
-        this->children = other.children;
-    }
-    return *this;
-}
 
 void ConfigNode::addValue(const std::string& key, const std::string& value) {values[key].push_back(value);}
 
@@ -26,15 +16,15 @@ void ConfigNode::addChild(const ConfigNode& child) {children.push_back(child);}
 
 ConfigNode& ConfigNode::getLastChild() {return children.back();}
 
-const std::vector<ConfigNode>& ConfigNode::getChildren() const {return children;}
+// const std::vector<ConfigNode>& ConfigNode::getChildren() const {return children;}
 
 const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-const std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& key) const
+std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& key) 
 {
-    std::map<std::string, std::vector<std::string> >::const_iterator it = values.find(key);
+    std::map<std::string, std::vector<std::string> >::iterator it = values.find(key);
     if (it != values.end())
         return &(it->second);
     return NULL;
@@ -75,8 +65,7 @@ std::string removeSpaces( std::string &input)
 {
 	std::string result = "";
 	for (size_t i = 0; i < input.length(); i++)
-		if (input[i] != ' ')
-			result += input[i];
+		if (input[i] != ' ') result += input[i];
 	return result;
 }
 // remove extra spaces from the line
@@ -104,23 +93,18 @@ std::string RmComments( std::string buffer)
 	while (end != std::string::npos)
 	{
 		std::string line = buffer.substr(start, end - start);
-		if (line.find('#') != std::string::npos)
-			line.erase(line.find('#'));
+		if (line.find('#') != std::string::npos) line.erase(line.find('#'));
 		line = removeExtraSpaces(line);
-		if (!line.empty() && line.find_first_not_of(' ') != std::string::npos)
-			result += line + ' ';
+		if (!line.empty() && line.find_first_not_of(' ') != std::string::npos) result += line + ' ';
 		start = end + 1;
 		end = buffer.find('\n', start);
 	}
 	std::string lastLine = buffer.substr(start);
-	if (lastLine.find('#') != std::string::npos)
-		lastLine.erase(lastLine.find('#'));
+	if (lastLine.find('#') != std::string::npos) lastLine.erase(lastLine.find('#'));
 	lastLine = removeExtraSpaces(lastLine);
-	if (!lastLine.empty() && lastLine.find_first_not_of(' ') != std::string::npos)
-		result += lastLine;
+	if (!lastLine.empty() && lastLine.find_first_not_of(' ') != std::string::npos) result += lastLine;
 	size_t endPos = result.find_last_not_of(' ');
-	if (endPos != std::string::npos)
-		result.erase(endPos + 1);
+	if (endPos != std::string::npos) result.erase(endPos + 1);
 	return result;
 }
 
@@ -129,60 +113,18 @@ void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, siz
     std::vector<std::string> words = split(text);
     if (pos == 0)
     {
-        if (words.size() != 1)
-            throw std::runtime_error("Error: Expected exactly one word in server.");
-        if (words[0] != "server")
-            throw std::runtime_error("Error: The first word must be 'server'.");
+        if (words.size() != 1) throw std::runtime_error("Error: Expected exactly one word in server.");
+        if (words[0] != "server") throw std::runtime_error("Error: The first word must be 'server'.");
     }
     else
     {
         std::string name = nodeStack.back()->getName();
         std::vector<std::string> checkwords = split(name);
-        if (checkwords[0] == "location")
-            throw std::runtime_error("Error: Location block cannot be nested in another location block.");
-        if (words.size() != 2)
-            throw std::runtime_error("Error: Expected exactly two words in location");
-        if (words[0] != "location")
-            throw std::runtime_error("Error: The first word must be 'location'.");
+        if (checkwords[0] == "location") throw std::runtime_error("Error: Location block cannot be nested in another location block.");
+        if (words.size() != 2) throw std::runtime_error("Error: Expected exactly two words in location");
+        if (words[0] != "location") throw std::runtime_error("Error: The first word must be 'location'.");
     }
 }
-
-// void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t max, size_t multip)
-// {
-    // std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
-    // std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
-    // size_t KVLen = KV.empty() ? 0 : KV.size() - 1;
-    // std::vector<std::string> doubl;
-    // doubl.push_back("error_page");
-    // doubl.push_back("return");
-    // if (it == currentValues.end())
-    // {
-    //     std::vector<std::string>::iterator b = std::find(doubl.begin(), doubl.end(), KV[0]);
-    //     if (b != doubl.end())
-    //     {
-    //         if (KVLen % 2 != 0)
-    //             throw std::runtime_error("number of parameters of " +KV[0] + " are not correct1");
-    //         else
-    //          return;
-    //     }
-    //     if (KVLen > max)
-    //     {
-    //         if (KV[0] != StringTest)
-    //             return;
-    //         std::cout << KV[0] << " " << StringTest << " " << std::endl;
-    //         throw std::runtime_error("number of parameters of " +KV[0] + " are not correct2");
-    //     }
-    //     return;
-    // }
-    // if (it->first != KV[0])
-    //     return;
-    // for (size_t i = 1; i <KV.size(); i++ )
-    //     for (size_t j = 0; j <it->second.size(); j++ )
-    //         if (KV[i] == it->second[j])
-    //             throw std::runtime_error("dumplicate param");
-    // if (max < it->second.size() + KVLen || it->second.size() % multip != 0 || KVLen % multip != 0)
-    //     throw std::runtime_error("number of parameters of " +KV[0] + " are not correct3");
-// }
 
 void CheckAllError(const std::vector<std::string>& KV, const std::string& key, ConfigNode& ConfNode, int max, int mult) {
     int count = 0;
@@ -191,12 +133,11 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
-    std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(key);
-    if (it != currentValues.end())
+    std::vector<std::string>* helo = ConfNode.getValuesForKey(key);
+    if (helo != NULL)
     {
-        if (max != -1 && (int)(it->second.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
-        if (mult != -1 && (it->second.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+        if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
+        if (mult != -1 && (helo->size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
     }
     else
     {
