@@ -1,5 +1,5 @@
 # Explicitly list all .cpp files
-SRC = config/pars_config/config.cpp config/tree_config/conftree.cpp main.cpp
+SRC = ./pars_config/config.cpp main.cpp
 
 # Define the object directory
 OBJ_DIR = obj
@@ -8,7 +8,7 @@ OBJ_DIR = obj
 OBJ = $(addprefix $(OBJ_DIR)/, $(notdir $(SRC:.cpp=.o)))
 
 # Define source directories for vpath
-VPATH = config/pars_config:config/tree_config:.
+VPATH = ./pars_config:.
 
 # Define the output executable name
 NAME = Webserv
@@ -27,7 +27,7 @@ $(NAME): $(OBJ)
 	$(CC) $(FLAGS) $(OBJ) -o $@
 
 # Rule to compile source files into object files
-$(OBJ_DIR)/%.o: %.cpp config/pars_config/config.hpp  config/tree_config/conftree.hpp
+$(OBJ_DIR)/%.o: %.cpp ./pars_config/config.hpp 
 	@mkdir -p $(OBJ_DIR)
 	$(CC) $(FLAGS) -c $< -o $@
 

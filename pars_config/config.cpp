@@ -44,8 +44,7 @@ void ConfigNode::PutName(const std::string &name) {this->name = name;}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-// std::string trimSpaces(const std::string& str) {
+// trim spaces from the line
 void trimSpaces(std::string &str)
 {
     size_t first = str.find_first_not_of(" \t\n\r");
@@ -60,6 +59,7 @@ void trimSpaces(std::string &str)
     str = str.substr(first, last - first + 1);
 }
 
+// split the line into words
 std::vector<std::string> split(std::string text)
 {
 	std::istringstream stream(text);
@@ -70,6 +70,7 @@ std::vector<std::string> split(std::string text)
 	return words;
 }
 
+// remove spaces from the line
 std::string removeSpaces( std::string &input)
 {
 	std::string result = "";
@@ -78,7 +79,7 @@ std::string removeSpaces( std::string &input)
 			result += input[i];
 	return result;
 }
-
+// remove extra spaces from the line
 std::string removeExtraSpaces(std::string line)
 {
 	std::stringstream result;
@@ -94,6 +95,7 @@ std::string removeExtraSpaces(std::string line)
 	return result.str();
 }
 
+// remove comments from the buffer
 std::string RmComments( std::string buffer)
 {
 	std::string result;
@@ -122,10 +124,9 @@ std::string RmComments( std::string buffer)
 	return result;
 }
 
-void CheckStartServer(std::string text, size_t pos)
+void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, size_t pos)
 {
     std::vector<std::string> words = split(text);
-
     if (pos == 0)
     {
         if (words.size() != 1)
@@ -135,6 +136,10 @@ void CheckStartServer(std::string text, size_t pos)
     }
     else
     {
+        std::string name = nodeStack.back()->getName();
+        std::vector<std::string> checkwords = split(name);
+        if (checkwords[0] == "location")
+            throw std::runtime_error("Error: Location block cannot be nested in another location block.");
         if (words.size() != 2)
             throw std::runtime_error("Error: Expected exactly two words in location");
         if (words[0] != "location")
@@ -142,74 +147,90 @@ void CheckStartServer(std::string text, size_t pos)
     }
 }
 
-void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t max, size_t multip)
-{
-    std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
-    std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
+// void CheckAllError(std::vector<std::string>& KV, std::string StringTest, ConfigNode &ConfNode, size_t max, size_t multip)
+// {
+    // std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
+    // std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(StringTest);
+    // size_t KVLen = KV.empty() ? 0 : KV.size() - 1;
+    // std::vector<std::string> doubl;
+    // doubl.push_back("error_page");
+    // doubl.push_back("return");
+    // if (it == currentValues.end())
+    // {
+    //     std::vector<std::string>::iterator b = std::find(doubl.begin(), doubl.end(), KV[0]);
+    //     if (b != doubl.end())
+    //     {
+    //         if (KVLen % 2 != 0)
+    //             throw std::runtime_error("number of parameters of " +KV[0] + " are not correct1");
+    //         else
+    //          return;
+    //     }
+    //     if (KVLen > max)
+    //     {
+    //         if (KV[0] != StringTest)
+    //             return;
+    //         std::cout << KV[0] << " " << StringTest << " " << std::endl;
+    //         throw std::runtime_error("number of parameters of " +KV[0] + " are not correct2");
+    //     }
+    //     return;
+    // }
+    // if (it->first != KV[0])
+    //     return;
+    // for (size_t i = 1; i <KV.size(); i++ )
+    //     for (size_t j = 0; j <it->second.size(); j++ )
+    //         if (KV[i] == it->second[j])
+    //             throw std::runtime_error("dumplicate param");
+    // if (max < it->second.size() + KVLen || it->second.size() % multip != 0 || KVLen % multip != 0)
+    //     throw std::runtime_error("number of parameters of " +KV[0] + " are not correct3");
+// }
 
-    size_t KVLen = KV.empty() ? 0 : KV.size() - 1;
-    std::vector<std::string> doubl;
-    doubl.push_back("error_page");
-    doubl.push_back("return");
-
-    if (it == currentValues.end())
-    {
-        // std::cout << max << " " << multip << " " << KVLen << std::endl;
-        std::vector<std::string>::iterator b = std::find(doubl.begin(), doubl.end(), KV[0]);
-        if (b != doubl.end())
-        {
-            if (KVLen % 2 != 0)
-                throw std::runtime_error("number of parameters of " +KV[0] + " are not correct1");
-            else
-             return;
-        }
-        if (KVLen > max)
-        {
-            if (KV[0] != StringTest)
-                return;
-            std::cout << KV[0] << " " << StringTest << " " << std::endl;
-            throw std::runtime_error("number of parameters of " +KV[0] + " are not correct2");
-        }
-
-        return;
-    }
-    if (it->first != KV[0])
-        return;
-    for (size_t i = 1; i <KV.size(); i++ )
-        for (size_t j = 0; j <it->second.size(); j++ )
-            if (KV[i] == it->second[j])
-                throw std::runtime_error("dumplicate param");
+void CheckAllError(const std::vector<std::string>& KV, const std::string& key, ConfigNode& ConfNode, int max, int mult) {
+    int count = 0;
+    (void)ConfNode;
+    count = KV.size() - 1;
+    if (key != KV[0]) return;
     
-    if (max < it->second.size() + KVLen || it->second.size() % multip != 0 || KVLen % multip != 0)
-        throw std::runtime_error("number of parameters of " +KV[0] + " are not correct3");
+    
+    std::map<std::string, std::vector<std::string> >& currentValues = ConfNode.getValues();
+    std::map<std::string, std::vector<std::string> >::const_iterator it  = currentValues.find(key);
+    if (it != currentValues.end())
+    {
+        if (max != -1 && (int)(it->second.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
+        if (mult != -1 && (it->second.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+    }
+    else
+    {
+        if (max != -1 && (int)(count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
+        if (mult != -1 && (count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+    }
 }
-
 
 void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string blockType)
 {
     if (blockType == "server")
     {
-        CheckAllError(KV, "listen", ConfNode, 1, 1);
-        CheckAllError(KV, "server_name", ConfNode, 1, 1);
-        CheckAllError(KV, "error_page", ConfNode, 4*2, 2);
+        CheckAllError(KV, "listen", ConfNode, -1, 1);
+        CheckAllError(KV, "server_name", ConfNode, -1, 1);
+        CheckAllError(KV, "error_page", ConfNode, -1, 2);
         CheckAllError(KV, "client_max_body_size", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
-        CheckAllError(KV, "index", ConfNode, 1, 1);
+        CheckAllError(KV, "index", ConfNode, -1, -1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, 1*2, 2);
+        CheckAllError(KV, "return", ConfNode, -1, 2);
     }
     else {
         CheckAllError(KV, "allow_methods", ConfNode, 3, 1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, 1*2, 1);
+        CheckAllError(KV, "return", ConfNode, -1, 2);
         CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
-        CheckAllError(KV, "index", ConfNode, 1, 1);
+        CheckAllError(KV, "index", ConfNode, -1, -1);
         CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "upload_store", ConfNode, 1, 1);
     }
 }
 
+// check if the key is allowed in the block
 void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& words, ConfigNode &ConfNode, const std::string& blockType)
 {
     std::vector<std::string>::const_iterator it;
@@ -221,7 +242,7 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
     ErrorHandle(words, ConfNode, blockType);
 }
 
-
+// add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
     static bool initialized = false;
@@ -269,6 +290,7 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         ConfNode.addValue(words[0], words[i]);
 }
 
+// process the closing brace
 void processClosingBrace(std::vector<ConfigNode*> &nodeStack)
 {
     if (!nodeStack.empty())
@@ -277,6 +299,7 @@ void processClosingBrace(std::vector<ConfigNode*> &nodeStack)
         throw std::runtime_error("Error: Unmatched closing brace '}'.");
 }
 
+// process the semicolon
 void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (nodeStack.empty())
@@ -286,9 +309,10 @@ void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
         AddKV(*nodeStack.back(), words);
 }
 
+// process the opening brace
 void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack, bool &isRootNameSet, size_t pos)
 {
-    CheckStartServer(text, pos);
+    CheckStartServer(nodeStack, text, pos);
     trimSpaces(text);
     if (nodeStack.size() == 1 && !isRootNameSet)
     {
@@ -303,6 +327,7 @@ void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack,
     }
 }
 
+// check the content of the buffer
 void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
 {
     std::string delimiters = "{};";
@@ -316,11 +341,10 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     while (pos < buffer.size())
     {
         size_t delimiterPos = buffer.find_first_of(delimiters, pos);
-        if (delimiterPos == std::string::npos)
-            throw std::runtime_error("Error: Could not find any delimiters '{};'");
+        if (delimiterPos == std::string::npos) throw std::runtime_error("Error: Could not find any delimiters '{};'");
         text = buffer.substr(pos, delimiterPos - pos);
         std::string delimiter = buffer.substr(delimiterPos, 1);
-        
+
         if (delimiter == "{")
         {
             if (nodeStack.empty())
@@ -336,17 +360,15 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
             }
             processOpeningBrace(text, nodeStack, isRootNameSet, pos);
         }
-        else if (delimiter == "}")
-            processClosingBrace(nodeStack);
-        else if (delimiter == ";")
-            processSemicolon(text, nodeStack);
+        else if (delimiter == "}") processClosingBrace(nodeStack);
+        else if (delimiter == ";") processSemicolon(text, nodeStack);
         pos = delimiterPos + 1;
     }
     ConfigPars.push_back(ConfNode);
-    if (nodeStack.size() != 0)
-        throw std::runtime_error("Error: Unmatched opening brace '{'.");
+    if (nodeStack.size() != 0) throw std::runtime_error("Error: Unmatched opening brace '{'.");
 }
 
+// Parse the configuration file
 void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	std::ifstream infile(ConfigFilePath);
@@ -359,11 +381,11 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 }
 
 void ConfigNode::print() const {
-    std::cout << "--------------------->[" << name << "] {" << std::endl;
+    std::cout << "[" << name << "]" << std::endl;
 
     for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
     {
-        std::cout << "  [" << it->first << "]";
+        std::cout << "    [" << it->first << "]";
         for (size_t i = 0; i < it->second.size(); i++)
         {
             std::cout <<  " [" << it->second[i] << "]";
@@ -377,5 +399,4 @@ void ConfigNode::print() const {
         children[i].print();
     }
 
-    std::cout << "}" << std::endl;
 }
