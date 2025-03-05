@@ -24,11 +24,17 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 	catch (const std::exception &e)
 	{
 		std::cerr << e.what() << std::endl;
-		return 1; 
+		return 1;
 	}
 	return 0; 
 }
 
+int StartServer(std::vector<ConfigNode> &ConfigPars)
+{
+	struct sockaddr_in serv_addr;
+
+	return 0;
+}
 int main(int argc, char **argv)
 {
 	if (argc != 2)
@@ -40,8 +46,9 @@ int main(int argc, char **argv)
 	std::vector<ConfigNode> ConfigPars;
 	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
 		return 1;
-	
-	return 0; 
+	if (StartServer(ConfigPars) == 1)
+		return 1;
+	return 0;
 }
 
 
