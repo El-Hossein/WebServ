@@ -12,21 +12,19 @@ class ConfigNode {
 		std::vector<ConfigNode> children;  // Nested contexts
 	public:
 		ConfigNode();
-		ConfigNode(const ConfigNode& other);
 		ConfigNode(const std::string& name);
-		ConfigNode& operator=(const ConfigNode& other);
 		~ConfigNode();
 		
 		void addValue(const std::string& key, const std::string& value);
 		void addChild(const ConfigNode& child);
 		ConfigNode& getLastChild();
-		const std::vector<ConfigNode>& getChildren() const;
+		// const std::vector<ConfigNode>& getChildren() const;
 		const std::string& getName() const;
 		void PutName(const std::string& name);
 		
 		std::map<std::string, std::vector<std::string> >& getValues() ;
 
-		const std::vector<std::string>* getValuesForKey(const std::string& key) const ;
+		std::vector<std::string>* getValuesForKey(const std::string& key)  ;
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };
