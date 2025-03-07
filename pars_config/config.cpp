@@ -22,11 +22,14 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::vector<std::string>* ConfigNode::getValuesForKey(const std::string& key) 
+std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key) 
 {
-    std::map<std::string, std::vector<std::string> >::iterator it = values.find(key);
-    if (it != values.end())
-        return &(it->second);
+    //loop through the confnode check if the key is present
+    std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
+    if (it != ConfNode.getValues().end())
+        return &it->second;
+    // std::map<std::string, std::vector<std::string> >::iterator it = values.find(key);
+
     return NULL;
 }
 
@@ -133,7 +136,7 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::vector<std::string>* helo = ConfNode.getValuesForKey(key);
+    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key);
     if (helo != NULL)
     {
         if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");

@@ -10,14 +10,12 @@
 #include <vector>
 #include <map>
 
-#include <iostream>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
 #include <poll.h>
+#include <cstdlib>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+#include <arpa/inet.h>
+#include <sys/event.h>
 #endif

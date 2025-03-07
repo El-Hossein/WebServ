@@ -2,6 +2,7 @@
 #define HTTPSERVER_HPP
 
 #include "../allincludes.hpp"
+#include "../pars_config/config.hpp"
 
 class HttpServer {
     public:
@@ -9,7 +10,7 @@ class HttpServer {
         HttpServer(const HttpServer& other);
         ~HttpServer();
 
-        void setup_server();
+        void setup_server(std::vector<ConfigNode> ConfigPars);
         void run();
         void accept_new_client();
         void handle_client(int index);
