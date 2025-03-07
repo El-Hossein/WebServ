@@ -1,7 +1,7 @@
 #include "./pars_config/config.hpp"
+#include "./AllServer/HttpServer.hpp"
 
-
-int Printall = 1;
+int Printall = 0;
 
 
 int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
@@ -29,12 +29,15 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 	return 0; 
 }
 
-int StartServer(std::vector<ConfigNode> &ConfigPars)
+int StartServer(std::vector<ConfigNode> ConfigPars)
 {
-	struct sockaddr_in serv_addr;
-
+	(void)ConfigPars;
+	HttpServer server;
+    server.setup_server(ConfigPars);
+    server.run();
 	return 0;
 }
+
 int main(int argc, char **argv)
 {
 	if (argc != 2)

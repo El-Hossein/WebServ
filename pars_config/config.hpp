@@ -24,7 +24,7 @@ class ConfigNode {
 		
 		std::map<std::string, std::vector<std::string> >& getValues() ;
 
-		std::vector<std::string>* getValuesForKey(const std::string& key)  ;
+		std::vector<std::string>* getValuesForKey(ConfigNode& ConfNode, const std::string& key)  ;
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };
