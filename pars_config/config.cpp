@@ -281,7 +281,7 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     std::vector<ConfigNode*> nodeStack;
     nodeStack.push_back(&ConfNode);
     bool isRootNameSet = false;
-
+    if (buffer.size() == 0) throw std::runtime_error("Error: Empty configuration file.");
     while (pos < buffer.size())
     {
         size_t delimiterPos = buffer.find_first_of(delimiters, pos);

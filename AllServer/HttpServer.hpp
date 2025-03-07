@@ -15,9 +15,9 @@ class HttpServer {
         void accept_new_client();
         void handle_client(int index);
     private:
-        std::vector<struct pollfd> poll_fds;
-        int server_fd1;
-        int server_fd2;
+        int kq;
+        std::vector<int> server_fds;
+        
 };
 
 #endif
