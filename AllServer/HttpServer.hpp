@@ -12,12 +12,13 @@ class HttpServer {
 
         void setup_server(std::vector<ConfigNode> ConfigPars);
         void run();
-        void accept_new_client();
-        void handle_client(int index);
+        void accept_new_client(int server_fd);
+        void handle_client(int client_fd, int filter);
+        void remove_client(int client_fd);
     private:
         int kq;
         std::vector<int> server_fds;
-        
+        std::map<int, std::string> response_map;
 };
 
 #endif

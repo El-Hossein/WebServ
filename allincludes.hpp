@@ -18,4 +18,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/event.h>
+
+#include <csignal>
+
+
 #endif

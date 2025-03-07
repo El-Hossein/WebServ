@@ -1,6 +1,8 @@
 #include "./pars_config/config.hpp"
 #include "./AllServer/HttpServer.hpp"
 
+
+
 int Printall = 0;
 
 
@@ -29,12 +31,19 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 	return 0; 
 }
 
-int StartServer(std::vector<ConfigNode> ConfigPars)
+int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 {
-	(void)ConfigPars;
-	HttpServer server;
-    server.setup_server(ConfigPars);
-    server.run();
+	try
+	{
+		HttpServer server;
+		server.setup_server(ConfigPars);
+		server.run();
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
 	return 0;
 }
 
@@ -49,7 +58,7 @@ int main(int argc, char **argv)
 	std::vector<ConfigNode> ConfigPars;
 	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
 		return 1;
-	if (StartServer(ConfigPars) == 1)
+	if (StartServerFunc(ConfigPars) == 1)
 		return 1;
 	return 0;
 }
