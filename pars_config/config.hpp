@@ -7,7 +7,7 @@
 
 class ConfigNode {
 	private:
-		std::string name; // Name of the context (e.g., "http", "server", etc.)
+		std::string name; // Name of the context ("http", "server", etc.)
 		std::map<std::string, std::vector<std::string> > values; // Multi-value directives
 		std::vector<ConfigNode> children;  // Nested contexts
 	public:
