@@ -1,7 +1,7 @@
 #include "HttpServer.hpp"
 
 #define BACKLOG 128
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 200
 
 HttpServer::HttpServer()
 {}
@@ -50,7 +50,11 @@ int BindAndListen(int server_fd, struct sockaddr_in server_addr, int port, int i
 void AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags)
 {
     EV_SET(&event, fd, filter, flags, 0, 0, NULL);
-    kevent(kq, &event, 1, NULL, 0, NULL);
+    if (kevent(kq, &event, 1, NULL, 0, NULL) == -1)
+    {
+        std::cerr << "kevent failed for fd " << fd << ": " << strerror(errno) << std::endl;
+        // Don’t throw yet—subject wants resilience, so log and continue
+    }
 }
 
 //done with the server setup
@@ -97,16 +101,21 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars){
             std::cout << "Server " << i << " listening on port " << AllPorts[i][j] << std::endl;
         }
     }
+    std::cout << "--------------------------------------------------------" << std::endl;
 }
 
 void HttpServer::accept_new_client(int server_fd)
 {
-    std::cout << "Accepting new client..." << std::endl;
     // Accept a new client
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addr_len);
-    if (client_fd < 0) return;
+    if (client_fd < 0)
+    {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) // Non-blocking expected
+            std::cerr << "Accept failed on server_fd " << server_fd << ": " << strerror(errno) << std::endl;
+        return;
+    }
 
     // Print client and server connection details
     // Get client connection details
@@ -124,7 +133,7 @@ void HttpServer::accept_new_client(int server_fd)
     int server_port = ntohs(server_addr.sin_port);
 
     std::cout << "Client " << client_ip << ":" << client_port << " connected to server at " 
-              << server_ip << ":" << server_port << "\n-----------------------------------------------------" << std::endl;
+              << server_ip << ":" << server_port << "\n" << std::endl;
     
     // Set the client socket to non-blocking
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
@@ -135,6 +144,7 @@ void HttpServer::accept_new_client(int server_fd)
     
     AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_DISABLE);
     // Add the client socket to the kqueue for writing, but initially disabled
+    std::cout << "Accept new clien: " << client_fd << std::endl;
 }
 
 void parseRequest(const std::string& request, std::vector<std::pair<std::string, std::string> >& headers)
@@ -188,11 +198,9 @@ void SetUpResponse(const std::string& buffer, int client_fd, std::map<int, std::
     std::string response;
 
     // Print the headers and body
-    // for (std::vector<std::pair<std::string, std::string> >::const_iterator it = headers.begin(); it != headers.end(); ++it)
-    // {
-    //     std::cout << it->first << ": -----> " << it->second << std::endl;
-    // }
-    // std::cout  << "-----------------------------------------------------" << std::endl;
+    for (std::vector<std::pair<std::string, std::string> >::const_iterator it = headers.begin(); it != headers.end(); ++it)
+        std::cout << it->first << ": -----> " << it->second << std::endl;
+    std::cout  << "-----------------------------------------------------" << std::endl;
 
     for (size_t i = 0; i < headers.size(); i++)
     {
@@ -203,11 +211,20 @@ void SetUpResponse(const std::string& buffer, int client_fd, std::map<int, std::
         if (headers[i].first == "Connection" && headers[i].second == "close")
             keep_alive = false; // Client wants to close connection
     }
-    // Create the response
+    std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
+    int content_length = body.length(); //
     if (keep_alive)
-        response = "HTTP/1.1 200 OK\r\n" "Connection: keep-alive\r\n" "Keep-Alive: timeout=1, max=100\r\n" "Content-Length: 13\r\n\r\n" "Hello, World!";
+        response = "HTTP/1.1 200 OK\r\n"
+                   "Connection: keep-alive\r\n"
+                   "Keep-Alive: timeout=1, max=100\r\n"
+                   "Content-Length: " + std::to_string(content_length) + "\r\n"
+                   "\r\n" + body;
     else
-        response = "HTTP/1.1 200 OK\r\n" "Connection: close\r\n" "Content-Length: 13\r\n\r\n" "Hello, World!";
+        response = "HTTP/1.1 200 OK\r\n"
+                   "Connection: close\r\n"
+                   "Content-Length: " + std::to_string(content_length) + "\r\n"
+                   "\r\n" + body;
+    // Create the response
     response_map[client_fd] = response;
 }
 
@@ -232,7 +249,7 @@ void HttpServer::handle_client(int client_fd, int filter)
 
         if (bytes_read < 0)
         {
-            // No data available yet, keep the socket open
+            // No data available yet, keep the socket open  eagain: Resource temporarily unavailable; EWOULDBLOCK: Operation would block
             if (errno == EAGAIN || errno == EWOULDBLOCK) return;
             // Other errors, close the connection
             remove_client(client_fd);
@@ -240,7 +257,10 @@ void HttpServer::handle_client(int client_fd, int filter)
         }
         // Client closed the connection
         if (bytes_read == 0)
-            remove_client(client_fd); return;
+        {
+            remove_client(client_fd);
+            return;
+        }
         buffer[bytes_read] = '\0';
         // Process request
         SetUpResponse(buffer, client_fd, response_map);
@@ -262,8 +282,7 @@ void HttpServer::handle_client(int client_fd, int filter)
                 if (bytes_written < 0)
                 {
                     // Can't write more now, keep the response in map and wait
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                        return;
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) return;
                     remove_client(client_fd);
                     response_map.erase(client_fd);
                     return;
@@ -279,7 +298,7 @@ void HttpServer::handle_client(int client_fd, int filter)
 
             if (!should_close)
             {
-                std::cout << "Waiting for next request from client " << client_fd << std::endl;
+                // std::cout << "Waiting for next request from client " << client_fd << std::endl;
                 AddToKqueue(event, kq, client_fd, EVFILT_READ, EV_ENABLE);
             }
             else

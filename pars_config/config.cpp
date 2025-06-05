@@ -279,7 +279,7 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     std::string text;
     ConfigNode ConfNode;
     std::vector<ConfigNode*> nodeStack;
-    nodeStack.push_back(&ConfNode);
+    // nodeStack.push_back(&ConfNode);
     bool isRootNameSet = false;
     if (buffer.size() == 0) throw std::runtime_error("Error: Empty configuration file.");
     while (pos < buffer.size())
@@ -322,6 +322,7 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 	buffer << infile.rdbuf();
 	infile.close();
 	checkContent(RmComments(buffer.str()), ConfigPars);
+    if (!ConfigPars.empty()) ConfigPars.erase(ConfigPars.begin());
 }
 
 void ConfigNode::print() const {
