@@ -100,3 +100,4 @@ The communication between a **client** and a **server** happens using **HTTP**:
 
 This project is a work-in-progress, aimed at learning and exploring system-level programming and the HTTP protocol in C++.
 
+
