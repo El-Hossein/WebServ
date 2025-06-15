@@ -1,14 +1,10 @@
 #include "HttpServer.hpp"
 
-#define BACKLOG 128
-#define BUFFER_SIZE 200
+HttpServer::HttpServer()	{ }
 
-HttpServer::HttpServer()
-{}
-HttpServer::HttpServer(const HttpServer & other)
-{*this = other;}
-HttpServer::~HttpServer()
-{}
+HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
+
+HttpServer::~HttpServer()	{ }
 
 // Get all the ports from the configuration file
 void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<std::vector<int> > &AllPorts)
@@ -147,61 +143,14 @@ void HttpServer::accept_new_client(int server_fd)
     std::cout << "Accept new clien: " << client_fd << std::endl;
 }
 
-void parseRequest(const std::string& request, std::vector<std::pair<std::string, std::string> >& headers)
+void	SetUpResponse(int client_fd, std::map<int, std::string>& response_map, Request	&request)
 {
-    std::istringstream stream(request);
-    std::string line;
-    bool isBody = false;
-    std::string body;
-    // Parse the request line
-    if (std::getline(stream, line))
-    {
-        std::istringstream requestLine(line);
-        std::string method, path, protocol;
-        requestLine >> method >> path >> protocol;
-        headers.push_back(std::make_pair("Method", method));
-        headers.push_back(std::make_pair("Path", path));
-        headers.push_back(std::make_pair("Protocol", protocol));
-    }
-
-    // Parse the headers and body
-    while (std::getline(stream, line))
-    {
-        if (line == "\r")
-        {
-            isBody = true;
-            continue;
-        }
-
-        if (isBody)
-            body += line + "\n";
-        else
-        {
-            size_t pos = line.find(": ");
-            if (pos != std::string::npos)
-            {
-                std::string headerName = line.substr(0, pos);
-                std::string headerValue = line.substr(pos + 2);
-                headers.push_back(std::make_pair(headerName, headerValue));
-            }
-        }
-    }
-    headers.push_back(std::make_pair("body", body));
-}
-
-void SetUpResponse(const std::string& buffer, int client_fd, std::map<int, std::string>& response_map)
-{
-    std::vector<std::pair<std::string, std::string> > headers;
-    // std::string body;
-    parseRequest(buffer, headers);
-    bool keep_alive = false;
     std::string response;
+	bool keep_alive = false;
+    std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
+    int content_length = body.length(); //
 
-    // Print the headers and body
-    for (std::vector<std::pair<std::string, std::string> >::const_iterator it = headers.begin(); it != headers.end(); ++it)
-        std::cout << it->first << ": -----> " << it->second << std::endl;
-    std::cout  << "-----------------------------------------------------" << std::endl;
-
+	PairedVectorSS	headers = request.getHeaders();
     for (size_t i = 0; i < headers.size(); i++)
     {
         if (headers[i].first == "Protocol" && headers[i].second == "HTTP/1.1")
@@ -211,8 +160,6 @@ void SetUpResponse(const std::string& buffer, int client_fd, std::map<int, std::
         if (headers[i].first == "Connection" && headers[i].second == "close")
             keep_alive = false; // Client wants to close connection
     }
-    std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
-    int content_length = body.length(); //
     if (keep_alive)
         response = "HTTP/1.1 200 OK\r\n"
                    "Connection: keep-alive\r\n"
@@ -239,31 +186,37 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
-void HttpServer::handle_client(int client_fd, int filter)
+void	HttpServer::fill_buffer(char (&buffer)[BUFFER_SIZE], int client_fd)
 {
-    if (filter == EVFILT_READ)
+    int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
+
+	if (bytes_read < 0)
+	{
+		// No data available yet, keep the socket open  eagain: Resource temporarily unavailable; EWOULDBLOCK: Operation would block
+		if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+		// Other errors, close the connection
+		remove_client(client_fd);
+		return;
+	}
+	// Client closed the connection
+	if (bytes_read == 0)
+		return remove_client(client_fd);
+
+	buffer[bytes_read] = '\0';
+}
+
+void	HttpServer::handle_client(int client_fd, int filter)
+{
+	if (filter == EVFILT_READ)
     {
+		char buffer[BUFFER_SIZE];
+		fill_buffer(buffer, client_fd);
 
-        char buffer[BUFFER_SIZE];
-        int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-
-        if (bytes_read < 0)
-        {
-            // No data available yet, keep the socket open  eagain: Resource temporarily unavailable; EWOULDBLOCK: Operation would block
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return;
-            // Other errors, close the connection
-            remove_client(client_fd);
-            return;
-        }
-        // Client closed the connection
-        if (bytes_read == 0)
-        {
-            remove_client(client_fd);
-            return;
-        }
-        buffer[bytes_read] = '\0';
-        // Process request
-        SetUpResponse(buffer, client_fd, response_map);
+        // -------------	Process request	 ------------- //
+		Request obj(buffer);
+		obj.SetUpRequest();
+        // -------------	Process respons		 ------------- //
+        SetUpResponse(client_fd, response_map, obj);
         // Enable writing
         struct kevent event;
         AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
