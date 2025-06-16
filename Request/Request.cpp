@@ -1,13 +1,9 @@
 #include "Request.hpp"
 
-Request::Request(const std::string& buffer) : full_request(buffer) {
+Request::Request(std::string buffer) : full_request(buffer) {
 }
 
 Request::~Request() {
-}
-
-const std::string	Request::getBody() const {
-	return this->body;
 }
 
 PairedVectorSS	Request::getHeaders() const {
