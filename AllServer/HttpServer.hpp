@@ -14,7 +14,7 @@ class HttpServer {
         HttpServer(const HttpServer& other);
         ~HttpServer();
 
-		void fill_buffer(char (&buffer)[BUFFER_SIZE], int client_fd);
+		void fill_buffer(char (&buffer)[BUFFER_SIZE], int &client_fd);
         void setup_server(std::vector<ConfigNode> ConfigPars);
         void run();
         void accept_new_client(int server_fd);

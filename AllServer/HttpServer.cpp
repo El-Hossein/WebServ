@@ -143,7 +143,7 @@ void HttpServer::accept_new_client(int server_fd)
     std::cout << "Accept new clien: " << client_fd << std::endl;
 }
 
-void	SetUpResponse(int client_fd, std::map<int, std::string>& response_map, Request	&request)
+void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&request)
 {
     std::string response;
 	bool keep_alive = false;
@@ -186,21 +186,20 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
-void	HttpServer::fill_buffer(char (&buffer)[BUFFER_SIZE], int client_fd)
+void	HttpServer::fill_buffer(char (&buffer)[BUFFER_SIZE], int &client_fd)
 {
     int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
 
 	if (bytes_read < 0)
 	{
 		// No data available yet, keep the socket open  eagain: Resource temporarily unavailable; EWOULDBLOCK: Operation would block
-		if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+		if (errno == EAGAIN || errno == EWOULDBLOCK) throw std::runtime_error("");
 		// Other errors, close the connection
-		remove_client(client_fd);
-		return;
+		remove_client(client_fd), throw std::runtime_error("");
 	}
 	// Client closed the connection
 	if (bytes_read == 0)
-		return remove_client(client_fd);
+		remove_client(client_fd), throw std::runtime_error("");
 
 	buffer[bytes_read] = '\0';
 }
@@ -210,7 +209,8 @@ void	HttpServer::handle_client(int client_fd, int filter)
 	if (filter == EVFILT_READ)
     {
 		char buffer[BUFFER_SIZE];
-		fill_buffer(buffer, client_fd);
+		try	{ fill_buffer(buffer, client_fd); }
+			catch (std::exception &e) {return ;}
 
         // -------------	Process request	 ------------- //
 		Request obj(buffer);
