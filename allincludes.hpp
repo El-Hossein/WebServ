@@ -1,5 +1,6 @@
 #ifndef ALLINCLUDES_HPP
 #define ALLINCLUDES_HPP
+
 #include <cstddef>
 #include <exception>
 #include <iostream>
@@ -9,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #include <poll.h>
 #include <cstdlib>
