@@ -1,7 +1,6 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd) :	ClientFd(fd),
-									FullRequest("")
+Request::Request(const int	&fd) :	ClientFd(fd)
 {
 }
 
@@ -13,11 +12,6 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
-std::string		Request::getFullRequest() const
-{
-	return this->FullRequest;
-}
-
 PairedVectorSS	Request::getHeaders() const {
 	return this->Headers;
 }
@@ -27,12 +21,52 @@ PairedVectorSS	Request::getHeaders() const {
 	|#----------------------------------#|
 */
 
+void	Request::ParseFirstLine(std::string	FirstLine)
+{
+	std::string			line;
+	std::istringstream	FirstLineStream(FirstLine); // to use getline
+
+	std::getline(FirstLineStream, line);
+
+	std::istringstream Attributes(line);
+	std::string method, path, protocol;
+	Attributes >> method >> path >> protocol;
+
+	if (method != "GET" && method != "POST" && method != "DELETE")
+		throw std::runtime_error("Invalide request method.");
+	if (protocol != "HTTP/1.1")
+		throw std::runtime_error("Invalide request protocol.");
+
+	Headers.push_back(std::make_pair("Method", method));
+	Headers.push_back(std::make_pair("Path", path));
+	Headers.push_back(std::make_pair("Protocol", protocol));
+}
+
+void	Request::ParseRequestHeader(std::string Header)
+{
+	std::string			line;
+	std::istringstream	stream(Header); // to use getline
+
+	// Parse the Headers
+	while (std::getline(stream, line))
+	{    
+		size_t pos = line.find(": ");
+		if (pos != std::string::npos)
+		{
+			std::string headerName = line.substr(0, pos);
+			std::string headerValue = line.substr(pos + 2);
+			Headers.push_back(std::make_pair(headerName, headerValue));
+		}
+	}
+}
+
 void	Request::ReadRequestHeader()
 {
-	char		buffer[MAX_HEADER_SIZE];
 	int			BytesRead = 0;
 	static	int	MaxHeaderSize = 0;
-	
+	static bool	FirstLine = false;
+	char		buffer[BUFFER_SIZE];
+
 	while (true)
 	{
 		BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
@@ -44,64 +78,35 @@ void	Request::ReadRequestHeader()
 		if (MaxHeaderSize > MAX_HEADER_SIZE)
 			throw std::runtime_error("Invalide request header lengh.");
 
-		/*
-			RetrieveRequestFromBuffer
-			Parse the buffer here.
-		*/
+		if (!FirstLine)
+		{
+			ParseFirstLine(buffer); // First line
+			FirstLine = true;
+		}
+		ParseRequestHeader(buffer); // other lines
+
+		std::string	tmp(buffer);
+		if (tmp.find("\r\n\r\n")) // ila salit lHeader nkhroj -> Possible error incase [...\r\n\r] [\n...]
+			break;
 	}
+	/*
+		check if all required headers exist
+	*/
 }
 
-void	Request::ParseRequest()
+inline void	PrintHeaders(PairedVectorSS Headers)
 {
-    std::string line;
-    std::string body;
-	std::istringstream stream(FullRequest);
-    bool isBody = false;
-
-    // Parse the request lines
-    if (std::getline(stream, line))
-    {
-		std::istringstream requestLine(line);
-        std::string method, path, protocol;
-        requestLine >> method >> path >> protocol;
-        Headers.push_back(std::make_pair("Method", method));
-        Headers.push_back(std::make_pair("Path", path));
-        Headers.push_back(std::make_pair("Protocol", protocol));
-    }
-
-    // Parse the Headers and body
-    while (std::getline(stream, line))
-    {
-		if (line == "\r")
-        {
-			isBody = true;
-            continue;
-        }
-        if (isBody)
-			body += line + "\n";
-        else
-        {
-			size_t pos = line.find(": ");
-            if (pos != std::string::npos)
-            {
-				std::string headerName = line.substr(0, pos);
-                std::string headerValue = line.substr(pos + 2);
-                Headers.push_back(std::make_pair(headerName, headerValue));
-            }
-        }
-    }
-    Headers.push_back(std::make_pair("body", body));
-}
-
-void	Request::SetUpRequest()
-{
-	ReadRequestHeader();
-	ParseRequest();
-
-	// Print the Headers and body
 	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); ++it)
 	{
 		std::cout << it->first << ": -----> " << it->second << std::endl;
 	}
 	std::cout  << "-----------------------------------------------------" << std::endl;
+}
+
+void	Request::SetUpRequest()
+{
+	ReadRequestHeader();
+
+
+	PrintHeaders(this->Headers);
 }
