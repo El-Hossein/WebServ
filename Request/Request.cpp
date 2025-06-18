@@ -1,6 +1,8 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd) : ClientFd(fd) {
+Request::Request(const int	&fd) :	ClientFd(fd),
+									FullRequest("")
+{
 }
 
 Request::~Request() {
@@ -25,16 +27,28 @@ PairedVectorSS	Request::getHeaders() const {
 	|#----------------------------------#|
 */
 
-void	Request::ReadRequest()
+void	Request::ReadRequestHeader()
 {
-	int bytes_read = read(ClientFd, buffer, BUFFER_SIZE - 1);
+	char		buffer[MAX_HEADER_SIZE];
+	int			BytesRead = 0;
+	static	int	MaxHeaderSize = 0;
+	
+	while (true)
+	{
+		BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
+		if (BytesRead < 0)
+			throw std::runtime_error("Negative return read.");
+		buffer[BytesRead] = '\0';
 
-	if (bytes_read <= 0)
-		return ;
+		MaxHeaderSize += BytesRead;
+		if (MaxHeaderSize > MAX_HEADER_SIZE)
+			throw std::runtime_error("Invalide request header lengh.");
 
-	buffer[bytes_read] = '\0';
-
-	std::cout << "#------>" <<  buffer << std::endl;
+		/*
+			RetrieveRequestFromBuffer
+			Parse the buffer here.
+		*/
+	}
 }
 
 void	Request::ParseRequest()
@@ -81,6 +95,7 @@ void	Request::ParseRequest()
 
 void	Request::SetUpRequest()
 {
+	ReadRequestHeader();
 	ParseRequest();
 
 	// Print the Headers and body
