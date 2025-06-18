@@ -193,14 +193,12 @@ void	HttpServer::handle_client(int client_fd, int filter)
 		// -------------	Process request	 ------------- //
 		Request obj(client_fd);
 
-		obj.ReadRequest();
-		// obj.SetUpRequest();
-
+		obj.SetUpRequest();
         // -------------	Process respons		 ------------- //
-        // SetUpResponse(client_fd, response_map, obj);
-        // // Enable writing
-        // struct kevent event;
-        // AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
+        SetUpResponse(client_fd, response_map, obj);
+        // Enable writing
+        struct kevent event;
+        AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
     }
     else if (filter == EVFILT_WRITE)
     {
