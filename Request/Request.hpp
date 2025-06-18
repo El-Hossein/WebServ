@@ -11,18 +11,18 @@ class Request
 {
 private:
 	int				ClientFd;
-	std::string		FullRequest; // can't have this bec max size is 30mb
 	PairedVectorSS	Headers;
 public:
 	Request(const int	&);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
 	PairedVectorSS		getHeaders() const;
-	std::string			getFullRequest() const;
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	
 	void	ReadRequestHeader();
-	void	ParseRequest();
+	
+	void	ParseFirstLine(std::string);
+	void	ParseRequestHeader(std::string);
 
 	void	SetUpRequest();
 };
