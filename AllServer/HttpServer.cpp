@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <vector>
 
 HttpServer::HttpServer()	{ }
 
@@ -204,8 +205,9 @@ void	HttpServer::fill_buffer(char (&buffer)[BUFFER_SIZE], int &client_fd)
 	buffer[bytes_read] = '\0';
 }
 
-void	HttpServer::handle_client(int client_fd, int filter)
+void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars)
 {
+    (void)ConfigPars;
 	if (filter == EVFILT_READ)
     {
 		char buffer[BUFFER_SIZE];
@@ -260,30 +262,39 @@ void	HttpServer::handle_client(int client_fd, int filter)
     }
 }
 
-void HttpServer::run()
+void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 {
-    struct kevent events[BACKLOG];
-
-    while (true)
-    {
-        int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
-        if (nev < 0) throw std::runtime_error("kevent error");
-        for (int i = 0; i < nev; i++)
-        {
-            int fd = events[i].ident;
-            // Check if it's a server socket
-            bool is_server = false;
-            for (size_t j = 0; j < server_fds.size(); j++)
-            {
-                if (server_fds[j] == fd)
-                {
-                    accept_new_client(fd);
-                    is_server = true;
-                    break;
-                }
-            }
-            if (!is_server)
-                handle_client(fd, events[i].filter);
+    
+    ConfigNode arr = ConfigNode::GetServer(ConfigPars, "myserver1.com");
+    arr.print();
+    std::vector<std::string>* idk = ChGetValuesForKey(arr, "allow_methods", "/");
+    if (idk != nullptr) 
+        for (std::vector<std::string>::iterator it = idk->begin(); it != idk->end(); ++it) {
+            std::cout << *it << "\n";
         }
-    }
+    
+    // struct kevent events[BACKLOG];
+
+    // while (true)
+    // {
+    //     int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
+    //     if (nev < 0) throw std::runtime_error("kevent error");
+    //     for (int i = 0; i < nev; i++)
+    //     {
+    //         int fd = events[i].ident;
+    //         // Check if it's a server socket
+    //         bool is_server = false;
+    //         for (size_t j = 0; j < server_fds.size(); j++)
+    //         {
+    //             if (server_fds[j] == fd)
+    //             {
+    //                 accept_new_client(fd);
+    //                 is_server = true;
+    //                 break;
+    //             }
+    //         }
+    //         if (!is_server)
+    //             handle_client(fd, events[i].filter, ConfigPars);
+    //     }
+    // }
 }
