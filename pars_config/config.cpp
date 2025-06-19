@@ -5,6 +5,13 @@
 
 ConfigNode::ConfigNode(){}
 
+std::vector<std::string> split(const std::string& text) {
+    std::istringstream stream(text);
+    std::string word;
+    std::vector<std::string> words;
+    while (stream >> word) words.push_back(word);
+    return words;
+}
 
 ConfigNode::~ConfigNode(){}
 
@@ -22,14 +29,23 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key) 
+std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     //loop through the confnode check if the key is present
-    std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
-    if (it != ConfNode.getValues().end())
-        return &it->second;
-    // std::map<std::string, std::vector<std::string> >::iterator it = values.find(key);
-
+    if (del == "NULL")
+    {
+        std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
+        if (it != ConfNode.getValues().end())
+            return &it->second;
+    }
+    else {
+        for (size_t i = 0; i < ConfNode.children.size(); i++)
+        {
+            std::vector<std::string> arr = split(ConfNode.children[i].getName());
+            if (arr[1] == del)
+                return getValuesForKey(ConfNode.children[i], key, "NULL");
+        }
+    }
     return NULL;
 }
 
@@ -53,15 +69,6 @@ void trimSpaces(std::string &str)
 }
 
 // split the line into words
-std::vector<std::string> split(std::string text)
-{
-	std::istringstream stream(text);
-    std::string word;
-    std::vector<std::string> words;
-    while (stream >> word)
-        words.push_back(word);
-	return words;
-}
 
 // remove spaces from the line
 std::string removeSpaces( std::string &input)
@@ -88,27 +95,19 @@ std::string removeExtraSpaces(std::string line)
 }
 
 // remove comments from the buffer
-std::string RmComments( std::string buffer)
-{
-	std::string result;
-	size_t start = 0;
-	size_t end = buffer.find('\n');
-	while (end != std::string::npos)
-	{
-		std::string line = buffer.substr(start, end - start);
-		if (line.find('#') != std::string::npos) line.erase(line.find('#'));
-		line = removeExtraSpaces(line);
-		if (!line.empty() && line.find_first_not_of(' ') != std::string::npos) result += line + ' ';
-		start = end + 1;
-		end = buffer.find('\n', start);
-	}
-	std::string lastLine = buffer.substr(start);
-	if (lastLine.find('#') != std::string::npos) lastLine.erase(lastLine.find('#'));
-	lastLine = removeExtraSpaces(lastLine);
-	if (!lastLine.empty() && lastLine.find_first_not_of(' ') != std::string::npos) result += lastLine;
-	size_t endPos = result.find_last_not_of(' ');
-	if (endPos != std::string::npos) result.erase(endPos + 1);
-	return result;
+std::string RmComments(std::string buffer) {
+    std::string result;
+    std::istringstream iss(buffer);
+    std::string line;
+    while (std::getline(iss, line)) {
+        size_t commentPos = line.find('#');
+        if (commentPos != std::string::npos) line.erase(commentPos);
+        line = removeExtraSpaces(line);
+        if (!line.empty()) result += line + " ";
+    }
+    size_t endPos = result.find_last_not_of(' ');
+    if (endPos != std::string::npos) result.erase(endPos + 1);
+    return result;
 }
 
 void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, size_t pos)
@@ -136,7 +135,7 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key);
+    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
     if (helo != NULL)
     {
         if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
@@ -326,11 +325,11 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 }
 
 void ConfigNode::print() const {
-    std::cout << "[" << name << "]" << std::endl;
+    std::cout << "[++" << name << "]" << std::endl;
 
     for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
     {
-        std::cout << "    [" << it->first << "]";
+        std::cout << "    [---" << it->first << "]";
         for (size_t i = 0; i < it->second.size(); i++)
         {
             std::cout <<  " [" << it->second[i] << "]";
@@ -343,5 +342,22 @@ void ConfigNode::print() const {
         std::cout << "  ";
         children[i].print();
     }
+}
 
+
+ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, std::string ServerName)
+{
+    std::vector<std::vector<std::string> > arr;
+
+    for (size_t i = 0; i < ConfigPars.size(); i++)
+    {
+        for (std::map<std::string, std::vector<std::string> >::const_iterator it = ConfigPars[i].values.begin(); it != ConfigPars[i].values.end(); ++it)
+        {
+            if(it->first == "server_name" && it->second[0] == ServerName )
+            {
+                return ConfigPars[i];
+            }
+        }
+    }
+    return ConfigPars[0];
 }
