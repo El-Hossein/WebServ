@@ -1,6 +1,8 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd) :	ClientFd(fd)
+									;
+Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
+																		ConfigPars(_ConfigPars)
 {
 }
 
@@ -112,6 +114,15 @@ void	Request::CheckRequiredHeaders()
 void	Request::SetUpRequest()
 {
 	ReadRequestHeader();
+
+	// ConfigNode server = ConfigNode::GetServer(ConfigPars, "myserver1.com");
+    // server.print();
+    // std::vector<std::string>* e = ConfigNode::getValuesForKey(server, "allow_methods", "NULL");
+    // std::vector<std::string>* e = ConfigNode::getValuesForKey(server, "allow_methods", "/");
+    // if (e != nullptr) 
+    //     for (std::vector<std::string>::iterator it = e->begin(); it != e->end(); ++it) {
+    //         std::cout << *it << "\n";
+    //     }
 	CheckRequiredHeaders();
 
 

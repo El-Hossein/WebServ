@@ -1,16 +1,19 @@
 #pragma once
 
 #include "../allincludes.hpp"
+#include "../pars_config/config.hpp"
 
 #define BUFFER_SIZE 1024 // 1kb
 #define MAX_HEADER_SIZE 8192 // 8kb
 
 typedef std::vector<std::pair<std::string, std::string> > PairedVectorSS;
 
-class Request 
+class Request
 {
 private:
-	int				ClientFd;
+	int						ClientFd;
+	std::vector<ConfigNode>	ConfigPars;
+
 	PairedVectorSS	Headers;
 	std::string		BodyUnprocessedBuffer;
 
@@ -21,11 +24,10 @@ private:
 	
 	void	CheckRequiredHeaders();
 public:
-	Request(const int	&);
+	Request(const int	&, std::vector<ConfigNode>);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
 	PairedVectorSS		getHeaders() const;
 	// ---------	MEMBER FUNCTIONS 	--------- //
-
 	void	SetUpRequest();
 };
