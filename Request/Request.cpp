@@ -47,9 +47,8 @@ void	Request::ParseRequestHeader(std::string Header)
 	std::string			line;
 	std::istringstream	stream(Header); // to use getline
 
-	// Parse the Headers
 	while (std::getline(stream, line))
-	{    
+	{
 		size_t pos = line.find(": ");
 		if (pos != std::string::npos)
 		{
@@ -63,35 +62,26 @@ void	Request::ParseRequestHeader(std::string Header)
 void	Request::ReadRequestHeader()
 {
 	int			BytesRead = 0;
-	static	int	MaxHeaderSize = 0;
-	static bool	FirstLine = false;
-	char		buffer[BUFFER_SIZE];
+	char		buffer[MAX_HEADER_SIZE];
 
-	while (true)
-	{
-		BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
-		if (BytesRead < 0)
-			throw std::runtime_error("Negative return read.");
-		buffer[BytesRead] = '\0';
+	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
+	if (BytesRead <= 0)
+		throw std::runtime_error("Error: Read return.");
+	if (BytesRead >= MAX_HEADER_SIZE - 1)
+		throw std::runtime_error("Invalide request header lengh.");
 
-		MaxHeaderSize += BytesRead;
-		if (MaxHeaderSize > MAX_HEADER_SIZE)
-			throw std::runtime_error("Invalide request header lengh.");
+	buffer[BytesRead] = '\0';
 
-		if (!FirstLine)
-		{
-			ParseFirstLine(buffer); // First line
-			FirstLine = true;
-		}
-		ParseRequestHeader(buffer); // other lines
+	std::string	StdBuffer(buffer);
+	size_t npos = StdBuffer.find("\r\n\r\n");
+	if (npos == std::string::npos)
+		throw std::runtime_error("Invalide request header.");
 
-		std::string	tmp(buffer);
-		if (tmp.find("\r\n\r\n")) // ila salit lHeader nkhroj -> Possible error incase [...\r\n\r] [\n...]
-			break;
-	}
-	/*
-		check if all required headers exist
-	*/
+	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
+	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
+
+	ParseFirstLine(StdBuffer); // First line
+	ParseRequestHeader(StdBuffer); // other lines
 }
 
 inline void	PrintHeaders(PairedVectorSS Headers)
@@ -103,9 +93,27 @@ inline void	PrintHeaders(PairedVectorSS Headers)
 	std::cout  << "-----------------------------------------------------" << std::endl;
 }
 
+void	Request::CheckRequiredHeaders()
+{
+	int	flag = 0;
+	PairedVectorSS::const_iterator it = Headers.begin();
+
+	if (it->second == "Post")
+	{
+		for (PairedVectorSS::const_iterator _it = Headers.begin(); _it != Headers.end(); _it++)
+		{
+			if (it->first == "Content-Length" || it->first == "Transfer-Encoding")
+				flag++;
+		}
+		if (flag != 2)	throw std::runtime_error("400");
+	}
+}
+
 void	Request::SetUpRequest()
 {
 	ReadRequestHeader();
+	CheckRequiredHeaders();
+
 
 
 	PrintHeaders(this->Headers);
