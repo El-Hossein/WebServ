@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <vector>
 
 HttpServer::HttpServer()	{ }
 
@@ -11,7 +12,7 @@ void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<std::vector<int
 {
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
-        std::vector<std::string>* ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen");
+        std::vector<std::string>* ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
         if (ConfPort != NULL)
         {
             std::vector<int> ports;
@@ -186,16 +187,18 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
-void	HttpServer::handle_client(int client_fd, int filter)
+void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars)
 {
+    (void)ConfigPars;
 	if (filter == EVFILT_READ)
     {
 		// -------------	Process request	 ------------- //
-		Request obj(client_fd);
-
+		Request obj(client_fd, ConfigPars);
 		obj.SetUpRequest();
         // -------------	Process respons		 ------------- //
         SetUpResponse(client_fd, response_map, obj);
+
+
         // Enable writing
         struct kevent event;
         AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
@@ -239,7 +242,7 @@ void	HttpServer::handle_client(int client_fd, int filter)
     }
 }
 
-void HttpServer::run()
+void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 {
     struct kevent events[BACKLOG];
 
@@ -262,7 +265,7 @@ void HttpServer::run()
                 }
             }
             if (!is_server)
-                handle_client(fd, events[i].filter);
+                handle_client(fd, events[i].filter, ConfigPars);
         }
     }
 }
