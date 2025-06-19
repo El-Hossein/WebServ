@@ -29,25 +29,24 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key) 
+std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     //loop through the confnode check if the key is present
-    std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
-    if (it != ConfNode.getValues().end())
-        return &it->second;
-    // std::map<std::string, std::vector<std::string> >::iterator it = values.find(key);
-
-    return NULL;
-}
-std::vector<std::string>* ConfigNode::ChGetValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)
-{
-    for (size_t i = 0; i < ConfNode.children.size(); i++)
+    if (del == "NULL")
     {
-        std::vector<std::string> arr = split(ConfNode.children[i].getName());
-        if (arr[1] == del)
-            return getValuesForKey(ConfNode.children[i], key);
+        std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
+        if (it != ConfNode.getValues().end())
+            return &it->second;
     }
-    return getValuesForKey(ConfNode.children[0], key);
+    else {
+        for (size_t i = 0; i < ConfNode.children.size(); i++)
+        {
+            std::vector<std::string> arr = split(ConfNode.children[i].getName());
+            if (arr[1] == del)
+                return getValuesForKey(ConfNode.children[i], key, "NULL");
+        }
+    }
+    return NULL;
 }
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
@@ -136,7 +135,7 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key);
+    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
     if (helo != NULL)
     {
         if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");

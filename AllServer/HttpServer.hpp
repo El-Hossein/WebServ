@@ -1,20 +1,18 @@
 #pragma once
 
 #define BACKLOG 128
-#define BUFFER_SIZE 200
 
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
 #include "../Request/Request.hpp"
 
-class HttpServer : public ConfigNode{
+class HttpServer{
     public:
         HttpServer();
         HttpServer(const HttpServer& other);
         ~HttpServer();
 
-		void fill_buffer(char (&buffer)[BUFFER_SIZE], int &client_fd);
         void setup_server(std::vector<ConfigNode> ConfigPars);
         void run(std::vector<ConfigNode> ConfigPars);
         void accept_new_client(int server_fd);

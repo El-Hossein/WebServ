@@ -12,7 +12,7 @@ void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<std::vector<int
 {
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
-        std::vector<std::string>* ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen");
+        std::vector<std::string>* ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
         if (ConfPort != NULL)
         {
             std::vector<int> ports;
@@ -187,38 +187,18 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
-void	HttpServer::fill_buffer(char (&buffer)[BUFFER_SIZE], int &client_fd)
-{
-    int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-
-	if (bytes_read < 0)
-	{
-		// No data available yet, keep the socket open  eagain: Resource temporarily unavailable; EWOULDBLOCK: Operation would block
-		if (errno == EAGAIN || errno == EWOULDBLOCK) throw std::runtime_error("");
-		// Other errors, close the connection
-		remove_client(client_fd), throw std::runtime_error("");
-	}
-	// Client closed the connection
-	if (bytes_read == 0)
-		remove_client(client_fd), throw std::runtime_error("");
-
-	buffer[bytes_read] = '\0';
-}
-
 void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars)
 {
     (void)ConfigPars;
 	if (filter == EVFILT_READ)
     {
-		char buffer[BUFFER_SIZE];
-		try	{ fill_buffer(buffer, client_fd); }
-			catch (std::exception &e) {return ;}
-
-        // -------------	Process request	 ------------- //
-		Request obj(buffer);
+		// -------------	Process request	 ------------- //
+		Request obj(client_fd, ConfigPars);
 		obj.SetUpRequest();
         // -------------	Process respons		 ------------- //
         SetUpResponse(client_fd, response_map, obj);
+
+
         // Enable writing
         struct kevent event;
         AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
@@ -264,37 +244,28 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
 
 void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 {
-    
-    ConfigNode arr = ConfigNode::GetServer(ConfigPars, "myserver1.com");
-    arr.print();
-    std::vector<std::string>* idk = ChGetValuesForKey(arr, "allow_methods", "/");
-    if (idk != nullptr) 
-        for (std::vector<std::string>::iterator it = idk->begin(); it != idk->end(); ++it) {
-            std::cout << *it << "\n";
-        }
-    
-    // struct kevent events[BACKLOG];
+    struct kevent events[BACKLOG];
 
-    // while (true)
-    // {
-    //     int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
-    //     if (nev < 0) throw std::runtime_error("kevent error");
-    //     for (int i = 0; i < nev; i++)
-    //     {
-    //         int fd = events[i].ident;
-    //         // Check if it's a server socket
-    //         bool is_server = false;
-    //         for (size_t j = 0; j < server_fds.size(); j++)
-    //         {
-    //             if (server_fds[j] == fd)
-    //             {
-    //                 accept_new_client(fd);
-    //                 is_server = true;
-    //                 break;
-    //             }
-    //         }
-    //         if (!is_server)
-    //             handle_client(fd, events[i].filter, ConfigPars);
-    //     }
-    // }
+    while (true)
+    {
+        int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
+        if (nev < 0) throw std::runtime_error("kevent error");
+        for (int i = 0; i < nev; i++)
+        {
+            int fd = events[i].ident;
+            // Check if it's a server socket
+            bool is_server = false;
+            for (size_t j = 0; j < server_fds.size(); j++)
+            {
+                if (server_fds[j] == fd)
+                {
+                    accept_new_client(fd);
+                    is_server = true;
+                    break;
+                }
+            }
+            if (!is_server)
+                handle_client(fd, events[i].filter, ConfigPars);
+        }
+    }
 }

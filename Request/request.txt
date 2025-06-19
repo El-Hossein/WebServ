@@ -1,0 +1,8 @@
+Command:
+curl http://localhost:8080
+
+Request raw text:
+GET / HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/8.7.1
+Accept: */*
