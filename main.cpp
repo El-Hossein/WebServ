@@ -57,6 +57,7 @@ int main(int argc, char **argv)
 	}
 	std::string ConfigFilePath = argv[1];
 	std::vector<ConfigNode> ConfigPars;
+	ConfigNode obj;
 	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
 		return 1;
 	if (StartServerFunc(ConfigPars) == 1)
