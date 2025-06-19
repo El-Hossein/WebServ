@@ -1,4 +1,4 @@
-	-> local/ziyad to remote/ziyad
+	-> ziyad to remote/main
 when im done doing changes on local ziyad and i want to push to
 remote ziyad, i should see the changes that have been made on the
 remote main branch + nadi chghol bach npushi l local ziyad:
@@ -19,5 +19,5 @@ git merge origin/main
 	-> You might have to resolve conflicts here — but that’s good. It means
 	you’re catching them before they hit the main branch.
 
-git push origin ziyad
-	-> Now you can push to your remote ziyad.
+git push origin ziyad:main
+	-> Now you can push to your remote main.
