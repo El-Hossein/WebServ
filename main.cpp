@@ -33,11 +33,12 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 
 int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 {
+	(void)ConfigPars;
 	try
 	{
 		HttpServer server;
 		server.setup_server(ConfigPars);
-		server.run();
+		server.run(ConfigPars);
 	}
 	catch (const std::exception &e)
 	{
