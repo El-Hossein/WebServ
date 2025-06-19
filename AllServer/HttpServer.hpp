@@ -7,16 +7,16 @@
 
 #include "../Request/Request.hpp"
 
-class HttpServer {
+class HttpServer{
     public:
         HttpServer();
         HttpServer(const HttpServer& other);
         ~HttpServer();
 
         void setup_server(std::vector<ConfigNode> ConfigPars);
-        void run();
+        void run(std::vector<ConfigNode> ConfigPars);
         void accept_new_client(int server_fd);
-        void handle_client(int client_fd, int filter);
+        void handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars);
         void remove_client(int client_fd);
     private:
         int kq;
