@@ -12,17 +12,20 @@ class Request
 private:
 	int				ClientFd;
 	PairedVectorSS	Headers;
+	std::string		BodyUnprocessedBuffer;
+
+	void	ReadRequestHeader();
+	
+	void	ParseFirstLine(std::string);
+	void	ParseRequestHeader(std::string);
+	
+	void	CheckRequiredHeaders();
 public:
 	Request(const int	&);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
 	PairedVectorSS		getHeaders() const;
 	// ---------	MEMBER FUNCTIONS 	--------- //
-	
-	void	ReadRequestHeader();
-	
-	void	ParseFirstLine(std::string);
-	void	ParseRequestHeader(std::string);
 
 	void	SetUpRequest();
 };
