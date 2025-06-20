@@ -116,13 +116,13 @@ void	Request::SetUpRequest()
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-	// ConfigNode RightServer = ConfigNode::GetServer(ConfigPars, "myserver1.com");
-    // RightServer.print();
-    // std::vector<std::string>* e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
-    // std::vector<std::string>* e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
-    // if (e != NULL) 
-    //     for (std::vector<std::string>::iterator it = e->begin(); it != e->end(); ++it)
-    //         std::cout << *it << "\n";
+	ConfigNode RightServer = ConfigNode::GetServer(ConfigPars, "myserver1.com");
+    RightServer.print();
+    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
+    std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
+    if (e.empty()) 
+        for (std::vector<std::string>::iterator it = e.begin(); it != e.end(); ++it)
+            std::cout << *it << "\n";
 
 	PrintHeaders(this->Headers);
 }
