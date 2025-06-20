@@ -29,24 +29,26 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
+std::vector<std::string> ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
+    std::vector<std::string> emptyResult;
+    std::vector<std::string> arr ;
     //loop through the confnode check if the key is present
     if (del == "NULL")
     {
         std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
         if (it != ConfNode.getValues().end())
-            return &it->second;
+            return it->second;
     }
     else {
         for (size_t i = 0; i < ConfNode.children.size(); i++)
         {
-            std::vector<std::string> arr = split(ConfNode.children[i].getName());
+            arr = split(ConfNode.children[i].getName());
             if (arr[1] == del)
                 return getValuesForKey(ConfNode.children[i], key, "NULL");
         }
     }
-    return NULL;
+    return emptyResult;
 }
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
@@ -135,11 +137,11 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
-    if (helo != NULL)
+    std::vector<std::string> helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
+    if (helo.empty())
     {
-        if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
-        if (mult != -1 && (helo->size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+        if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
+        if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
     }
     else
     {
