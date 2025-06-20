@@ -151,7 +151,7 @@ void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Req
     std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
     int content_length = body.length(); //
 
-	PairedVectorSS	headers = request.getHeaders();
+	PairedVectorSS	headers = request.GetHeaders();
     for (size_t i = 0; i < headers.size(); i++)
     {
         if (headers[i].first == "Protocol" && headers[i].second == "HTTP/1.1")
