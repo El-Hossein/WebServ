@@ -2,7 +2,7 @@
 
 									;
 Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
-																		ConfigPars(_ConfigPars)
+																		Servers(_ConfigPars)
 {
 }
 
@@ -14,8 +14,18 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
-PairedVectorSS	Request::getHeaders() const {
+PairedVectorSS	Request::GetHeaders() const
+{
 	return this->Headers;
+}
+
+std::string	Request::GetHeaderValue(std::string	key) const {
+	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); it++)
+	{
+		if (key == it->first)
+			return it->second;
+	}
+	return NULL;
 }
 
 /*	|#----------------------------------#|
@@ -23,7 +33,7 @@ PairedVectorSS	Request::getHeaders() const {
 	|#----------------------------------#|
 */
 
-void	Request::ParseFirstLine(std::string	FirstLine)
+void	Request::ReadFirstLine(std::string	FirstLine)
 {
 	std::string			line;
 	std::istringstream	FirstLineStream(FirstLine); // to use getline
@@ -44,7 +54,7 @@ void	Request::ParseFirstLine(std::string	FirstLine)
 	Headers.push_back(std::make_pair("Protocol", protocol));
 }
 
-void	Request::ParseRequestHeader(std::string Header)
+void	Request::ReadHeaders(std::string Header)
 {
 	std::string			line;
 	std::istringstream	stream(Header); // to use getline
@@ -82,8 +92,8 @@ void	Request::ReadRequestHeader()
 	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
 	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
 
-	ParseFirstLine(StdBuffer); // First line
-	ParseRequestHeader(StdBuffer); // other lines
+	ReadFirstLine(StdBuffer); // First line
+	ReadHeaders(StdBuffer); // other lines
 }
 
 inline void	PrintHeaders(PairedVectorSS Headers)

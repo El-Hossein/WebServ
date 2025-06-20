@@ -12,22 +12,22 @@ class Request
 {
 private:
 	int						ClientFd;
-	std::vector<ConfigNode>	ConfigPars;
+	std::vector<ConfigNode>	Servers;
 
 	PairedVectorSS	Headers;
 	std::string		BodyUnprocessedBuffer;
 
 	void	ReadRequestHeader();
-	
-	void	ParseFirstLine(std::string);
-	void	ParseRequestHeader(std::string);
+	void	ReadFirstLine(std::string);
+	void	ReadHeaders(std::string);
 	
 	void	CheckRequiredHeaders();
 public:
 	Request(const int	&, std::vector<ConfigNode>);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
-	PairedVectorSS		getHeaders() const;
+	PairedVectorSS	GetHeaders() const;
+	std::string		GetHeaderValue(std::string key1) const;
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	SetUpRequest();
 };
