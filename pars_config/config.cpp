@@ -138,7 +138,7 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     
     
     std::vector<std::string> helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
-    if (helo.empty())
+    if (!helo.empty())
     {
         if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
         if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
