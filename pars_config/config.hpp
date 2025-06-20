@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-//  server === > "listen", "server_name", "error_page", "client_max_body_size", "root", "index", "autoindex", "return"
+//  server === > "listen", "server_names", "error_page", "client_max_body_size", "root", "index", "autoindex", "return"
 //  location =====> "autoindex", "allow_methods", "return", "php-cgi", "root", "index", "py-cgi", "upload_store"
 class ConfigNode {
 	private:
@@ -28,7 +28,7 @@ class ConfigNode {
 		
 		std::map<std::string, std::vector<std::string> >& getValues() ;
 		static ConfigNode GetServer(std::vector<ConfigNode> ConfigPars, std::string ServerName);
-		static std::vector<std::string>* getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
+		static std::vector<std::string> getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };

@@ -29,24 +29,26 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::vector<std::string>* ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
+std::vector<std::string> ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
+    std::vector<std::string> emptyResult;
+    std::vector<std::string> arr ;
     //loop through the confnode check if the key is present
     if (del == "NULL")
     {
         std::map<std::string, std::vector<std::string> >::iterator it = ConfNode.getValues().find(key);
         if (it != ConfNode.getValues().end())
-            return &it->second;
+            return it->second;
     }
     else {
         for (size_t i = 0; i < ConfNode.children.size(); i++)
         {
-            std::vector<std::string> arr = split(ConfNode.children[i].getName());
+            arr = split(ConfNode.children[i].getName());
             if (arr[1] == del)
                 return getValuesForKey(ConfNode.children[i], key, "NULL");
         }
     }
-    return NULL;
+    return emptyResult;
 }
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
@@ -135,11 +137,11 @@ void CheckAllError(const std::vector<std::string>& KV, const std::string& key, C
     if (key != KV[0]) return;
     
     
-    std::vector<std::string>* helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
-    if (helo != NULL)
+    std::vector<std::string> helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
+    if (!helo.empty())
     {
-        if (max != -1 && (int)(helo->size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
-        if (mult != -1 && (helo->size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+        if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
+        if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
     }
     else
     {
@@ -153,7 +155,7 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
     if (blockType == "server")
     {
         CheckAllError(KV, "listen", ConfNode, -1, 1);
-        CheckAllError(KV, "server_name", ConfNode, -1, 1);
+        CheckAllError(KV, "server_names", ConfNode, -1, 1);
         CheckAllError(KV, "error_page", ConfNode, -1, 2);
         CheckAllError(KV, "client_max_body_size", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
@@ -196,7 +198,7 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
     if (!initialized)
     {
         SERVER_VALID_KEYS.push_back("listen");
-        SERVER_VALID_KEYS.push_back("server_name");
+        SERVER_VALID_KEYS.push_back("server_names");
         SERVER_VALID_KEYS.push_back("error_page");
         SERVER_VALID_KEYS.push_back("client_max_body_size");
         SERVER_VALID_KEYS.push_back("root");
@@ -353,7 +355,7 @@ ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, std::string
     {
         for (std::map<std::string, std::vector<std::string> >::const_iterator it = ConfigPars[i].values.begin(); it != ConfigPars[i].values.end(); ++it)
         {
-            if(it->first == "server_name" && it->second[0] == ServerName )
+            if(it->first == "server_names" && it->second[0] == ServerName )
             {
                 return ConfigPars[i];
             }
