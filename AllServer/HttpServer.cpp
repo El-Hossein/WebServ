@@ -13,7 +13,7 @@ void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<std::vector<int
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
         std::vector<std::string> ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
-        if (ConfPort.empty())
+        if (!ConfPort.empty())
         {
             std::vector<int> ports;
             for (size_t j = 0; j < ConfPort.size(); j++)
