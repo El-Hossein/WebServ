@@ -126,7 +126,7 @@ void	Request::SetUpRequest()
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-	ConfigNode RightServer = ConfigNode::GetServer(ConfigPars, "myserver1.com");
+	ConfigNode RightServer = ConfigNode::GetServer(Servers, "myserver1.com");
     RightServer.print();
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
