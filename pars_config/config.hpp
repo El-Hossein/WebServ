@@ -28,7 +28,7 @@ class ConfigNode {
 		
 		std::map<std::string, std::vector<std::string> >& getValues() ;
 		static ConfigNode GetServer(std::vector<ConfigNode> ConfigPars, std::string ServerName);
-		static std::vector<std::string>* getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
+		static std::vector<std::string> getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };
