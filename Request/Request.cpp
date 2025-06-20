@@ -41,16 +41,19 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	std::getline(FirstLineStream, line);
 
 	std::istringstream Attributes(line);
-	std::string method, path, protocol;
-	Attributes >> method >> path >> protocol;
+	std::string method, URI, protocol;
+	Attributes >> method >> URI >> protocol;
 
 	if (method != "GET" && method != "POST" && method != "DELETE")
 		throw std::runtime_error("Invalide request method.");
+
+	ParseURI(URI);
+
 	if (protocol != "HTTP/1.1")
 		throw std::runtime_error("Invalide request protocol.");
 
 	Headers.push_back(std::make_pair("Method", method));
-	Headers.push_back(std::make_pair("Path", path));
+	Headers.push_back(std::make_pair("Path", URI));
 	Headers.push_back(std::make_pair("Protocol", protocol));
 }
 
@@ -116,6 +119,8 @@ void	Request::CheckRequiredHeaders()
 		{
 			if (it->first == "Content-Length" || it->first == "Transfer-Encoding")
 				flag++;
+			if (it->first == "Transfer-Encoding" && it->second != "chunked")
+				throw "501 Not implemented";
 		}
 		if (flag != 2)	throw std::runtime_error("400");
 	}
@@ -126,12 +131,12 @@ void	Request::SetUpRequest()
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-	ConfigNode RightServer = ConfigNode::GetServer(Servers, "myserver1.com");
-    RightServer.print();
+	ConfigNode RightServer = ConfigNode::GetServer(Servers, "myserver.com");
+    // RightServer.print();
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
-    std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
-    if (e.empty()) 
-        for (std::vector<std::string>::iterator it = e.begin(); it != e.end(); ++it)
+    std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
+    if (!e.empty())
+        for (std::vector<std::string>::iterator it = e.begin(); it != e.end(); it++)
             std::cout << *it << "\n";
 
 	PrintHeaders(this->Headers);

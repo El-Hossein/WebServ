@@ -25,9 +25,16 @@ private:
 public:
 	Request(const int	&, std::vector<ConfigNode>);
 	~Request();
+	
 	// ---------		GETTERS 	 	--------- //
 	PairedVectorSS	GetHeaders() const;
 	std::string		GetHeaderValue(std::string key1) const;
+	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	SetUpRequest();
 };
+
+// ---------	HELPER FUNCTIONS 	--------- //
+
+void	ParseURI(std::string	&URI);
+void	SplitURI(std::string	&URI);
