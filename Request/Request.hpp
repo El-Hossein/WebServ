@@ -20,21 +20,29 @@ private:
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
-	
+
 	void	CheckRequiredHeaders();
+
+	void	DecodeQuery();
+	void	SplitURI();
+	void	ParseURI(std::string	&URI);
 public:
 	Request(const int	&, std::vector<ConfigNode>);
 	~Request();
-	
+
 	// ---------		GETTERS 	 	--------- //
 	PairedVectorSS	GetHeaders() const;
-	std::string		GetHeaderValue(std::string key1) const;
-	
+	std::string		GetHeaderValue(std::string) const;
+
+	// ---------		SETTERS 	 	--------- //
+	void	SetHeaderValue(std::string, std::string);
+
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	SetUpRequest();
 };
 
 // ---------	HELPER FUNCTIONS 	--------- //
 
-void	ParseURI(std::string	&URI);
-void	SplitURI(std::string	&URI);
+bool			IsHexa(char c);
+std::string		HexaToChar(std::string	Hexa);
+void			PrintHeaders(PairedVectorSS Headers);

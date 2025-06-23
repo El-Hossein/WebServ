@@ -29,9 +29,82 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 }
 
 /*	|#----------------------------------#|
+	|#			 	SETTERS    			#|
+	|#----------------------------------#|
+*/
+
+void	Request::SetHeaderValue(std::string	key, std::string NewValue)
+{
+	for (PairedVectorSS::iterator it = Headers.begin(); it != Headers.end(); it++)
+	{
+		if (key == it->first)
+			return it->second = NewValue, (void)0;
+	}
+}
+
+/*	|#----------------------------------#|
 	|#			MEMBER FUNCTIONS    	#|
 	|#----------------------------------#|
 */
+
+void	Request::DecodeQuery()
+{
+	size_t pos = 0;
+	std::string	Query = GetHeaderValue("Query");
+
+    while((pos = Query.find("%", pos)) != std::string::npos)
+	{
+		if (pos + 2 < Query.size() && IsHexa(Query[pos + 1]) && IsHexa(Query[pos + 2]))
+		{
+			Query.replace(pos, 3, HexaToChar(Query.substr(pos + 1, 2))); // 2 letters after '%
+			pos += 1; // 1 -> size d charachter
+		}
+		else
+			throw "Error: % in the Query";
+    }
+	SetHeaderValue("Query", Query);
+}
+
+void	Request::SplitURI()
+{
+	std::string	Path,Query;
+	std::string	URI = GetHeaderValue("URI");
+	size_t		pos = URI.find("?");
+
+	if (pos == std::string::npos) // Query has not been found
+	{
+		Path = URI, Query = "", (void)0;
+	}
+	else
+	{
+		Path = URI.substr(0, pos);
+		Query = URI.substr(pos + 1);
+	}
+
+	this->Headers.push_back(std::make_pair("Path", Path));
+	this->Headers.push_back(std::make_pair("Query", Query));
+
+	// ---------# Parse Path #--------- //
+	for (size_t	i = 0, j = 0; i < Path.length(); i++)
+	{
+		if (!isalnum(URI[i]) && URI[i] != '/' && URI[i] != '.'
+			&& URI[i] != '-' && URI[i] != '_' && URI[i] != '?')
+				throw "400 Bad Request 1";
+
+		if (URI[i] == '?')
+			(++j >= 2) ? throw "400 Bad Request 2" : (void)0;
+	}
+}
+
+void	Request::ParseURI(std::string	&URI)
+{
+	if (URI.length() > 2048)
+		throw "414 Request-URI too long";
+
+	Headers.push_back(std::make_pair("URI", URI));
+	SplitURI();
+	DecodeQuery();
+}
 
 void	Request::ReadFirstLine(std::string	FirstLine)
 {
@@ -46,14 +119,12 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 
 	if (method != "GET" && method != "POST" && method != "DELETE")
 		throw std::runtime_error("Invalide request method.");
+	Headers.push_back(std::make_pair("Method", method));
 
 	ParseURI(URI);
 
 	if (protocol != "HTTP/1.1")
 		throw std::runtime_error("Invalide request protocol.");
-
-	Headers.push_back(std::make_pair("Method", method));
-	Headers.push_back(std::make_pair("Path", URI));
 	Headers.push_back(std::make_pair("Protocol", protocol));
 }
 
@@ -97,15 +168,6 @@ void	Request::ReadRequestHeader()
 
 	ReadFirstLine(StdBuffer); // First line
 	ReadHeaders(StdBuffer); // other lines
-}
-
-inline void	PrintHeaders(PairedVectorSS Headers)
-{
-	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); ++it)
-	{
-		std::cout << it->first << ": -----> " << it->second << std::endl;
-	}
-	std::cout  << "-----------------------------------------------------" << std::endl;
 }
 
 void	Request::CheckRequiredHeaders()

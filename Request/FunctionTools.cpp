@@ -1,24 +1,28 @@
 #include "Request.hpp"
 
-/*
-	check if URI contains characters not allowed
-		throw "400 Bad Request";
+// --------------#	URI TOOLS #-------------- //
 
-	check if URI length > 2048 chars
-		throw "414 Request-URI too long"
-*/
-void	ParseURI(std::string	&URI)
+bool	IsHexa(char c)
 {
-	for (size_t	i = 0; i < URI.length(); i++)
-		if (!isalnum(URI[i]) && URI[i] != '/' && URI[i] != '.'
-			&& URI[i] != '-' && URI[i] != '_')
-				throw "400 Bad Request";
-
-	if (URI.length() > 2048)
-		throw "414 Request-URI too long";
+	return std::isdigit(c) || (std::tolower(c) >= 'a' && std::tolower(c) <= 'f');
 }
 
-void	SplitURI(std::string	&URI)
+std::string	HexaToChar(std::string	Hexa)
 {
-	
+	std::cout << Hexa << std::endl;
+	std::string tmp = "0x" + Hexa; // Convert to Hexa form
+
+	char	Helpervar = static_cast<char>(std::stod(tmp)); // Convert Hexa to Char
+	return std::string(1, Helpervar); // calling constructor string with 1 character
+}
+
+// --------------#	PRINTER	 #-------------- //
+
+void	PrintHeaders(PairedVectorSS Headers)
+{
+	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); ++it)
+	{
+		std::cout << it->first << ": ----->" << it->second << std::endl;
+	}
+	std::cout  << "-----------------------------------------------------" << std::endl;
 }
