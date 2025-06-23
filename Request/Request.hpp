@@ -15,6 +15,8 @@ private:
 	std::vector<ConfigNode>	Servers;
 
 	PairedVectorSS	Headers;
+	PairedVectorSS	QueryParams;
+
 	std::string		BodyUnprocessedBuffer;
 
 	void	ReadRequestHeader();
@@ -23,7 +25,7 @@ private:
 
 	void	CheckRequiredHeaders();
 
-	void	DecodeQuery();
+	void	HandleQuery();
 	void	SplitURI();
 	void	ParseURI(std::string	&URI);
 public:
