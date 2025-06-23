@@ -21,8 +21,6 @@ std::string	HexaToChar(std::string	Hexa)
 void	PrintHeaders(PairedVectorSS Headers)
 {
 	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); ++it)
-	{
-		std::cout << it->first << ": ----->" << it->second << std::endl;
-	}
+		std::cout << "key{" << it->first << "}		value:" << it->second << std::endl;
 	std::cout  << "-----------------------------------------------------" << std::endl;
 }
