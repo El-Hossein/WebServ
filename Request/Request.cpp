@@ -47,11 +47,12 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 	|#----------------------------------#|
 */
 
-void	Request::DecodeQuery()
+void	Request::HandleQuery()
 {
 	size_t pos = 0;
 	std::string	Query = GetHeaderValue("Query");
 
+	// ---------		Decode Query 	 	--------- //
     while((pos = Query.find("%", pos)) != std::string::npos)
 	{
 		if (pos + 2 < Query.size() && IsHexa(Query[pos + 1]) && IsHexa(Query[pos + 2]))
@@ -63,6 +64,23 @@ void	Request::DecodeQuery()
 			throw "Error: % in the Query";
     }
 	SetHeaderValue("Query", Query);
+
+	// ---------	Split && Save Query Params	 	--------- //
+
+	std::istringstream	stream(Query);
+	std::string			tmp, key, value;
+	
+	while (std::getline(stream, tmp, '&'))
+	{
+		pos = tmp.find("=");
+		if (pos == std::string::npos)
+			continue;
+		key = tmp.substr(0, pos);
+		value = tmp.substr(pos + 1);
+		if (key.empty() || value.empty())
+			continue;
+		QueryParams.push_back(make_pair(key, value));
+	}
 }
 
 void	Request::SplitURI()
@@ -103,7 +121,7 @@ void	Request::ParseURI(std::string	&URI)
 
 	Headers.push_back(std::make_pair("URI", URI));
 	SplitURI();
-	DecodeQuery();
+	HandleQuery();
 }
 
 void	Request::ReadFirstLine(std::string	FirstLine)
