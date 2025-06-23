@@ -4,7 +4,8 @@ CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
 
-SRC	= ./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp ./Request/Request.cpp
+SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp ./Request/Request.cpp \
+		./FunctionTools.cpp
 
 OBJ_DIR = obj
 
@@ -26,8 +27,11 @@ clean:
 	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -rf $(NAME)
+	rm -rf $(NAME) zbi
 
 re: fclean all
 
 .PHONY: all clean fclean re
+
+test:
+	c++ -fsanitize=address -std=c++98 Request/z.cpp -o zbi && echo "\n" && ./zbi
