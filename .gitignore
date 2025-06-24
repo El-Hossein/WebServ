@@ -1,3 +1,5 @@
+Request/*.txt
+Request/z.cpp
 obj/
 Webserv
 a.tldr
