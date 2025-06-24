@@ -13,8 +13,12 @@ class Request
 private:
 	int						ClientFd;
 	std::vector<ConfigNode>	Servers;
+	ConfigNode				RightServer;
 
 	PairedVectorSS	Headers;
+	PairedVectorSS	QueryParams;
+
+	std::string		FullSystemPath;
 	std::string		BodyUnprocessedBuffer;
 
 	void	ReadRequestHeader();
@@ -23,7 +27,8 @@ private:
 
 	void	CheckRequiredHeaders();
 
-	void	DecodeQuery();
+	void	HandleQuery();
+	void	HandlePath();
 	void	SplitURI();
 	void	ParseURI(std::string	&URI);
 public:
