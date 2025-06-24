@@ -9,7 +9,6 @@ bool	IsHexa(char c)
 
 std::string	HexaToChar(std::string	Hexa)
 {
-	std::cout << Hexa << std::endl;
 	std::string tmp = "0x" + Hexa; // Convert to Hexa form
 
 	char	Helpervar = static_cast<char>(std::stod(tmp)); // Convert Hexa to Char
