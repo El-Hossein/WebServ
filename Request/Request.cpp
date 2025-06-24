@@ -81,7 +81,18 @@ void	Request::HandleQuery()
 			continue;
 		QueryParams.push_back(make_pair(key, value));
 	}
+	PrintHeaders(QueryParams);
 }
+
+void   Request::HandlePath()
+{
+	std::string			UriPath = GetHeaderValue("Path");
+	std::vector<string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", "NULL");
+	if (ConfigPath.empty())
+		return ;
+	this->FullSystemPath = ConfigPath[0] + UriPath;
+}
+
 
 void	Request::SplitURI()
 {
@@ -208,10 +219,11 @@ void	Request::CheckRequiredHeaders()
 
 void	Request::SetUpRequest()
 {
+	RighServer = ConfigNode::GetServer(Servers, "myserver.com");
+	
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-	ConfigNode RightServer = ConfigNode::GetServer(Servers, "myserver.com");
     // RightServer.print();
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
