@@ -13,7 +13,7 @@ class Request
 private:
 	int						ClientFd;
 	std::vector<ConfigNode>	Servers;
-	ConfigNodd				RightServer;
+	ConfigNode				RightServer;
 
 	PairedVectorSS	Headers;
 	PairedVectorSS	QueryParams;
@@ -28,6 +28,7 @@ private:
 	void	CheckRequiredHeaders();
 
 	void	HandleQuery();
+	void	HandlePath();
 	void	SplitURI();
 	void	ParseURI(std::string	&URI);
 public:
