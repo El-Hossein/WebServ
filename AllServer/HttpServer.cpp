@@ -187,6 +187,21 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
+std::string SetNewCookie()
+{
+    // add Set-cookie: 
+}
+
+void SetUpCookie(Request obj)
+{
+    std::string a = obj.GetHeaderValue("Cookie");
+    if (a.empty())
+    {
+        std::string cookie = SetNewCookie();
+    }
+    
+}
+
 void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars)
 {
     (void)ConfigPars;
@@ -195,6 +210,8 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
 		// -------------	Process request	 ------------- //
 		Request obj(client_fd, ConfigPars);
 		obj.SetUpRequest();
+        // -------------	Process Cookie		 ------------- //
+        SetUpCookie(obj);
         // -------------	Process respons		 ------------- //
         SetUpResponse(client_fd, response_map, obj);
 
