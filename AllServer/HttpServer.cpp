@@ -144,24 +144,14 @@ void HttpServer::accept_new_client(int server_fd)
     std::cout << "Accept new clien: " << client_fd << std::endl;
 }
 
-void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&request)
+void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&Request)
 {
     std::string response;
-	bool keep_alive = false;
     std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
     int content_length = body.length(); //
+	std::map<std::string, std::string>	headers = Request.GetHeaders();
 
-	PairedVectorSS	headers = request.GetHeaders();
-    for (size_t i = 0; i < headers.size(); i++)
-    {
-        if (headers[i].first == "Protocol" && headers[i].second == "HTTP/1.1")
-            keep_alive = true;  // HTTP/1.1 defaults to keep-alive unless told otherwise
-        if (headers[i].first == "Connection" && headers[i].second == "keep-alive")
-            keep_alive = true;  // Explicit keep-alive request
-        if (headers[i].first == "Connection" && headers[i].second == "close")
-            keep_alive = false; // Client wants to close connection
-    }
-    if (keep_alive)
+    if (Request.GetConnection()) // if (keep-alive || close)
         response = "HTTP/1.1 200 OK\r\n"
                    "Connection: keep-alive\r\n"
                    "Keep-Alive: timeout=1, max=100\r\n"

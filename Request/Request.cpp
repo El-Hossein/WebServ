@@ -14,18 +14,23 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
-PairedVectorSS	Request::GetHeaders() const
+std::map<std::string, std::string>	Request::GetHeaders() const
 {
 	return this->Headers;
 }
 
 std::string	Request::GetHeaderValue(std::string	key) const {
-	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); it++)
+	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
 			return it->second;
 	}
-	return NULL;
+	return "NULL";
+}
+
+bool	Request::GetConnection() const
+{
+	return this->KeepAlive;
 }
 
 /*	|#----------------------------------#|
@@ -35,7 +40,7 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
-	for (PairedVectorSS::iterator it = Headers.begin(); it != Headers.end(); it++)
+	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
 			return it->second = NewValue, (void)0;
@@ -63,6 +68,8 @@ void	Request::HandleQuery()
 		else
 			throw "Error: % in the Query";
     }
+	for (size_t	i = 0; i < Query.length(); i++) // replacing each '+' with ' '
+		if (Query[i] == '+')	Query[i] = ' ';
 	SetHeaderValue("Query", Query);
 
 	// ---------	Split && Save Query Params	 	--------- //
@@ -79,7 +86,7 @@ void	Request::HandleQuery()
 		value = tmp.substr(pos + 1);
 		if (key.empty() || value.empty())
 			continue;
-		QueryParams.push_back(make_pair(key, value));
+		QueryParams.insert(make_pair(key, value));
 	}
 	std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
 }
@@ -91,8 +98,29 @@ void   Request::HandlePath()
 	if (ConfigPath.empty())
 		return ;
 	this->FullSystemPath = ConfigPath[0] + UriPath;
-}
 
+	std::istringstream	stream(FullSystemPath);
+	std::string			part;
+
+	while (std::getline(stream, part, '/'))
+	{
+		if (!part.empty() && part != ".")
+			PathParts.push_back(part);
+	}
+
+	while (FullSystemPath.size() > 1 && FullSystemPath.back() == '/') // remove '///' at the end
+		FullSystemPath.pop_back();
+
+	/*
+		check if the path is valide.
+		check whether the path is file or directory
+		file -> serve it.
+
+	*/
+	// ---------# Path Availability #--------- //
+	int	ret = access(FullSystemPath.c_str(), R_OK);
+	(void)ret;
+}
 
 void	Request::SplitURI()
 {
@@ -110,8 +138,8 @@ void	Request::SplitURI()
 		Query = URI.substr(pos + 1);
 	}
 
-	this->Headers.push_back(std::make_pair("Path", Path));
-	this->Headers.push_back(std::make_pair("Query", Query));
+	Headers["Path"] = Path;
+	Headers["Query"] = Query;
 
 	// ---------# Parse Path #--------- //
 	for (size_t	i = 0, j = 0; i < Path.length(); i++)
@@ -130,7 +158,7 @@ void	Request::ParseURI(std::string	&URI)
 	if (URI.length() > 2048)
 		throw "414 Request-URI too long";
 
-	Headers.push_back(std::make_pair("URI", URI));
+	Headers["URI"] = URI;
 	SplitURI();
 	HandlePath();
 	HandleQuery();
@@ -148,14 +176,14 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	Attributes >> method >> URI >> protocol;
 
 	if (method != "GET" && method != "POST" && method != "DELETE")
-		throw std::runtime_error("Invalide request method.");
-	Headers.push_back(std::make_pair("Method", method));
+		throw std::runtime_error("501: Invalide request method.");
+	Headers["Method"] = method;
 
 	ParseURI(URI);
 
 	if (protocol != "HTTP/1.1")
-		throw std::runtime_error("Invalide request protocol.");
-	Headers.push_back(std::make_pair("Protocol", protocol));
+		throw std::runtime_error("505: Invalide request protocol.");
+	Headers["Protocol"] =  protocol;
 }
 
 void	Request::ReadHeaders(std::string Header)
@@ -170,7 +198,7 @@ void	Request::ReadHeaders(std::string Header)
 		{
 			std::string headerName = line.substr(0, pos);
 			std::string headerValue = line.substr(pos + 2);
-			Headers.push_back(std::make_pair(headerName, headerValue));
+			Headers[headerName] = headerValue;
 		}
 	}
 }
@@ -191,7 +219,7 @@ void	Request::ReadRequestHeader()
 	std::string	StdBuffer(buffer);
 	size_t npos = StdBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
-		throw std::runtime_error("Invalide request header.");
+		throw std::runtime_error("400: Invalide request header.");
 
 	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
 	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
@@ -200,22 +228,37 @@ void	Request::ReadRequestHeader()
 	ReadHeaders(StdBuffer); // other lines
 }
 
+
+
 void	Request::CheckRequiredHeaders()
 {
 	int	flag = 0;
-	PairedVectorSS::const_iterator it = Headers.begin();
 
-	if (it->second == "Post")
+	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
-		for (PairedVectorSS::const_iterator _it = Headers.begin(); _it != Headers.end(); _it++)
+		std::string LowKey = it->first;
+		std::transform(LowKey.begin(), LowKey.end(), LowKey.begin(), ::tolower);
+
+		if (LowKey == "connection")
 		{
-			if (it->first == "Content-Length" || it->first == "Transfer-Encoding")
+			if (it->second != "keep-alive" && it->second != "close")
+				SetHeaderValue("connection", "keep-alive"); // setting up default behaviour
+			it-> second == "keep-alive" ? KeepAlive = true : KeepAlive = false;
+		}
+		if (Headers.begin()->second == "POST")
+		{
+			if (LowKey == "content-length" || LowKey == "transfer-encoding")
+			{
+				if (!ValidContentLength(it->second))	throw "400: Bad Request";
+				ContentLength = strtod(it->second.c_str(), NULL);
 				flag++;
-			if (it->first == "Transfer-Encoding" && it->second != "chunked")
+			}
+			else if (LowKey == "transfer-encoding" && it->second != "chunked")
 				throw "501 Not implemented";
 		}
-		if (flag != 2)	throw std::runtime_error("400");
 	}
+	if (Headers.begin()->second == "POST")
+		if (flag == 2)	throw std::runtime_error("400");
 }
 
 void	Request::SetUpRequest()

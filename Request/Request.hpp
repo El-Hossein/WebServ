@@ -6,7 +6,10 @@
 #define BUFFER_SIZE 1024 // 1kb
 #define MAX_HEADER_SIZE 8192 // 8kb
 
-typedef std::vector<std::pair<std::string, std::string> > PairedVectorSS;
+/**
+ * 
+ * 
+ */
 
 class Request
 {
@@ -15,12 +18,15 @@ private:
 	std::vector<ConfigNode>	Servers;
 	ConfigNode				RightServer;
 
-	PairedVectorSS	Headers;
-	PairedVectorSS	QueryParams;
+	std::map<std::string, std::string>	Headers;
+	std::map<std::string, std::string>	QueryParams;
+	std::string							FullSystemPath;
+	std::vector<std::string>			PathParts;
 
-	std::string		FullSystemPath;
-	std::string		BodyUnprocessedBuffer;
-
+	bool						KeepAlive;
+	std::string					BodyUnprocessedBuffer;
+	size_t						ContentLength;
+	
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
@@ -36,8 +42,9 @@ public:
 	~Request();
 
 	// ---------		GETTERS 	 	--------- //
-	PairedVectorSS	GetHeaders() const;
+	std::map<std::string, std::string>	GetHeaders() const;
 	std::string		GetHeaderValue(std::string) const;
+	bool			GetConnection() const;
 
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
@@ -50,4 +57,5 @@ public:
 
 bool			IsHexa(char c);
 std::string		HexaToChar(std::string	Hexa);
-void			PrintHeaders(PairedVectorSS Headers);
+void			PrintHeaders(std::map<std::string, std::string> Headers);
+bool			ValidContentLength(const std::string& value);
