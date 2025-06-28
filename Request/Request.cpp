@@ -33,6 +33,11 @@ bool	Request::GetConnection() const
 	return this->KeepAlive;
 }
 
+std::string	Request::GetFullPath() const
+{
+	return FullSystemPath;
+}
+
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -110,16 +115,6 @@ void   Request::HandlePath()
 
 	while (FullSystemPath.size() > 1 && FullSystemPath.back() == '/') // remove '///' at the end
 		FullSystemPath.pop_back();
-
-	/*
-		check if the path is valide.
-		check whether the path is file or directory
-		file -> serve it.
-
-	*/
-	// ---------# Path Availability #--------- //
-	int	ret = access(FullSystemPath.c_str(), R_OK);
-	(void)ret;
 }
 
 void	Request::SplitURI()
@@ -145,7 +140,7 @@ void	Request::SplitURI()
 	for (size_t	i = 0, j = 0; i < Path.length(); i++)
 	{
 		if (!isalnum(URI[i]) && URI[i] != '/' && URI[i] != '.'
-			&& URI[i] != '-' && URI[i] != '_' && URI[i] != '?')
+			&& URI[i] != '-' && URI[i] != '_')
 				throw "400 Bad Request 1";
 
 		if (URI[i] == '?')
@@ -175,21 +170,24 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	std::string method, URI, protocol;
 	Attributes >> method >> URI >> protocol;
 
-	if (method != "GET" && method != "POST" && method != "DELETE")
-		throw std::runtime_error("501: Invalide request method.");
+	if		(method == "GET")	this->Method = GET;
+	else if (method == "POST")	this->Method = POST;
+	else if (method == "GET")	this->Method = DELETE;	
+	else						throw ("400: Invalide request method.");
+		
 	Headers["Method"] = method;
 
 	ParseURI(URI);
 
 	if (protocol != "HTTP/1.1")
-		throw std::runtime_error("505: Invalide request protocol.");
+		throw ("505: Invalide request protocol.");
 	Headers["Protocol"] =  protocol;
 }
 
 void	Request::ReadHeaders(std::string Header)
 {
 	std::string			line;
-	std::istringstream	stream(Header); // to use getline
+	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
@@ -197,7 +195,11 @@ void	Request::ReadHeaders(std::string Header)
 		if (pos != std::string::npos)
 		{
 			std::string headerName = line.substr(0, pos);
+			if (ValidFieldName(headerName))
+				throw "400 Bad Request";
 			std::string headerValue = line.substr(pos + 2);
+			if (ValidFieldValue(headerName))
+				throw "400 Bad Request";
 			Headers[headerName] = headerValue;
 		}
 	}
@@ -210,16 +212,16 @@ void	Request::ReadRequestHeader()
 
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead <= 0)
-		throw std::runtime_error("Error: Read return.");
+		throw ("Error: Read return.");
 	if (BytesRead >= MAX_HEADER_SIZE - 1)
-		throw std::runtime_error("Invalide request header lengh.");
+		throw ("Invalide request header lengh.");
 
 	buffer[BytesRead] = '\0';
 
 	std::string	StdBuffer(buffer);
 	size_t npos = StdBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
-		throw std::runtime_error("400: Invalide request header.");
+		throw ("400: Invalide request header.");
 
 	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
 	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
@@ -227,8 +229,6 @@ void	Request::ReadRequestHeader()
 	ReadFirstLine(StdBuffer); // First line
 	ReadHeaders(StdBuffer); // other lines
 }
-
-
 
 void	Request::CheckRequiredHeaders()
 {
@@ -258,7 +258,7 @@ void	Request::CheckRequiredHeaders()
 		}
 	}
 	if (Headers.begin()->second == "POST")
-		if (flag == 2)	throw std::runtime_error("400");
+		if (flag == 2)	throw ("400");
 }
 
 void	Request::SetUpRequest()
@@ -268,12 +268,14 @@ void	Request::SetUpRequest()
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-    // RightServer.print();
-    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
+	switch (Method)
+	{
+		case GET:		Get(*this);
+		case POST:		Post(*this);
+		case DELETE:	Delete(*this);
+	}
+
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
-    if (!e.empty())
-        for (std::vector<std::string>::iterator it = e.begin(); it != e.end(); it++)
-            std::cout << *it << "\n";
 
 	PrintHeaders(this->Headers);
 }
