@@ -2,10 +2,10 @@ NAME = webserv
 
 CC = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
+FLAGS = -fsanitize=address -g #-Wall -Wextra -Werror -std=c++98
 
 SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp ./Request/Request.cpp \
-		./FunctionTools.cpp
+		./FunctionTools.cpp ./Request/Get.cpp ./Request/Post.cpp ./Request/Delete.cpp
 
 OBJ_DIR = obj
 

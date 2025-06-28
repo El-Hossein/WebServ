@@ -184,11 +184,11 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
     {
 		// -------------	Process request	 ------------- //
 		Request obj(client_fd, ConfigPars);
-		obj.SetUpRequest();
-        // -------------	Process respons		 ------------- //
+		try { obj.SetUpRequest(); }
+			catch (const char *e) { std::cout << e << std::endl;	exit(1); }
+
+        // -------------	Process response	 ------------- //
         SetUpResponse(client_fd, response_map, obj);
-
-
         // Enable writing
         struct kevent event;
         AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
