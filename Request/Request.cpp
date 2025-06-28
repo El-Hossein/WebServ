@@ -107,14 +107,18 @@ void   Request::HandlePath()
 	std::istringstream	stream(FullSystemPath);
 	std::string			part;
 
+	FullSystemPath.clear();
 	while (std::getline(stream, part, '/'))
 	{
-		if (!part.empty() && part != ".")
+		if (part == "..")
+			throw ("403 Forbidden");
+		else if (!part.empty() && part != ".")
+		{
 			PathParts.push_back(part);
+			this->FullSystemPath += "/";
+			this->FullSystemPath += part;
+		}
 	}
-
-	while (FullSystemPath.size() > 1 && FullSystemPath.back() == '/') // remove '///' at the end
-		FullSystemPath.pop_back();
 }
 
 void	Request::SplitURI()
@@ -195,11 +199,11 @@ void	Request::ReadHeaders(std::string Header)
 		if (pos != std::string::npos)
 		{
 			std::string headerName = line.substr(0, pos);
-			if (ValidFieldName(headerName))
-				throw "400 Bad Request";
+			if (!ValidFieldName(headerName))
+				throw "400 Bad Request ReadHeaders()-1";
 			std::string headerValue = line.substr(pos + 2);
-			if (ValidFieldValue(headerName))
-				throw "400 Bad Request";
+			if (!ValidFieldValue(headerName))
+				throw "400 Bad Request ReadHeaders()-2";
 			Headers[headerName] = headerValue;
 		}
 	}
