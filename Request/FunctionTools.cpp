@@ -7,6 +7,13 @@ bool	IsHexa(char c)
 	return std::isdigit(c) || (std::tolower(c) >= 'a' && std::tolower(c) <= 'f');
 }
 
+bool	IsValide(char c)
+{
+	return std::isalnum(c) || c == '!' || c == '#' || c == '$' || c == '%' ||
+		   c == '&' || c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
+		   c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
+}
+
 std::string	HexaToChar(std::string	Hexa)
 {
 	std::string tmp = "0x" + Hexa; // Convert to Hexa form
@@ -35,4 +42,22 @@ bool	ValidContentLength(const std::string& value)
 	if (ret < 0)						return false;
 
 	return true;
+}
+
+bool	ValidFieldName(const std::string& name)
+{
+    if (name.empty())
+		return false;
+    for (size_t i = 0; i < name.size(); ++i)
+        if (!IsValide(name[i]))
+			return false;
+    return true;
+}
+
+bool	ValidFieldValue(const std::string& value)
+{
+    for (size_t i = 0; i < value.size(); i++)
+        if (!std::isprint(value[i]))
+			return false;
+    return true;
 }
