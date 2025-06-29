@@ -2,7 +2,9 @@
 
 									;
 Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
-																		Servers(_ConfigPars)
+																		Servers(_ConfigPars),
+																		ContentLength(0),
+																		KeepAlive(false)
 {
 }
 
@@ -36,6 +38,16 @@ bool	Request::GetConnection() const
 std::string	Request::GetFullPath() const
 {
 	return FullSystemPath;
+}
+
+std::string	Request::GetUnprocessedBuffer() const
+{
+	return this->BodyUnprocessedBuffer;
+}
+
+size_t		Request::GetContentLength() const
+{
+	return this->ContentLength;
 }
 
 /*	|#----------------------------------#|
@@ -190,22 +202,26 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 
 void	Request::ReadHeaders(std::string Header)
 {
-	std::string			line;
+	std::string			line, headerName, headerValue;
 	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
 		size_t pos = line.find(": ");
-		if (pos != std::string::npos)
-		{
-			std::string headerName = line.substr(0, pos);
-			if (!ValidFieldName(headerName))
-				throw "400 Bad Request ReadHeaders()-1";
-			std::string headerValue = line.substr(pos + 2);
-			if (!ValidFieldValue(headerName))
-				throw "400 Bad Request ReadHeaders()-2";
-			Headers[headerName] = headerValue;
-		}
+		if (pos == std::string::npos)
+			continue ;
+
+		headerName = line.substr(0, pos);
+		if (!ValidFieldName(headerName))
+			throw "400 Bad Request ReadHeaders()-1";
+
+		headerValue = line.substr(pos + 2);
+		if (!headerValue.empty() && headerValue.back() == '\r')
+			headerValue.pop_back();
+		if (!ValidFieldValue(headerValue))
+			throw "400 Bad Request ReadHeaders()-2";
+
+		Headers[headerName] = headerValue;
 	}
 }
 
@@ -227,7 +243,7 @@ void	Request::ReadRequestHeader()
 	if (npos == std::string::npos)
 		throw ("400: Invalide request header.");
 
-	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
+	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n") + 4);
 	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
 
 	ReadFirstLine(StdBuffer); // First line
@@ -249,17 +265,19 @@ void	Request::CheckRequiredHeaders()
 				SetHeaderValue("connection", "keep-alive"); // setting up default behaviour
 			it-> second == "keep-alive" ? KeepAlive = true : KeepAlive = false;
 		}
-		if (Headers.begin()->second == "POST")
-		{
-			if (LowKey == "content-length" || LowKey == "transfer-encoding")
+		// if (Headers.begin()->second == "POST")
+		// {
+			if (LowKey == "content-length")
 			{
+				std::cout << "[" << it->second << "]" << std::endl;
 				if (!ValidContentLength(it->second))	throw "400: Bad Request";
 				ContentLength = strtod(it->second.c_str(), NULL);
+				std::cout << "BEFORE: ---->" << ContentLength << std::endl; 
 				flag++;
 			}
-			else if (LowKey == "transfer-encoding" && it->second != "chunked")
-				throw "501 Not implemented";
-		}
+			// else if (LowKey == "transfer-encoding" && it->second != "chunked")
+			// 	throw "501 Not implemented";
+		// }
 	}
 	if (Headers.begin()->second == "POST")
 		if (flag == 2)	throw ("400");
@@ -274,12 +292,12 @@ void	Request::SetUpRequest()
 
 	switch (Method)
 	{
-		case GET:		Get(*this);
-		case POST:		Post(*this);
+		case GET:		{	Get		GetObj(*this);	GetObj.CheckPath(GetFullPath()); }
+		case POST:		{	Post	PostObj(*this);	PostObj.ParseBody();	}
 		case DELETE:	Delete(*this);
 	}
 
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
 
-	PrintHeaders(this->Headers);
+	// PrintHeaders(this->Headers);
 }
