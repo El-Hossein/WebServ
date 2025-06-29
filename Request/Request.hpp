@@ -41,7 +41,9 @@ public:
 	std::map<std::string, std::string>	GetHeaders() const;
 	std::string		GetFullPath() const;
 	std::string		GetHeaderValue(std::string) const;
+	std::string		GetUnprocessedBuffer() const;
 	bool			GetConnection() const;
+	size_t			GetContentLength() const;
 	
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
