@@ -14,18 +14,28 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
-PairedVectorSS	Request::GetHeaders() const
+std::map<std::string, std::string>	Request::GetHeaders() const
 {
 	return this->Headers;
 }
 
 std::string	Request::GetHeaderValue(std::string	key) const {
-	for (PairedVectorSS::const_iterator it = Headers.begin(); it != Headers.end(); it++)
+	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
 			return it->second;
 	}
-	return NULL;
+	return "NULL";
+}
+
+bool	Request::GetConnection() const
+{
+	return this->KeepAlive;
+}
+
+std::string	Request::GetFullPath() const
+{
+	return FullSystemPath;
 }
 
 /*	|#----------------------------------#|
@@ -35,7 +45,7 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
-	for (PairedVectorSS::iterator it = Headers.begin(); it != Headers.end(); it++)
+	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
 			return it->second = NewValue, (void)0;
@@ -63,6 +73,8 @@ void	Request::HandleQuery()
 		else
 			throw "Error: % in the Query";
     }
+	for (size_t	i = 0; i < Query.length(); i++) // replacing each '+' with ' '
+		if (Query[i] == '+')	Query[i] = ' ';
 	SetHeaderValue("Query", Query);
 
 	// ---------	Split && Save Query Params	 	--------- //
@@ -79,7 +91,7 @@ void	Request::HandleQuery()
 		value = tmp.substr(pos + 1);
 		if (key.empty() || value.empty())
 			continue;
-		QueryParams.push_back(make_pair(key, value));
+		QueryParams.insert(make_pair(key, value));
 	}
 	std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
 }
@@ -91,8 +103,23 @@ void   Request::HandlePath()
 	if (ConfigPath.empty())
 		return ;
 	this->FullSystemPath = ConfigPath[0] + UriPath;
-}
 
+	std::istringstream	stream(FullSystemPath);
+	std::string			part;
+
+	FullSystemPath.clear();
+	while (std::getline(stream, part, '/'))
+	{
+		if (part == "..")
+			throw ("403 Forbidden");
+		else if (!part.empty() && part != ".")
+		{
+			PathParts.push_back(part);
+			this->FullSystemPath += "/";
+			this->FullSystemPath += part;
+		}
+	}
+}
 
 void	Request::SplitURI()
 {
@@ -110,14 +137,14 @@ void	Request::SplitURI()
 		Query = URI.substr(pos + 1);
 	}
 
-	this->Headers.push_back(std::make_pair("Path", Path));
-	this->Headers.push_back(std::make_pair("Query", Query));
+	Headers["Path"] = Path;
+	Headers["Query"] = Query;
 
 	// ---------# Parse Path #--------- //
 	for (size_t	i = 0, j = 0; i < Path.length(); i++)
 	{
 		if (!isalnum(URI[i]) && URI[i] != '/' && URI[i] != '.'
-			&& URI[i] != '-' && URI[i] != '_' && URI[i] != '?')
+			&& URI[i] != '-' && URI[i] != '_')
 				throw "400 Bad Request 1";
 
 		if (URI[i] == '?')
@@ -130,7 +157,7 @@ void	Request::ParseURI(std::string	&URI)
 	if (URI.length() > 2048)
 		throw "414 Request-URI too long";
 
-	Headers.push_back(std::make_pair("URI", URI));
+	Headers["URI"] = URI;
 	SplitURI();
 	HandlePath();
 	HandleQuery();
@@ -147,21 +174,24 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	std::string method, URI, protocol;
 	Attributes >> method >> URI >> protocol;
 
-	if (method != "GET" && method != "POST" && method != "DELETE")
-		throw std::runtime_error("Invalide request method.");
-	Headers.push_back(std::make_pair("Method", method));
+	if		(method == "GET")	this->Method = GET;
+	else if (method == "POST")	this->Method = POST;
+	else if (method == "GET")	this->Method = DELETE;	
+	else						throw ("400: Invalide request method.");
+		
+	Headers["Method"] = method;
 
 	ParseURI(URI);
 
 	if (protocol != "HTTP/1.1")
-		throw std::runtime_error("Invalide request protocol.");
-	Headers.push_back(std::make_pair("Protocol", protocol));
+		throw ("505: Invalide request protocol.");
+	Headers["Protocol"] =  protocol;
 }
 
 void	Request::ReadHeaders(std::string Header)
 {
 	std::string			line;
-	std::istringstream	stream(Header); // to use getline
+	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
@@ -169,8 +199,12 @@ void	Request::ReadHeaders(std::string Header)
 		if (pos != std::string::npos)
 		{
 			std::string headerName = line.substr(0, pos);
+			if (!ValidFieldName(headerName))
+				throw "400 Bad Request ReadHeaders()-1";
 			std::string headerValue = line.substr(pos + 2);
-			Headers.push_back(std::make_pair(headerName, headerValue));
+			if (!ValidFieldValue(headerName))
+				throw "400 Bad Request ReadHeaders()-2";
+			Headers[headerName] = headerValue;
 		}
 	}
 }
@@ -182,16 +216,16 @@ void	Request::ReadRequestHeader()
 
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead <= 0)
-		throw std::runtime_error("Error: Read return.");
+		throw ("Error: Read return.");
 	if (BytesRead >= MAX_HEADER_SIZE - 1)
-		throw std::runtime_error("Invalide request header lengh.");
+		throw ("Invalide request header lengh.");
 
 	buffer[BytesRead] = '\0';
 
 	std::string	StdBuffer(buffer);
 	size_t npos = StdBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
-		throw std::runtime_error("Invalide request header.");
+		throw ("400: Invalide request header.");
 
 	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
 	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
@@ -203,19 +237,32 @@ void	Request::ReadRequestHeader()
 void	Request::CheckRequiredHeaders()
 {
 	int	flag = 0;
-	PairedVectorSS::const_iterator it = Headers.begin();
 
-	if (it->second == "Post")
+	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
-		for (PairedVectorSS::const_iterator _it = Headers.begin(); _it != Headers.end(); _it++)
+		std::string LowKey = it->first;
+		std::transform(LowKey.begin(), LowKey.end(), LowKey.begin(), ::tolower);
+
+		if (LowKey == "connection")
 		{
-			if (it->first == "Content-Length" || it->first == "Transfer-Encoding")
+			if (it->second != "keep-alive" && it->second != "close")
+				SetHeaderValue("connection", "keep-alive"); // setting up default behaviour
+			it-> second == "keep-alive" ? KeepAlive = true : KeepAlive = false;
+		}
+		if (Headers.begin()->second == "POST")
+		{
+			if (LowKey == "content-length" || LowKey == "transfer-encoding")
+			{
+				if (!ValidContentLength(it->second))	throw "400: Bad Request";
+				ContentLength = strtod(it->second.c_str(), NULL);
 				flag++;
-			if (it->first == "Transfer-Encoding" && it->second != "chunked")
+			}
+			else if (LowKey == "transfer-encoding" && it->second != "chunked")
 				throw "501 Not implemented";
 		}
-		if (flag != 2)	throw std::runtime_error("400");
 	}
+	if (Headers.begin()->second == "POST")
+		if (flag == 2)	throw ("400");
 }
 
 void	Request::SetUpRequest()
@@ -225,12 +272,14 @@ void	Request::SetUpRequest()
 	ReadRequestHeader();
 	CheckRequiredHeaders();
 
-    // RightServer.print();
-    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "NULL");
+	switch (Method)
+	{
+		case GET:		Get(*this);
+		case POST:		Post(*this);
+		case DELETE:	Delete(*this);
+	}
+
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
-    if (!e.empty())
-        for (std::vector<std::string>::iterator it = e.begin(); it != e.end(); it++)
-            std::cout << *it << "\n";
 
 	PrintHeaders(this->Headers);
 }
