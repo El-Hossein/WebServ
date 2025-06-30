@@ -186,7 +186,15 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
         throw std::runtime_error("Error: Invalid key '" + words[0] + "' for " + blockType + " block");
     ErrorHandle(words, ConfNode, blockType);
 }
-
+void MaxBodySizeTOBytes(std::vector<std::string>& words)
+{
+    if (words[1][words[1].length() -1] == 'B')
+        return;
+    if (words[1][words[1].length() -1] == 'M')
+        std::cout << words[1] << std::endl;
+    if (words[1][words[1].length() -1] == 'G')
+        std::cout << words[1] << std::endl;
+}
 // add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
@@ -231,6 +239,9 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, locations[0]);
     else
         throw std::runtime_error("Error: Unknown block type in configuration.");
+    if (words[0] == "client_max_body_size")
+        MaxBodySizeTOBytes(words);
+        
     for (size_t i = 1; i < words.size(); ++i)
         ConfNode.addValue(words[0], words[i]);
 }
