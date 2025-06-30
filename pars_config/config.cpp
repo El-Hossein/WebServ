@@ -186,14 +186,45 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
         throw std::runtime_error("Error: Invalid key '" + words[0] + "' for " + blockType + " block");
     ErrorHandle(words, ConfNode, blockType);
 }
-void MaxBodySizeTOBytes(std::vector<std::string>& words)
-{
-    if (words[1][words[1].length() -1] == 'B')
+
+void MaxBodySizeToBytes(std::vector<std::string>& words) {
+    if (words.empty() || words.size() < 2 || words[1].empty()) {
+        words[1] = "0";
         return;
-    if (words[1][words[1].length() -1] == 'M')
-        std::cout << words[1] << std::endl;
-    if (words[1][words[1].length() -1] == 'G')
-        std::cout << words[1] << std::endl;
+    }
+
+    std::string value = words[1];
+    char unit = value[value.length() - 1];
+    size_t number = 0;
+
+    std::string num_str = value.substr(0, value.length() - 1);
+    std::stringstream ss(num_str);
+    ss >> number;
+    if (ss.fail()) {
+        words[1] = "0";
+        return;
+    }
+
+    switch (unit) {
+        case 'B':
+            break;
+        case 'K':
+            number *= 1024;
+            break;
+        case 'M':
+            number *= 1024 * 1024;
+            break;
+        case 'G':
+            number *= 1024 * 1024 * 1024;
+            break;
+        default:
+            words[1] = "0";
+            return;
+    }
+
+    std::stringstream result;
+    result << number;
+    words[1] = result.str();
 }
 // add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
@@ -240,7 +271,11 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
     else
         throw std::runtime_error("Error: Unknown block type in configuration.");
     if (words[0] == "client_max_body_size")
-        MaxBodySizeTOBytes(words);
+    {
+        MaxBodySizeToBytes(words);
+        // std::cout << "test: " << words[1] << std::endl;
+    }
+        
         
     for (size_t i = 1; i < words.size(); ++i)
         ConfNode.addValue(words[0], words[i]);
