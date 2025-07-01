@@ -52,16 +52,16 @@ int IsCgiRequest(const char *uri)
 {
     //make a specific folder for CGI scripts
     const char *extension = strrchr(uri, '.');
-    if (extension && (strcmp(extension, ".cgi") == 0 || strcmp(extension, ".py") == 0))
+    if (extension && (strcmp(extension, ".cgi") == 0 || strcmp(extension, ".py") == 0) || strcmp(extension, ".php") == 0)
         return 1;
     return 0;
 }
 
 int main()
 {
-    if (IsCgiRequest("/cgiScripts/file.cgi") == 1)
+    if (IsCgiRequest("/cgiScripts/file.php") == 1)
     {
-        std::string getResponse = handleCgiRequest("GET", "/cgiScripts/file.cgi", "name=ismail");
+        std::string getResponse = handleCgiRequest("GET", "/cgiScripts/file.php", "name=ismail");
         std::cout << "GET Response:\n" << getResponse << std::endl;
         
         // std::string post_response = handleCgiRequest("POST", "/cgiScripts/file.py", "name=ismail");
