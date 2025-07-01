@@ -72,7 +72,7 @@ std::string executeCgiScript(const char* script_path, const char* method, const 
         if (query_string && strlen(query_string) > 0)
             sprintf(buffer7, "QUERY_STRING=%s", query_string);
         else
-            sprintf(buffer7, "QUERY_STRING=", "");
+            sprintf(buffer7, "QUERY_STRING=");
         if (method && strcmp(method, "POST") == 0)
             sprintf(buffer8, "CONTENT_LENGTH=%d", strlen(postRequestBody));
         else
@@ -107,6 +107,13 @@ std::string executeCgiScript(const char* script_path, const char* method, const 
             argv[0] = (char*)script_path;
             argv[1] = NULL;
             execve(script_path, argv, envp);
+        }
+        else if (strstr(script_path, ".php"))
+        {
+            argv[0] = (char*)"php";
+            argv[1] = (char*)script_path;
+            argv[2] = NULL;
+            execve("/bin/php", argv, envp);
         }
         perror("execve failed");
         exit(1);
