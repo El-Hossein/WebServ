@@ -1,36 +1,43 @@
 #include "cgiHeader.hpp"
 
-CgiResponse parseOutput(const std::string& raw_output)
+CgiResponse parseOutput(const std::string& scriptOutput)
 {
     CgiResponse response;
     response.status_code = 200;
 
-    std::istringstream stream(raw_output);
+    std::istringstream stream(scriptOutput);
     std::string line;
-    bool in_header = true;
+    bool readHeader = true;
 
     while (std::getline(stream, line))
     {
-        if (in_header)
+        if (!line.empty() && line[line.size()-1] == '\r')
+            line.erase(line.size() - 1);
+        if (readHeader)
         {
             if (line.empty() || line == "\r") //    we reached the end of headers
             {
-                in_header = false;
+                readHeader = false;
                 continue;
             }
-            size_t colon_pos = line.find(':');
-            if (colon_pos != std::string::npos)
+            size_t colonPos = line.find(':');
+            if (colonPos != std::string::npos)
             {
-                std::string header_name = line.substr(0, colon_pos);
-                std::string header_value = line.substr(colon_pos + 1);
-                while (!header_value.empty() && (header_value[0] == ' ' || header_value[0] == '\t'))
-                    header_value.erase(0, 1);
-                while (!header_value.empty() && (header_value[header_value.size() - 1] == '\r' || header_value[header_value.size() - 1] == '\n'))
-                    header_value.erase(header_value.size() - 1);
-                if (header_name == "Status")
-                    response.status_code = atoi(header_value.c_str());
+                std::string headerName = line.substr(0, colonPos);
+                std::string headerValue = line.substr(colonPos + 1);
+                while (!headerValue.empty() && (headerValue[0] == ' ' || headerValue[0] == '\t'))
+                    headerValue.erase(0, 1);
+                while (!headerValue.empty() && (headerValue[headerValue.size() - 1] == '\r' || headerValue[headerValue.size() - 1] == '\n'))
+                    headerValue.erase(headerValue.size() - 1);
+                if (headerName == "Status")
+                    response.status_code = atoi(headerValue.c_str());
                 else
                     response.headers += line + "\r\n";
+            }
+            else
+            {
+                readHeader = false;
+                response.body += line + "\n";
             }
         }
         else
@@ -63,18 +70,18 @@ std::string executeCgiScript(const char* script_path, const Request &req)
         char* envp[12];
         char buffer1[64], buffer2[256], buffer3[256], buffer4[64], buffer5[64], buffer6[64], buffer7[256], buffer8[64], buffer9[128], buffer10[64], buffer11[64];
 
-        // sprintf(buffer1, "REQUEST_METHOD=%s", );
+        // sprintf(buffer1, "REQUEST_METHOD=%s", "GET");
         // sprintf(buffer2, "SCRIPT_NAME=%s", req.GetFullPath().c_str());
         // sprintf(buffer3, "SCRIPT_FILENAME=%s", script_path);
         // sprintf(buffer4, "SERVER_SOFTWARE=YourWebServer/1.0");
         // sprintf(buffer5, "SERVER_PROTOCOL=HTTP/1.1");
         // sprintf(buffer6, "GATEWAY_INTERFACE=CGI/1.1");
-        // if (req.QueryParams && strlen(query_string) > 0)
-        //     sprintf(buffer7, "QUERY_STRING=%s", query_string);
+        // if (strlen("ismail") > 0)
+        //     sprintf(buffer7, "QUERY_STRING=%s", "ismail");
         // else
         //     sprintf(buffer7, "QUERY_STRING=");
-        // if (method && strcmp(method, "POST") == 0)
-        //     sprintf(buffer8, "CONTENT_LENGTH=%d", strlen(postRequestBody));
+        // if (strcmp("POST", "POST") == 0)
+        //     sprintf(buffer8, "CONTENT_LENGTH=%ld", strlen(postRequestBody));
         // else
         //     sprintf(buffer8, "CONTENT_LENGTH=%d", 0);
         // sprintf(buffer9, "CONTENT_TYPE=application/x-www-form-urlencoded");
@@ -131,7 +138,12 @@ std::string executeCgiScript(const char* script_path, const Request &req)
 
         int status;
         waitpid(pid, &status, 0);
-
+        if (status != 0)
+        {
+            unlink(inpFile.c_str());
+            unlink(outFile.c_str());
+            return "";
+        }
         FILE* outFileStream = fopen(outFile.c_str(), "r"); // open the output file to read
         if (outFileStream)
         {
