@@ -146,24 +146,7 @@ void HttpServer::accept_new_client(int server_fd)
 
 void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&Request)
 {
-    std::string response;
-    std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
-    int content_length = body.length(); //
-	std::map<std::string, std::string>	headers = Request.GetHeaders();
-
-    if (Request.GetConnection()) // if (keep-alive || close)
-        response = "HTTP/1.1 200 OK\r\n"
-                   "Connection: keep-alive\r\n"
-                   "Keep-Alive: timeout=1, max=100\r\n"
-                   "Content-Length: " + std::to_string(content_length) + "\r\n"
-                   "\r\n" + body;
-    else
-        response = "HTTP/1.1 200 OK\r\n"
-                   "Connection: close\r\n"
-                   "Content-Length: " + std::to_string(content_length) + "\r\n"
-                   "\r\n" + body;
-    // Create the response
-    response_map[client_fd] = response;
+    moveToResponse(client_fd, response_map, Request);
 }
 
 // remove the client from the kqueue and close the connection

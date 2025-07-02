@@ -29,18 +29,19 @@ std::string modifyingPath(const char* uri)
     return path;
 }
 
-std::string handleCgiRequest(const char* method, const char* uri, const char* queryString)
+std::string handleCgiRequest(const Request &req)
 {
     const char *requestBody = "";
 
-    std::string scriptPath = modifyingPath(uri);
-    int code = fileChecking(scriptPath);    
+    // need to check which methode if its not get or post error.
+    std::string scriptPath = modifyingPath(req.GetFullPath().c_str());
+    int code = fileChecking(scriptPath);
     if (code == 403)
         return responseError(403, " Forbidden");
     else if (code == 404)
         return responseError(404, " not found");
 
-    std::string scriptOutput = executeCgiScript(scriptPath.c_str(), method, uri, queryString);
+    std::string scriptOutput = executeCgiScript(scriptPath.c_str(), req);
     if (scriptOutput.empty())
         return responseError(500, " internal server error");
 
@@ -52,23 +53,26 @@ int IsCgiRequest(const char *uri)
 {
     //make a specific folder for CGI scripts
     const char *extension = strrchr(uri, '.');
+    if (extension == NULL)
+        return 0;
     if (extension && (strcmp(extension, ".cgi") == 0 || strcmp(extension, ".py") == 0) || strcmp(extension, ".php") == 0)
         return 1;
     return 0;
 }
 
-int main()
-{
-    if (IsCgiRequest("/cgiScripts/file.php") == 1)
-    {
-        std::string getResponse = handleCgiRequest("GET", "/cgiScripts/file.php", "name=ismail");
-        std::cout << "GET Response:\n" << getResponse << std::endl;
+// int main()
+// {
+//     // if (IsCgiRequest("/cgiScripts/file.php") == 1)
+//     // {
+//     //     std::string getResponse = handleCgiRequest("GET", "/cgiScripts/file.php", "name=ismail");
+//     //     std::cout << "GET Response:\n" << getResponse << std::endl;
         
-        // std::string post_response = handleCgiRequest("POST", "/cgiScripts/file.py", "name=ismail");
-        // std::cout << "POST Response:\n" << post_response << std::endl;
-    }
-    else
-        std::cout << "is NOT a CGI request" << std::endl;
+//     //     // std::string post_response = handleCgiRequest("POST", "/cgiScripts/file.py", "name=ismail");
+//     //     // std::cout << "POST Response:\n" << post_response << std::endl;
+//     // }
+//     // else
+//     //     std::cout << "is NOT a CGI request" << std::endl;
 
-    return 0;
-}
+    
+//     return 0;
+// }

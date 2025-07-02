@@ -6,6 +6,8 @@
 #include "../pars_config/config.hpp"
 
 #include "../Request/Request.hpp"
+#include "../cgi/cgiHeader.hpp"
+#include "../Response/responseHeader.hpp"
 
 class HttpServer{
     public:

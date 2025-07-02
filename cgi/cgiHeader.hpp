@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sstream>
 #include <fstream>
+#include "../Request/Request.hpp"
 
 struct CgiResponse
 {
@@ -20,5 +21,7 @@ struct CgiResponse
 std::string formatHttpResponse(const CgiResponse& cgiResponse);
 std::string responseError(int status_code, const std::string& message);
 CgiResponse parseOutput(const std::string& raw_output);
-std::string executeCgiScript(const char* script_path, const char* method, const char* uri, const char* query_string);
+std::string executeCgiScript(const char* script_path, const Request &req);
 std::string intToString(int n);
+int IsCgiRequest(const char *uri);
+std::string handleCgiRequest(const Request &req);
