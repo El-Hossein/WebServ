@@ -42,7 +42,7 @@ CgiResponse parseOutput(const std::string& raw_output)
     return response;
 }
 
-std::string executeCgiScript(const char* script_path, const char* method, const char* uri, const char* query_string)
+std::string executeCgiScript(const char* script_path, const Request &req)
 {
     const char *postRequestBody = "name=ismail"; //needs to be placed with the real one from the socket
     std::string output;
@@ -63,23 +63,23 @@ std::string executeCgiScript(const char* script_path, const char* method, const 
         char* envp[12];
         char buffer1[64], buffer2[256], buffer3[256], buffer4[64], buffer5[64], buffer6[64], buffer7[256], buffer8[64], buffer9[128], buffer10[64], buffer11[64];
 
-        sprintf(buffer1, "REQUEST_METHOD=%s", method);
-        sprintf(buffer2, "SCRIPT_NAME=%s", uri);
-        sprintf(buffer3, "SCRIPT_FILENAME=%s", script_path);
-        sprintf(buffer4, "SERVER_SOFTWARE=YourWebServer/1.0");
-        sprintf(buffer5, "SERVER_PROTOCOL=HTTP/1.1");
-        sprintf(buffer6, "GATEWAY_INTERFACE=CGI/1.1");
-        if (query_string && strlen(query_string) > 0)
-            sprintf(buffer7, "QUERY_STRING=%s", query_string);
-        else
-            sprintf(buffer7, "QUERY_STRING=");
-        if (method && strcmp(method, "POST") == 0)
-            sprintf(buffer8, "CONTENT_LENGTH=%d", strlen(postRequestBody));
-        else
-            sprintf(buffer8, "CONTENT_LENGTH=%d", 0);
-        sprintf(buffer9, "CONTENT_TYPE=application/x-www-form-urlencoded");
-        sprintf(buffer10, "SERVER_NAME=localhost");
-        sprintf(buffer11, "SERVER_PORT=8080");
+        // sprintf(buffer1, "REQUEST_METHOD=%s", );
+        // sprintf(buffer2, "SCRIPT_NAME=%s", req.GetFullPath().c_str());
+        // sprintf(buffer3, "SCRIPT_FILENAME=%s", script_path);
+        // sprintf(buffer4, "SERVER_SOFTWARE=YourWebServer/1.0");
+        // sprintf(buffer5, "SERVER_PROTOCOL=HTTP/1.1");
+        // sprintf(buffer6, "GATEWAY_INTERFACE=CGI/1.1");
+        // if (req.QueryParams && strlen(query_string) > 0)
+        //     sprintf(buffer7, "QUERY_STRING=%s", query_string);
+        // else
+        //     sprintf(buffer7, "QUERY_STRING=");
+        // if (method && strcmp(method, "POST") == 0)
+        //     sprintf(buffer8, "CONTENT_LENGTH=%d", strlen(postRequestBody));
+        // else
+        //     sprintf(buffer8, "CONTENT_LENGTH=%d", 0);
+        // sprintf(buffer9, "CONTENT_TYPE=application/x-www-form-urlencoded");
+        // sprintf(buffer10, "SERVER_NAME=localhost");
+        // sprintf(buffer11, "SERVER_PORT=8080");
 
         envp[0] = buffer1;
         envp[1] = buffer2;
