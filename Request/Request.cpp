@@ -50,6 +50,11 @@ size_t		Request::GetContentLength() const
 	return this->ContentLength;
 }
 
+ConfigNode	&Request::GetRightServer()
+{
+	return this->RightServer;
+}
+
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -186,9 +191,9 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	std::string method, URI, protocol;
 	Attributes >> method >> URI >> protocol;
 
-	if		(method == "GET")	this->Method = GET;
-	else if (method == "POST")	this->Method = POST;
-	else if (method == "GET")	this->Method = DELETE;	
+	if		(method == "GET")		this->Method = GET;
+	else if (method == "POST")		this->Method = POST;
+	else if (method == "DELETE")	this->Method = DELETE;	
 	else						throw ("400: Invalide request method.");
 		
 	Headers["Method"] = method;
@@ -233,8 +238,6 @@ void	Request::ReadRequestHeader()
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead <= 0)
 		throw ("Error: Read return.");
-	if (BytesRead >= MAX_HEADER_SIZE - 1)
-		throw ("Invalide request header lengh.");
 
 	buffer[BytesRead] = '\0';
 
@@ -243,8 +246,8 @@ void	Request::ReadRequestHeader()
 	if (npos == std::string::npos)
 		throw ("400: Invalide request header.");
 
-	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n") + 4);
-	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
+	BodyUnprocessedBuffer	= StdBuffer.substr(npos + 4);
+	StdBuffer				= StdBuffer.substr(0, npos);
 
 	ReadFirstLine(StdBuffer); // First line
 	ReadHeaders(StdBuffer); // other lines
@@ -269,10 +272,8 @@ void	Request::CheckRequiredHeaders()
 		// {
 			if (LowKey == "content-length")
 			{
-				std::cout << "[" << it->second << "]" << std::endl;
 				if (!ValidContentLength(it->second))	throw "400: Bad Request";
 				ContentLength = strtod(it->second.c_str(), NULL);
-				std::cout << "BEFORE: ---->" << ContentLength << std::endl; 
 				flag++;
 			}
 			// else if (LowKey == "transfer-encoding" && it->second != "chunked")
@@ -292,9 +293,9 @@ void	Request::SetUpRequest()
 
 	switch (Method)
 	{
-		case GET:		{	Get		GetObj(*this);	GetObj.CheckPath(GetFullPath()); }
-		case POST:		{	Post	PostObj(*this);	PostObj.ParseBody();	}
-		case DELETE:	Delete(*this);
+		case GET:		{	Get		GetObj(*this);		GetObj.CheckPath(GetFullPath()); }
+		case POST:		{	Post	PostObj(*this);		PostObj.HandleBody();	}
+		case DELETE:	{	Delete	DeleteObj(*this);	DeleteObj.DoDelete(GetFullPath());	}
 	}
 
     std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");

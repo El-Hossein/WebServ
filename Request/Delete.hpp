@@ -12,4 +12,6 @@ private:
 public:
 	Delete(const Request	&_obj);
 	~Delete();
+
+	void	DoDelete(std::string path);
 };
