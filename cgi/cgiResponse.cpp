@@ -4,14 +4,14 @@ std::string formatHttpResponse(const CgiResponse& cgiResponse)
 {
     // protocol version and status code and reason phrase 
     std::string httpResponse = "HTTP/1.1 " + intToString(cgiResponse.status_code);
-    switch (cgiResponse.status_code)
-    {
-        case 200: httpResponse += " OK"; break;
-        case 403: httpResponse += " Forbidden"; break;
-        case 404: httpResponse += " Not Found"; break;
-        case 500: httpResponse += " Internal Server Error"; break;
-        // need to add more
-    }
+    httpResponse += " OK";
+    // switch (cgiResponse.status_code)
+    // {
+    //     case 200: httpResponse += " OK"; break;
+    //     // case 403: httpResponse += " Forbidden"; break;
+    //     // case 404: httpResponse += " Not Found"; break;
+    //     // case 500: httpResponse += " Internal Server Error"; break;
+    // }
     // headers
     httpResponse += "\r\n";
     httpResponse += cgiResponse.headers;
@@ -21,20 +21,53 @@ std::string formatHttpResponse(const CgiResponse& cgiResponse)
     return httpResponse;
 }
 
-std::string responseError(int status_code, const std::string& message)
+std::string readFileToString(const std::string& path)
 {
-    std::string body = "<html><body><h1>" + intToString(status_code) + message + "</p></body></html>";
-    std::string response = "HTTP/1.1 " + intToString(status_code);
-    switch (status_code)
+    std::ifstream file(path.c_str(), std::ios::binary);
+    if (!file)
+        return "";
+    std::ostringstream contents;
+    contents << file.rdbuf(); // read the whole file
+    file.close();
+    return contents.str();
+}
+
+std::string handWritingError(const std::string& message, int statusCode)
+{
+    std::string _code = intToString(statusCode);
+
+    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
+    html += "<body><h1>";
+    html += _code;
+    html += " ";
+    html += message;
+    html += "</h1></body></html>";
+
+    return html;
+}
+
+std::string responseError(int statusCode, const std::string& message)
+{
+    std::string body;
+    switch (statusCode)
+    {
+        case 403: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/40.html"); break;
+        case 404: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/404.html"); break;
+        case 500: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/500.html"); break;
+    }
+    if (body.empty())
+        body = handWritingError(message, statusCode);
+    std::string response = "HTTP/1.1 " + intToString(statusCode);
+    switch (statusCode)
     {
         case 403: response += " Forbidden"; break;
         case 404: response += " Not Found"; break;
         case 500: response += " Internal Server Error"; break;
-        // default: response += " Error"; break;
     }
     response += "\r\n";
-    response += "Content-Type: text/html\r\n"; // i guess its not always text/html i need to search abt this
+    response += "Content-Type: text/html\r\n"; // its not always text/html i need to search abt this
     response += "Content-Length: " + intToString(body.length()) + "\r\n\r\n";
     response += body;
+    
     return response;
 }

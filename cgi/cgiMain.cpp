@@ -11,8 +11,11 @@ std::string intToString(int n)
 int fileChecking(const std::string& path)
 {
     struct stat st;
+
     if (stat(path.c_str(), &st) != 0)
         return 404; // path invalid
+    if (S_ISDIR(st.st_mode))
+        return 403; // path is a directory, not a file
     if (S_ISREG(st.st_mode))
     {
         if ((st.st_mode & S_IXUSR) == 0)
@@ -25,7 +28,7 @@ std::string modifyingPath(const char* uri)
 {
     std::string path;
 
-    path = "." + std::string(uri);
+    path = std::string(uri);
     return path;
 }
 
@@ -40,7 +43,6 @@ std::string handleCgiRequest(const Request &req)
         return responseError(403, " Forbidden");
     else if (code == 404)
         return responseError(404, " not found");
-
     std::string scriptOutput = executeCgiScript(scriptPath.c_str(), req);
     if (scriptOutput.empty())
         return responseError(500, " internal server error");
