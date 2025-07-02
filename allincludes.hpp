@@ -1,6 +1,7 @@
 #ifndef ALLINCLUDES_HPP
 #define ALLINCLUDES_HPP
 
+#include <cstdio> 
 #include <cstddef>
 #include <exception>
 #include <iostream>
