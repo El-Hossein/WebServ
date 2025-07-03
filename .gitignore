@@ -6,3 +6,4 @@ a.tldr
 test/
 .vscode/
 t.txt
+AllServer/GenerateJWT.php
