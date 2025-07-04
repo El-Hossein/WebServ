@@ -24,7 +24,7 @@ std::string formatHttpResponse(const CgiResponse& cgiResponse)
 std::string readFileToString(const std::string& path)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
-    if (!file)
+    if (!file)  // need to give error pages and check if they are valid
         return "";
     std::ostringstream contents;
     contents << file.rdbuf(); // read the whole file
@@ -51,9 +51,10 @@ std::string responseError(int statusCode, const std::string& message)
     std::string body;
     switch (statusCode)
     {
-        case 403: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/40.html"); break;
-        case 404: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToString("/Users/isrkik/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
+        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
+        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
     }
     if (body.empty())
         body = handWritingError(message, statusCode);
@@ -63,10 +64,12 @@ std::string responseError(int statusCode, const std::string& message)
         case 403: response += " Forbidden"; break;
         case 404: response += " Not Found"; break;
         case 500: response += " Internal Server Error"; break;
+        case 501: response += " Method not implemented"; break;
     }
     response += "\r\n";
     response += "Content-Type: text/html\r\n"; // its not always text/html i need to search abt this
-    response += "Content-Length: " + intToString(body.length()) + "\r\n\r\n";
+    response += "Content-Length: " + intToString(body.length()) + "\r\n";
+    response += "Connection: close\r\n\r\n";
     response += body;
     
     return response;
