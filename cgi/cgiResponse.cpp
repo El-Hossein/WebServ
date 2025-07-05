@@ -46,9 +46,16 @@ std::string handWritingError(const std::string& message, int statusCode)
     return html;
 }
 
-std::string responseError(int statusCode, const std::string& message)
+std::string responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars)
 {
     std::string body;
+    (void)ConfigPars;
+    // std::string re = getInfoConfig(ConfigPars, "error_page");
+    // if (!re.empty())
+    // {
+    //     body = handWritingError(message, statusCode);
+
+    // }
     switch (statusCode)
     {
         case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
