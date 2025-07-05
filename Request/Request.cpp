@@ -2,7 +2,9 @@
 
 									;
 Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
-																		Servers(_ConfigPars)
+																		Servers(_ConfigPars),
+																		ContentLength(0),
+																		KeepAlive(false)
 {
 }
 
@@ -25,7 +27,17 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 		if (key == it->first)
 			return it->second;
 	}
-	return "NULL";
+	throw "Header not found";
+}
+
+std::map<std::string, std::string>	Request::GetQueryParams() const
+{
+	return this->QueryParams;
+}
+
+std::vector<std::string>	Request::GetPathParts() const
+{
+	return this->PathParts;
 }
 
 bool	Request::GetConnection() const
@@ -36,6 +48,21 @@ bool	Request::GetConnection() const
 std::string	Request::GetFullPath() const
 {
 	return FullSystemPath;
+}
+
+std::string	Request::GetUnprocessedBuffer() const
+{
+	return this->BodyUnprocessedBuffer;
+}
+
+size_t		Request::GetContentLength() const
+{
+	return this->ContentLength;
+}
+
+ConfigNode	&Request::GetRightServer()
+{
+	return this->RightServer;
 }
 
 /*	|#----------------------------------#|
@@ -52,6 +79,11 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 	}
 }
 
+void	Request::SetContentLength(const size_t	Length)
+{
+	this->ContentLength = Length;
+}
+
 /*	|#----------------------------------#|
 	|#			MEMBER FUNCTIONS    	#|
 	|#----------------------------------#|
@@ -60,22 +92,13 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 void	Request::HandleQuery()
 {
 	size_t pos = 0;
-	std::string	Query = GetHeaderValue("Query");
+	std::string	Query = GetHeaderValue("query");
 
 	// ---------		Decode Query 	 	--------- //
-    while((pos = Query.find("%", pos)) != std::string::npos)
-	{
-		if (pos + 2 < Query.size() && IsHexa(Query[pos + 1]) && IsHexa(Query[pos + 2]))
-		{
-			Query.replace(pos, 3, HexaToChar(Query.substr(pos + 1, 2))); // 2 letters after '%
-			pos += 1; // 1 -> size d charachter
-		}
-		else
-			throw "Error: % in the Query";
-    }
+	DecodeHexaToChar(Query);
 	for (size_t	i = 0; i < Query.length(); i++) // replacing each '+' with ' '
 		if (Query[i] == '+')	Query[i] = ' ';
-	SetHeaderValue("Query", Query);
+	SetHeaderValue("query", Query);
 
 	// ---------	Split && Save Query Params	 	--------- //
 
@@ -98,7 +121,7 @@ void	Request::HandleQuery()
 
 void   Request::HandlePath()
 {
-	std::string					UriPath = GetHeaderValue("Path");
+	std::string					UriPath = GetHeaderValue("path");
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", "NULL");
 	if (ConfigPath.empty())
 		return ;
@@ -124,7 +147,7 @@ void   Request::HandlePath()
 void	Request::SplitURI()
 {
 	std::string	Path,Query;
-	std::string	URI = GetHeaderValue("URI");
+	std::string	URI = GetHeaderValue("uri");
 	size_t		pos = URI.find("?");
 
 	if (pos == std::string::npos) // Query has not been found
@@ -137,8 +160,8 @@ void	Request::SplitURI()
 		Query = URI.substr(pos + 1);
 	}
 
-	Headers["Path"] = Path;
-	Headers["Query"] = Query;
+	Headers["path"] = Path;
+	Headers["query"] = Query;
 
 	// ---------# Parse Path #--------- //
 	for (size_t	i = 0, j = 0; i < Path.length(); i++)
@@ -157,7 +180,7 @@ void	Request::ParseURI(std::string	&URI)
 	if (URI.length() > 2048)
 		throw "414 Request-URI too long";
 
-	Headers["URI"] = URI;
+	Headers["uri"] = URI;
 	SplitURI();
 	HandlePath();
 	HandleQuery();
@@ -174,38 +197,44 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	std::string method, URI, protocol;
 	Attributes >> method >> URI >> protocol;
 
-	if		(method == "GET")	this->Method = GET;
-	else if (method == "POST")	this->Method = POST;
-	else if (method == "GET")	this->Method = DELETE;	
-	else						throw ("400: Invalide request method.");
+	if		(method == "GET")		this->Method = GET;
+	else if (method == "POST")		this->Method = POST;
+	else if (method == "DELETE")	this->Method = DELETE;	
+	else							throw ("400: Invalide request method.");
 		
-	Headers["Method"] = method;
+	Headers["method"] = method;
 
 	ParseURI(URI);
 
 	if (protocol != "HTTP/1.1")
 		throw ("505: Invalide request protocol.");
-	Headers["Protocol"] =  protocol;
+	Headers["protocol"] =  protocol;
 }
 
 void	Request::ReadHeaders(std::string Header)
 {
-	std::string			line;
+	std::string			line, headerName, headerValue, LowKey;
 	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
 		size_t pos = line.find(": ");
-		if (pos != std::string::npos)
-		{
-			std::string headerName = line.substr(0, pos);
-			if (!ValidFieldName(headerName))
-				throw "400 Bad Request ReadHeaders()-1";
-			std::string headerValue = line.substr(pos + 2);
-			if (!ValidFieldValue(headerName))
-				throw "400 Bad Request ReadHeaders()-2";
-			Headers[headerName] = headerValue;
-		}
+		if (pos == std::string::npos)
+			continue ;
+
+		headerName = line.substr(0, pos);
+		if (!ValidFieldName(headerName))
+			throw "400 Bad Request ReadHeaders()-1";
+
+		headerValue = line.substr(pos + 2);
+		if (!headerValue.empty() && headerValue.back() == '\r')
+			headerValue.pop_back();
+		if (!ValidFieldValue(headerValue))
+			throw "400 Bad Request ReadHeaders()-2";
+
+		std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
+
+		Headers[headerName] = headerValue;
 	}
 }
 
@@ -217,8 +246,6 @@ void	Request::ReadRequestHeader()
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead <= 0)
 		throw ("Error: Read return.");
-	if (BytesRead >= MAX_HEADER_SIZE - 1)
-		throw ("Invalide request header lengh.");
 
 	buffer[BytesRead] = '\0';
 
@@ -227,8 +254,8 @@ void	Request::ReadRequestHeader()
 	if (npos == std::string::npos)
 		throw ("400: Invalide request header.");
 
-	BodyUnprocessedBuffer	= StdBuffer.substr(StdBuffer.find("\r\n\r\n"));
-	StdBuffer				= StdBuffer.substr(0, StdBuffer.find("\r\n\r\n"));
+	BodyUnprocessedBuffer	= StdBuffer.substr(npos + 4);
+	StdBuffer				= StdBuffer.substr(0, npos);
 
 	ReadFirstLine(StdBuffer); // First line
 	ReadHeaders(StdBuffer); // other lines
@@ -238,31 +265,10 @@ void	Request::CheckRequiredHeaders()
 {
 	int	flag = 0;
 
-	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
+	if (Headers.find("connection") != Headers.end())
 	{
-		std::string LowKey = it->first;
-		std::transform(LowKey.begin(), LowKey.end(), LowKey.begin(), ::tolower);
-
-		if (LowKey == "connection")
-		{
-			if (it->second != "keep-alive" && it->second != "close")
-				SetHeaderValue("connection", "keep-alive"); // setting up default behaviour
-			it-> second == "keep-alive" ? KeepAlive = true : KeepAlive = false;
-		}
-		if (Headers.begin()->second == "POST")
-		{
-			if (LowKey == "content-length" || LowKey == "transfer-encoding")
-			{
-				if (!ValidContentLength(it->second))	throw "400: Bad Request";
-				ContentLength = strtod(it->second.c_str(), NULL);
-				flag++;
-			}
-			else if (LowKey == "transfer-encoding" && it->second != "chunked")
-				throw "501 Not implemented";
-		}
+		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	}
-	if (Headers.begin()->second == "POST")
-		if (flag == 2)	throw ("400");
 }
 
 void	Request::SetUpRequest()
@@ -274,12 +280,12 @@ void	Request::SetUpRequest()
 
 	switch (Method)
 	{
-		case GET:		Get(*this);
-		case POST:		Post(*this);
-		case DELETE:	Delete(*this);
+		case GET	:	{	Get		GetObj(*this);		return GetObj.CheckPath(GetFullPath()); }
+		case POST	:	{	Post	PostObj(*this);		return PostObj.HandleBody();	}
+		case DELETE	:	{	Delete	DeleteObj(*this);	return DeleteObj.DoDelete(GetFullPath());	}
 	}
 
-    std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
+    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
 
-	PrintHeaders(this->Headers);
+	// PrintHeaders(this->Headers);
 }
