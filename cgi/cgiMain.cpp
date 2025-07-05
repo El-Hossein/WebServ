@@ -32,7 +32,7 @@ std::string modifyingPath(const char* uri)
     return path;
 }
 
-std::string handleCgiRequest(const Request &req)
+std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
     const char *requestBody = "";
 
@@ -40,12 +40,12 @@ std::string handleCgiRequest(const Request &req)
     std::string scriptPath = modifyingPath(req.GetFullPath().c_str());
     int code = fileChecking(scriptPath);
     if (code == 403)
-        return responseError(403, " Forbidden");
+        return responseError(403, " Forbidden", ConfigPars);
     else if (code == 404)
-        return responseError(404, " not found");
+        return responseError(404, " not found", ConfigPars);
     std::string scriptOutput = executeCgiScript(scriptPath.c_str(), req);
     if (scriptOutput.empty())
-        return responseError(500, " internal server error");
+        return responseError(500, " internal server error", ConfigPars);
 
     CgiResponse parsedCgi = parseOutput(scriptOutput);
     return formatHttpResponse(parsedCgi);
