@@ -7,7 +7,7 @@ Get::Get(const	Request	&_obj) : obj(_obj)
 Get::~Get() {
 }
 
-void	Get::CheckPath(std::string &path)
+void	Get::CheckPath(std::string path)
 {
 	struct stat fileStat;
 

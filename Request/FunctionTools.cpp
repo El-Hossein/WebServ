@@ -22,6 +22,22 @@ std::string	HexaToChar(std::string	Hexa)
 	return std::string(1, Helpervar); // calling constructor string with 1 character
 }
 
+void		DecodeHexaToChar(std::string	&str)
+{
+	size_t	pos = 0;
+	
+	while((pos = str.find("%", pos)) != std::string::npos)
+	{
+		if (pos + 2 < str.size() && IsHexa(str[pos + 1]) && IsHexa(str[pos + 2]))
+		{
+			str.replace(pos, 3, HexaToChar(str.substr(pos + 1, 2))); // 2 letters after '%
+			pos += 1; // 1 -> size d charachter
+		}
+		else
+			throw "Error: % in the str";
+    }
+}
+
 // --------------#	PRINTER	 #-------------- //
 
 void	PrintHeaders(std::map<std::string, std::string> Headers)
@@ -60,4 +76,34 @@ bool	ValidFieldValue(const std::string& value)
         if (!std::isprint(value[i]))
 			return false;
     return true;
+}
+
+bool	ValidBoundary(const std::string	&value)
+{
+	for (size_t	i = 0; i < value.length(); i++)
+	{
+		if (!std::isalnum(value[i]) || !std::isprint(value[i]))
+		{
+			if (value[i] != '(' && value[i] != ')' && value[i] != '+' && value[i] != '-' &&
+				value[i] != '_'	&& value[i] != ',' && value[i] != '.' && value[i] != ':' &&
+				value[i] != '=' && value[i] != '?')
+					return false;
+		}
+	}
+	return true;
+}
+
+void	TrimSpaces(std::string& str)
+{
+    size_t start = 0;
+
+    while (start < str.length() && std::isspace(static_cast<unsigned char>(str[start])))
+        ++start;
+
+    size_t end = str.length();
+
+    while (end > start && std::isspace(static_cast<unsigned char>(str[end - 1])))
+        --end;
+
+	str = str.substr(start, end - start);
 }
