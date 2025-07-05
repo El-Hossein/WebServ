@@ -10,39 +10,31 @@ std::string deleteResponseSuccess(const std::string& message)
     return html;
 }
 
-std::string generateAutoindex(const std::string& uri, const std::string& root)
+std::string generateListingDir(const std::string& uri, std::string &hh)
 {
-    std::string dirPath = root + uri; // real filesystem path to open
-
-    DIR *dir = opendir(dirPath.c_str());
-    if (!dir)
+    DIR *dirCheck = opendir(uri.c_str());
+    if (!dirCheck)
         return "<html><body><h1>Cannot open directory</h1></body></html>";
 
     std::string html = "<html><head><title>Index of " + uri + "</title></head><body>";
     html += "<h1>Index of " + uri + "</h1><ul>";
 
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL)
+    struct dirent *dir;
+    while ((dir = readdir(dirCheck)) != NULL)
     {
-        std::string name = entry->d_name;
-        if (name != ".")
-        {
-            // build correct href:
-            std::string link = uri;
-            if (link[link.size() - 1] != '/')
-                link += "/";
-            link += name;
+        // i need to check hh if has /
+        std::string name = hh + (hh[hh.length() - 1] == '/' ? "": "/") + dir->d_name;
 
-            html += "<li><a href=\"" + link + "\">" + name + "</a></li>";
-        }
+        if (name != ".")
+            html += "<li><a href=\"" + name + "\">" + name + "</a></li>";
     }
-    closedir(dir);
+    closedir(dirCheck);
 
     html += "</ul></body></html>";
     return html;
 }
 
-void    servListingDiren(std::string &uri, std::string &finalResponse)
+void    servListingDiren(std::string &uri, std::string &finalResponse, std::string &hh)
 {
     std::string autoIndexOn = "on"; 
     std::string htmlFound = uri + "/index.html";
@@ -65,7 +57,7 @@ void    servListingDiren(std::string &uri, std::string &finalResponse)
     }
     else if (autoIndexOn == "on")
     {
-        std::string body = generateAutoindex(uri, "/Users/i61mail");
+        std::string body = generateListingDir(uri, hh);
 
         finalResponse = "HTTP/1.1 200 OK\r\n";
         finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
@@ -79,14 +71,14 @@ void    servListingDiren(std::string &uri, std::string &finalResponse)
     }
 }
 
+
 void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&req)
 {
     std::string uri = req.GetFullPath();
     std::string finalResponse;
     struct stat st;
 
-
-    std::cout << uri << std::endl;
+    std::string hh = req.GetHeaderValue("Path");
     std::string method = "GET";
     if (method == "GET") // i need to check for allowed methods
     {
@@ -95,7 +87,7 @@ void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map,
 
         if (stat(uri.c_str(), &stList) == 0 && S_ISDIR(stList.st_mode))
         {
-            servListingDiren(uri, finalResponse);
+            servListingDiren(uri, finalResponse, hh);
         }
         else if (IsCgiRequest(uri.c_str()))
         {
