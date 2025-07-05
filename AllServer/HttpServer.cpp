@@ -177,6 +177,31 @@ void HttpServer::remove_client(int client_fd)
     close(client_fd);
 }
 
+// bool CheckCookie(std::string Cookie)
+// {
+
+// }
+
+
+std::string SetUpCookie(Request obj)
+{
+    std::string Cookie = obj.GetHeaderValue("Cookie");
+    if (Cookie.empty())
+    {
+        // AddToFile(Cookie);
+        if (Cookie.empty())
+           std::cout << "HTTP/1.1 500 Internal Server Error\r\n\r\nError generating cookie\n";
+    }
+    // else {
+    //     if (CheckCookie(Cookie))
+    //     {
+
+    //     }
+    // }
+    std::cout << "[" << Cookie << "]" << std::endl;
+    return Cookie;
+}
+
 void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode> ConfigPars)
 {
     (void)ConfigPars;
@@ -186,7 +211,8 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
 		Request obj(client_fd, ConfigPars);
 		try { obj.SetUpRequest(); }
 			catch (const char *e) { std::cout << e << std::endl;	exit(1); }
-
+        // -------------	Process Cookie		 ------------- //
+        std::string cookie = SetUpCookie(obj);
         // -------------	Process response	 ------------- //
         SetUpResponse(client_fd, response_map, obj);
         // Enable writing
