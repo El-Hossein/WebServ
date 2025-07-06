@@ -244,7 +244,7 @@ void	Request::ReadRequestHeader()
 	char		buffer[MAX_HEADER_SIZE];
 
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
-	if (BytesRead <= 0)
+	if (BytesRead < 0)
 		throw ("Error: Read return.");
 
 	buffer[BytesRead] = '\0';
