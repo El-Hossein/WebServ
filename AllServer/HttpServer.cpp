@@ -212,7 +212,7 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
 		try { obj.SetUpRequest(); }
 			catch (const char *e) { std::cout << e << std::endl;	exit(1); }
         // -------------	Process Cookie		 ------------- //
-        std::string cookie = SetUpCookie(obj);
+        // std::string cookie = SetUpCookie(obj);
         // -------------	Process response	 ------------- //
         SetUpResponse(client_fd, response_map, obj);
         // Enable writing
