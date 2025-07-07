@@ -27,7 +27,7 @@ std::string readFileToString(const std::string& path)
     if (!file)  // need to give error pages and check if they are valid
         return "";
     std::ostringstream contents;
-    contents << file.rdbuf(); // read the whole file
+    contents << file.rdbuf();
     file.close();
     return contents.str();
 }
@@ -50,7 +50,7 @@ std::string responseError(int statusCode, const std::string& message, std::vecto
 {
     std::string body;
     (void)ConfigPars;
-    // std::string re = getInfoConfig(ConfigPars, "error_page");
+    // std::string re = getInfoConfig(ConfigPars, "error_page", "NULL", 0);
     // if (!re.empty())
     // {
     //     body = handWritingError(message, statusCode);
