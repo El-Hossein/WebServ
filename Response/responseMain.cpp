@@ -31,27 +31,40 @@ std::string generateListingDir(const std::string& uri, std::string &pathRequeste
     return html;
 }
 
-std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what)
+std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, int index)
 {
-    ConfigNode a = ConfigNode::GetServer(ConfigPars, "myserver1.com");
+    ConfigNode a = ConfigNode::GetServer(ConfigPars, "myserver1.com");// need to handle
 
-    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, "NULL");
+    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
     if (autoIndex.empty())
     {
         return "";
     }
-    return autoIndex[0];
+    return autoIndex[index];
+}
+
+std::string generateAutoIndexOn(std::string &finalResponse, std::string &uri, std::string &pathRequested)
+{
+    std::string body = generateListingDir(uri, pathRequested);
+
+    finalResponse = "HTTP/1.1 200 OK\r\n";
+    finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
+    finalResponse += "Content-Type: text/html\r\n";
+    finalResponse += "Connection: close\r\n\r\n";
+    finalResponse += body;
+    return finalResponse;
+
 }
 
 void    servListingDiren(std::string &uri, std::string &finalResponse, std::string &pathRequested, std::vector<ConfigNode> ConfigPars)
 {
-    std::string autoIndexOn = getInfoConfig(ConfigPars, "autoindex"); // i need to know what should i do if autoindex isnt there
-    std::string index = getInfoConfig(ConfigPars, "index");
+    std::string autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
+    std::string index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
 
-    if (!index.empty())
+    if (index.empty() == 0)
     {
         std::string htmlFound = uri + "/" + index; // i need to check if slash already there or not
-        std::ifstream htmlStream(htmlFound.c_str(), std::ios::binary);
+        std::ifstream htmlStream(htmlFound.c_str(), std::ios::binary); 
         if (htmlStream)
         {
             std::ostringstream htmlContent;
@@ -66,32 +79,24 @@ void    servListingDiren(std::string &uri, std::string &finalResponse, std::stri
             finalResponse += body;
             
         }
+        else if (autoIndexOn == "on")
+            generateAutoIndexOn(finalResponse, uri, pathRequested);
+        else
+            finalResponse = responseError(403, " Forbidden", ConfigPars);
     }
     else if (autoIndexOn == "on")
-    {
-        std::string body = generateListingDir(uri, pathRequested);
-
-        finalResponse = "HTTP/1.1 200 OK\r\n";
-        finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
-        finalResponse += "Content-Type: text/html\r\n";
-        finalResponse += "Connection: close\r\n\r\n";
-        finalResponse += body;
-    }
+        generateAutoIndexOn(finalResponse, uri, pathRequested);
     else
-    {
         finalResponse = responseError(403, " Forbidden", ConfigPars);
-    }
 }
 
 std::string getResponse(std::string finalResponse, std::string uri, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-    struct stat stList;
+    struct stat st;
     std::string pathRequested = req.GetHeaderValue("path");
 
-    if (stat(uri.c_str(), &stList) == 0 && S_ISDIR(stList.st_mode))
-    {
+    if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
         servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
-    }
     else if (IsCgiRequest(uri.c_str()))
     {
         finalResponse = handleCgiRequest(req, ConfigPars);
@@ -124,45 +129,48 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
     return finalResponse;
 }
 
+
+std::string deleteResponse(std::string &finalResponse, std::string uri, std::vector<ConfigNode> ConfigPars)
+{
+    struct stat st;
+
+    if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+    {
+        finalResponse = responseError(403, " Permission Denied", ConfigPars);
+    }
+    else if (std::remove(uri.c_str()) == 0)
+    {
+        std::string body = deleteResponseSuccess("file succesefuly deleted!!");
+        finalResponse = "HTTP/1.1 200 OK\r\n";
+        finalResponse += "Content-Type: text/html\r\n";
+        finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
+        finalResponse += "Connection: close\r\n\r\n";
+        finalResponse += body;
+    }
+    else
+    {
+        finalResponse = responseError(404, " Not Found", ConfigPars);
+    }
+    return finalResponse;
+}
+
 void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     std::string uri = req.GetFullPath();
     std::string finalResponse;
     std::string method = req.GetHeaderValue("method");
-    struct stat st;
+    
 
-    if (method == "GET") // i need to check for allowed methods
+    if (method == "GET")
     {
-        //if method not allowed return 405 Method Not Allowed
         finalResponse = getResponse(finalResponse, uri, req, ConfigPars);
     }
-    else if (method == "DELETE") // i need to check for allowed methods
+    else if (method == "DELETE") 
     {
         // if method not allowed return 405 Method Not Allowed
-        // i need to check the errors thrown for the file before open it
-        if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-        {
-            finalResponse = responseError(403, " Permission Denied", ConfigPars);
-        }
-        else if (std::remove(uri.c_str()) == 0)
-        {
-            std::string body = deleteResponseSuccess("file succesefuly deleted!!");
-            finalResponse = "HTTP/1.1 200 OK\r\n";
-            finalResponse += "Content-Type: text/html\r\n";
-            finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
-            finalResponse += "Connection: close\r\n\r\n";
-            finalResponse += body;
-        }
-        else
-        {
-            finalResponse = responseError(404, " Not Found", ConfigPars);
-        }
+       finalResponse = deleteResponse(finalResponse, uri, ConfigPars);
     }
-
     else
-    {
         finalResponse = responseError(501, " Method not implemented", ConfigPars);
-    }
-    // std::cout << finalResponse << std::endl;
     response_map[client_fd] = finalResponse;
 }

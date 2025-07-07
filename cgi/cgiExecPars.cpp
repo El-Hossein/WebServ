@@ -49,91 +49,109 @@ CgiResponse parseOutput(const std::string& scriptOutput)
     return response;
 }
 
-std::string executeCgiScript(const char* script_path, const Request &req)
+char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
-    const char *postRequestBody = "name=ismail"; //needs to be placed with the real one from the socket
-    std::string output;
+    char **envp = new char*[8];
 
+
+    // REQUEST_METHOD
+    envp[0] = new char[strlen("REQUEST_METHOD=") + strlen(req.GetHeaderValue("method").c_str()) + 1];
+    strcpy(envp[0], "REQUEST_METHOD=");
+    strcat(envp[0], req.GetHeaderValue("method").c_str());
+    // std::cout << envp[0] << std::endl;
+    //SCRIPT_NAME
+    envp[1] = new char[strlen("SCRIPT_NAME=") + strlen(req.GetHeaderValue("path").c_str()) + 1];
+    strcpy(envp[1], "SCRIPT_NAME=");
+    strcat(envp[1], req.GetHeaderValue("path").c_str()); 
+    // std::cout << envp[1] << std::endl;
+    //SCRIPT_FILENAME
+    envp[2] = new char[strlen("SCRIPT_FILENAME=") + strlen(req.GetFullPath().c_str()) + 1];
+    strcpy(envp[2], "SCRIPT_FILENAME=");
+    strcat(envp[2], req.GetFullPath().c_str());
+    // std::cout << envp[2] << std::endl;
+    //QUERY_STRING
+    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1];
+    strcpy(envp[3], "QUERY_STRING=");
+    strcat(envp[3], req.GetHeaderValue("query").c_str());
+    // std::cout << envp[3] << std::endl;
+    //SERVER_PROTOCOL
+    envp[4] = new char[strlen("SERVER_PROTOCOL=") + strlen("HTTP/1.1") + 1];
+    strcpy(envp[4], "SERVER_PROTOCOL=");
+    strcat(envp[4], "HTTP/1.1");
+    // std::cout << envp[4] << std::endl;
+    //GATEWAY_INTERFACE
+    envp[5] = new char[strlen("GATEWAY_INTERFACE=") + strlen("CGI/1.1") + 1];
+    strcpy(envp[5], "GATEWAY_INTERFACE=");
+    strcat(envp[5], "CGI/1.1");
+    // std::cout << envp[5] << std::endl;
+    //SERVER_SOFTWARE
+    envp[6] = new char[strlen("SERVER_SOFTWARE=") + strlen("webSERV/1.0") + 1];
+    strcpy(envp[6], "SERVER_SOFTWARE=");
+    strcat(envp[6], "webSERV/1.0");
+    // std::cout << envp[6] << std::endl;
+    // need to add SERVER_NAME, SERVER_PORT, PATH_INFO, CONTENT_TYPE, CONTENT_LENGTH
+    envp[7] = NULL;
+    return envp;
+}
+
+void    execCgi(const char *scriptPath, char **envp)
+{
+    char* argv[3];
+    if (strstr(scriptPath, ".py"))
+    {
+        argv[0] = (char*)"python3";
+        argv[1] = (char*)scriptPath;
+        argv[2] = NULL;
+        execve("/usr/bin/python3", argv, envp);
+    }
+    else if (strstr(scriptPath, ".cgi"))
+    {
+        argv[0] = (char*)scriptPath;
+        argv[1] = NULL;
+        execve(scriptPath, argv, envp);
+    }
+    else if (strstr(scriptPath, ".php"))
+    {
+        argv[0] = (char*)"php";
+        argv[1] = (char*)scriptPath;
+        argv[2] = NULL;
+        execve("/bin/php", argv, envp);
+    }
+    perror("execve failed");
+    exit(1);
+}
+
+std::string executeCgiScript(const char* scriptPath, const Request &req, std::vector<ConfigNode> ConfigPars)
+{
+    const char *postRequestBody = "name=ismail";// testing purposes
     std::string inpFile = "/tmp/cgiInput";
     std::string outFile = "/tmp/cgiOutput";
+    std::string output;
 
     pid_t pid = fork();
     if (pid == -1)
         return "";
-
-    if (pid == 0)
+    else if (pid == 0)
     {
         freopen(inpFile.c_str(), "r", stdin);
         freopen(outFile.c_str(), "w", stdout);
         freopen(outFile.c_str(), "w", stderr);
-
-        char* envp[12];
-        char buffer1[64], buffer2[256], buffer3[256], buffer4[64], buffer5[64], buffer6[64], buffer7[256], buffer8[64], buffer9[128], buffer10[64], buffer11[64];
-
-        // sprintf(buffer1, "REQUEST_METHOD=%s", "GET");
-        // sprintf(buffer2, "SCRIPT_NAME=%s", req.GetFullPath().c_str());
-        // sprintf(buffer3, "SCRIPT_FILENAME=%s", script_path);
-        // sprintf(buffer4, "SERVER_SOFTWARE=YourWebServer/1.0");
-        // sprintf(buffer5, "SERVER_PROTOCOL=HTTP/1.1");
-        // sprintf(buffer6, "GATEWAY_INTERFACE=CGI/1.1");
-        // if (strlen("ismail") > 0)
-        //     sprintf(buffer7, "QUERY_STRING=%s", "ismail");
-        // else
-        //     sprintf(buffer7, "QUERY_STRING=");
-        // if (strcmp("POST", "POST") == 0)
-        //     sprintf(buffer8, "CONTENT_LENGTH=%ld", strlen(postRequestBody));
-        // else
-        //     sprintf(buffer8, "CONTENT_LENGTH=%d", 0);
-        // sprintf(buffer9, "CONTENT_TYPE=application/x-www-form-urlencoded");
-        // sprintf(buffer10, "SERVER_NAME=localhost");
-        // sprintf(buffer11, "SERVER_PORT=8080");
-
-        envp[0] = buffer1;
-        envp[1] = buffer2;
-        envp[2] = buffer3;
-        envp[3] = buffer4;
-        envp[4] = buffer5;
-        envp[5] = buffer6;
-        envp[6] = buffer7;
-        envp[7] = buffer8;
-        envp[8] = buffer9;
-        envp[9] = buffer10;
-        envp[10] = buffer11;
-        envp[11] = NULL;
-
-        char* argv[3];
-        if (strstr(script_path, ".py"))
-        {
-            argv[0] = (char*)"python3";
-            argv[1] = (char*)script_path;
-            argv[2] = NULL;
-            execve("/usr/bin/python3", argv, envp);
-        }
-        else if (strstr(script_path, ".cgi"))
-        {
-            argv[0] = (char*)script_path;
-            argv[1] = NULL;
-            execve(script_path, argv, envp);
-        }
-        else if (strstr(script_path, ".php"))
-        {
-            argv[0] = (char*)"php";
-            argv[1] = (char*)script_path;
-            argv[2] = NULL;
-            execve("/bin/php", argv, envp);
-        }
-        perror("execve failed");
-        exit(1);
+        char **envp;
+        envp = cgiEnvVariables(req, ConfigPars);
+        execCgi(scriptPath, envp);
     }
     else
     {
         // this is for POST data 
-        FILE* inputFileStream = fopen(inpFile.c_str(), "w");
-        if (inputFileStream)
+        if (req.GetHeaderValue("method") == "POST")
         {
-            if (postRequestBody && strlen(postRequestBody) > 0)
-                fwrite(postRequestBody, 1, strlen(postRequestBody), inputFileStream);
-            fclose(inputFileStream);
+            std::ofstream inputFileStream(inpFile.c_str());
+            if (inputFileStream.is_open())
+            {
+                if (postRequestBody && strlen(postRequestBody) > 0)
+                    inputFileStream << postRequestBody;
+                inputFileStream.close();
+            }
         }
 
         int status;
@@ -144,20 +162,14 @@ std::string executeCgiScript(const char* script_path, const Request &req)
             unlink(outFile.c_str());
             return "";
         }
-        FILE* outFileStream = fopen(outFile.c_str(), "r"); // open the output file to read
-        if (outFileStream)
+        std::ifstream outFileStream(outFile.c_str());
+        if (outFileStream.is_open())
         {
-            char buffer[4096];
-            size_t bytes_read;
-
-            while ((bytes_read = fread(buffer, 1, sizeof(buffer) - 1, outFileStream)) > 0)
-            {
-                buffer[bytes_read] = '\0';
-                output += buffer;
-            }
-            fclose(outFileStream);
+            std::ostringstream buffer;
+            buffer << outFileStream.rdbuf();
+            output = buffer.str();
+            outFileStream.close();
         }
-
         unlink(inpFile.c_str());
         unlink(outFile.c_str());
     }
