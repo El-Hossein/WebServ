@@ -49,9 +49,9 @@ CgiResponse parseOutput(const std::string& scriptOutput)
     return response;
 }
 
-char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars)
+char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    char **envp = new char*[8];
+    char **envp = new char*[9];
 
 
     // REQUEST_METHOD
@@ -89,8 +89,13 @@ char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars
     strcpy(envp[6], "SERVER_SOFTWARE=");
     strcat(envp[6], "webSERV/1.0");
     // std::cout << envp[6] << std::endl;
-    // need to add SERVER_NAME, SERVER_PORT, PATH_INFO, CONTENT_TYPE, CONTENT_LENGTH
-    envp[7] = NULL;
+    //PATH_INFO
+    envp[7] = new char[strlen("PATH_INFO=") + strlen(_pathInfo.c_str()) + 1];
+    strcpy(envp[7], "PATH_INFO=");
+    strcat(envp[7], _pathInfo.c_str());
+    // std::cout << envp[7] << std::endl;
+    // need to add SERVER_NAME, SERVER_PORT, CONTENT_TYPE, CONTENT_LENGTH
+    envp[8] = NULL;
     return envp;
 }
 
@@ -121,13 +126,12 @@ void    execCgi(const char *scriptPath, char **envp)
     exit(1);
 }
 
-std::string executeCgiScript(const char* scriptPath, const Request &req, std::vector<ConfigNode> ConfigPars)
+std::string executeCgiScript(const char* scriptPath, const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
     const char *postRequestBody = "name=ismail";// testing purposes
     std::string inpFile = "/tmp/cgiInput";
     std::string outFile = "/tmp/cgiOutput";
     std::string output;
-
     pid_t pid = fork();
     if (pid == -1)
         return "";
@@ -137,7 +141,7 @@ std::string executeCgiScript(const char* scriptPath, const Request &req, std::ve
         freopen(outFile.c_str(), "w", stdout);
         freopen(outFile.c_str(), "w", stderr);
         char **envp;
-        envp = cgiEnvVariables(req, ConfigPars);
+        envp = cgiEnvVariables(req, ConfigPars, _pathInfo);
         execCgi(scriptPath, envp);
     }
     else
