@@ -37,9 +37,7 @@ std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, 
 
     std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
     if (autoIndex.empty())
-    {
         return "";
-    }
     return autoIndex[index];
 }
 
@@ -90,45 +88,53 @@ void    servListingDiren(std::string &uri, std::string &finalResponse, std::stri
         finalResponse = responseError(403, " Forbidden", ConfigPars);
 }
 
-std::string getResponse(std::string finalResponse, std::string uri, Request	&req, std::vector<ConfigNode> ConfigPars)
+
+std::string getResponse(std::string finalResponse, std::string uri, Request	&req, std::vector<ConfigNode> ConfigPars, std::string method)
 {
     struct stat st;
     std::string pathRequested = req.GetHeaderValue("path");
 
-    if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-        servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
-    else if (IsCgiRequest(uri.c_str()))
-    {
+    if (IsCgiRequest(uri.c_str()))
         finalResponse = handleCgiRequest(req, ConfigPars);
-    }
-    else
+    else if (method == "GET")
     {
-        // i need to check the errors thrown for the file before open it
-        std::ifstream inFile(uri.c_str(), std::ios::binary);
-        if (inFile)
-        {
-            std::ostringstream outStringFIle;
-            outStringFIle << inFile.rdbuf(); // so i can read the whole file
-            inFile.close();
-            std::string fileBody = outStringFIle.str();
-            finalResponse = "HTTP/1.1 200 OK\r\n";
-            finalResponse += "Content-Length: ";
-            finalResponse += intToString(fileBody.size()) + "\r\n";
-            finalResponse += "Connection: close\r\n";
-            //need to check content type
-            finalResponse += "Content-Type: text/html\r\n";
-            finalResponse += "\r\n";
-            finalResponse += fileBody;
-        }
+        if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
         else
         {
-            // and need to display given error page
-            finalResponse = responseError(404, " Not Found", ConfigPars); // just a test i have to catsh error codes ziad throw
+            if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
+            {
+                finalResponse = responseError(403, " Forbidden", ConfigPars);
+                return finalResponse;
+            }
+            std::ifstream inFile(uri.c_str(), std::ios::binary);
+            if (inFile)
+            {
+                std::ostringstream outStringFIle;
+                outStringFIle << inFile.rdbuf();
+                inFile.close();
+                std::string fileBody = outStringFIle.str();
+                finalResponse = "HTTP/1.1 200 OK\r\n";
+                finalResponse += "Content-Length: ";
+                finalResponse += intToString(fileBody.size()) + "\r\n";
+                finalResponse += "Connection: close\r\n";
+                finalResponse += "Content-Type: text/html\r\n";
+                finalResponse += "\r\n";
+                finalResponse += fileBody;
+            }
+            else
+            {
+                // and need to display given error page
+                finalResponse = responseError(404, " Not Found", ConfigPars);
+            }
         }
+    }
+    else if (method == "POST")
+    {
+        // POST here
     }
     return finalResponse;
 }
-
 
 std::string deleteResponse(std::string &finalResponse, std::string uri, std::vector<ConfigNode> ConfigPars)
 {
@@ -161,9 +167,9 @@ void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map,
     std::string method = req.GetHeaderValue("method");
     
 
-    if (method == "GET")
+    if (method == "GET" || method == "POST")
     {
-        finalResponse = getResponse(finalResponse, uri, req, ConfigPars);
+        finalResponse = getResponse(finalResponse, uri, req, ConfigPars, method);
     }
     else if (method == "DELETE") 
     {

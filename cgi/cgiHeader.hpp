@@ -19,10 +19,17 @@ struct CgiResponse
     int status_code;
 };
 
+struct pathInfo
+{
+    std::string scriptFile;
+    std::string _pathInfo;
+};
+
+
 std::string formatHttpResponse(const CgiResponse& cgiResponse);
 std::string responseError(int status_code, const std::string& message, std::vector<ConfigNode> ConfigPars);
 CgiResponse parseOutput(const std::string& raw_output);
-std::string executeCgiScript(const char* script_path, const Request &req, std::vector<ConfigNode> ConfigPars);
+std::string executeCgiScript(const char* script_path, const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo);
 std::string intToString(int n);
-int IsCgiRequest(const char *uri);
 std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars);
+int         IsCgiRequest(const char *uri);
