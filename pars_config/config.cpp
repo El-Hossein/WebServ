@@ -29,6 +29,14 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
+std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, const std::string& key, size_t index) 
+{
+    if (index > ConfNode.children.size())
+        return "";
+    else
+        return ConfNode.children[index].getName();
+}
+
 std::vector<std::string> ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     std::vector<std::string> emptyResult;
@@ -159,7 +167,7 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "error_page", ConfNode, -1, 2);
         CheckAllError(KV, "client_max_body_size", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
-        CheckAllError(KV, "index", ConfNode, -1, -1);
+        CheckAllError(KV, "index", ConfNode, 1, -1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
         CheckAllError(KV, "return", ConfNode, -1, 2);
     }
@@ -169,7 +177,7 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "return", ConfNode, -1, 2);
         CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
-        CheckAllError(KV, "index", ConfNode, -1, -1);
+        CheckAllError(KV, "index", ConfNode, 1, -1);
         CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "upload_store", ConfNode, 1, 1);
     }
