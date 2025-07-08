@@ -35,6 +35,9 @@ void SetUpForBind(struct sockaddr_in &server_addr, int port)
 // Bind the socket to an address and listen on the socket
 int BindAndListen(int server_fd, struct sockaddr_in server_addr, int port, int i)
 {
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+        return (std::cerr << "setsockopt failed for server " << i << "\n", 1);
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
         return  (std::cerr << "Bind failed on port " << port << " for server " << i << "\n", 1);
 
