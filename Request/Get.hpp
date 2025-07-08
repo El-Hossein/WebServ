@@ -13,6 +13,5 @@ public:
 	Get(const Request	&_obj);
 	~Get();
 
-	void			CheckPath(std::string &path);
-	std::string		ReadFile();
+	void			CheckPath(std::string path);
 };
