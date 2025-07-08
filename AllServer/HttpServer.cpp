@@ -144,26 +144,9 @@ void HttpServer::accept_new_client(int server_fd)
     std::cout << "Accept new clien: " << client_fd << std::endl;
 }
 
-void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&Request)
+void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&Request, std::vector<ConfigNode> ConfigPars)
 {
-    std::string response;
-    std::string body = "Hello, World! " + std::to_string(client_fd) + "\n";
-    int content_length = body.length(); //
-	std::map<std::string, std::string>	headers = Request.GetHeaders();
-
-    if (Request.GetConnection()) // if (keep-alive || close)
-        response = "HTTP/1.1 200 OK\r\n"
-                   "Connection: keep-alive\r\n"
-                   "Keep-Alive: timeout=1, max=100\r\n"
-                   "Content-Length: " + std::to_string(content_length) + "\r\n"
-                   "\r\n" + body;
-    else
-        response = "HTTP/1.1 200 OK\r\n"
-                   "Connection: close\r\n"
-                   "Content-Length: " + std::to_string(content_length) + "\r\n"
-                   "\r\n" + body;
-    // Create the response
-    response_map[client_fd] = response;
+    moveToResponse(client_fd, response_map, Request, ConfigPars);
 }
 
 // remove the client from the kqueue and close the connection
@@ -212,9 +195,9 @@ void	HttpServer::handle_client(int client_fd, int filter, std::vector<ConfigNode
 		try { obj.SetUpRequest(); }
 			catch (const char *e) { std::cout << e << std::endl;	exit(1); }
         // -------------	Process Cookie		 ------------- //
-        std::string cookie = SetUpCookie(obj);
+        // std::string cookie = SetUpCookie(obj);
         // -------------	Process response	 ------------- //
-        SetUpResponse(client_fd, response_map, obj);
+        SetUpResponse(client_fd, response_map, obj, ConfigPars);
         // Enable writing
         struct kevent event;
         AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ENABLE);
