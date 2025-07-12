@@ -5,14 +5,16 @@ CC = c++
 FLAGS = -fsanitize=address -g #-Wall -Wextra -Werror -std=c++98
 
 SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp ./Request/Request.cpp \
-		./FunctionTools.cpp ./Request/Get.cpp ./Request/Post.cpp ./Request/Delete.cpp
+		./FunctionTools.cpp ./Request/Get.cpp ./Request/Post.cpp ./Request/Delete.cpp \
+		./cgi/cgiMain.cpp ./cgi/cgiExecPars.cpp ./cgi/cgiResponse.cpp \
+		./Response/responseMain.cpp
 
 OBJ_DIR = obj
 
 OBJ = $(addprefix $(OBJ_DIR)/, $(notdir $(SRC:.cpp=.o)))
 
 # Define source directories for vpath
-VPATH = ./pars_config:./AllServer:./Request
+VPATH = ./pars_config:./AllServer:./Request:./cgi:./Response
 
 all: $(NAME)
 
@@ -27,11 +29,11 @@ clean:
 	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -rf $(NAME) zbi
+	rm -rf $(NAME) test
 
 re: fclean all
 
 .PHONY: all clean fclean re
 
 test:
-	c++ -fsanitize=address -std=c++98 Request/z.cpp -o zbi && echo "\n" && ./zbi
+	c++ -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
