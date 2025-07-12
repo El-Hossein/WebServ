@@ -27,7 +27,7 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 		if (key == it->first)
 			return it->second;
 	}
-	throw "Header not found";
+	throw "";
 }
 
 std::map<std::string, std::string>	Request::GetQueryParams() const
