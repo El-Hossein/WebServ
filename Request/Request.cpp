@@ -148,12 +148,17 @@ void	Request::SplitURI()
 {
 	std::string	Path,Query;
 	std::string	URI = GetHeaderValue("uri");
-	size_t		pos = URI.find("?");
-
-	if (pos == std::string::npos) // Query has not been found
+	
+	// ---------# Parse URI #--------- //
+	std::string URICharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
+	for (size_t i = 0; i < URI.size() ; i++)
 	{
-		Path = URI, Query = "", (void)0;
+		if (URICharacters.find(URI[i]) == std::string::npos)
+			throw "400 Bad request";
 	}
+	size_t		pos = URI.find("?");
+	if (pos == std::string::npos) // Query has not been found
+		Path = URI, Query = "";
 	else
 	{
 		Path = URI.substr(0, pos);
@@ -163,16 +168,6 @@ void	Request::SplitURI()
 	Headers["path"] = Path;
 	Headers["query"] = Query;
 
-	// ---------# Parse Path #--------- //
-	for (size_t	i = 0, j = 0; i < Path.length(); i++)
-	{
-		if (!isalnum(URI[i]) && URI[i] != '/' && URI[i] != '.'
-			&& URI[i] != '-' && URI[i] != '_')
-				throw "400 Bad Request 1";
-
-		if (URI[i] == '?')
-			(++j >= 2) ? throw "400 Bad Request 2" : (void)0;
-	}
 }
 
 void	Request::ParseURI(std::string	&URI)
@@ -227,8 +222,7 @@ void	Request::ReadHeaders(std::string Header)
 			throw "400 Bad Request ReadHeaders()-1";
 
 		headerValue = line.substr(pos + 2);
-		if (!headerValue.empty() && headerValue.back() == '\r')
-			headerValue.pop_back();
+		TrimSpaces(headerValue);
 		if (!ValidFieldValue(headerValue))
 			throw "400 Bad Request ReadHeaders()-2";
 
@@ -246,11 +240,20 @@ void	Request::ReadRequestHeader()
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead < 0)
 		throw ("Error: Read return.");
+	if (BytesRead == 0)
+		throw ("Nothing else to Read.\n");
 
 	buffer[BytesRead] = '\0';
 
 	std::string	StdBuffer(buffer);
+
+	//			READ RAW REQUEST		//
+	std::ofstream	Test;
+	Test.open("REQUEST_VALUE.txt");
+	Test << StdBuffer;
+
 	size_t npos = StdBuffer.find("\r\n\r\n");
+
 	if (npos == std::string::npos)
 		throw ("400: Invalide request header.");
 
@@ -265,6 +268,10 @@ void	Request::CheckRequiredHeaders()
 {
 	int	flag = 0;
 
+	if (Headers.find("host") == Headers.end())
+	{
+		PrintError("No Host has been found!"), throw "400 Bad request";
+	}
 	if (Headers.find("connection") != Headers.end())
 	{
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
@@ -284,7 +291,6 @@ void	Request::SetUpRequest()
 		case POST	:	{	Post	PostObj(*this);		return PostObj.HandleBody();	}
 		case DELETE	:	{	Delete	DeleteObj(*this);	return DeleteObj.DoDelete(GetFullPath());	}
 	}
-
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
 
 	// PrintHeaders(this->Headers);
