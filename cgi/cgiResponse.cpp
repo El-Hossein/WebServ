@@ -15,7 +15,8 @@ std::string formatHttpResponse(const CgiResponse& cgiResponse)
     // headers
     httpResponse += "\r\n";
     httpResponse += cgiResponse.headers;
-    httpResponse += "Content-Length: " + intToString(cgiResponse.body.length()) + "\r\n\r\n";
+    httpResponse += "Content-Length: " + intToString(cgiResponse.body.length()) + "\r\n";
+    httpResponse += "Connection: close\r\n\r\n";
     // body
     httpResponse += cgiResponse.body;
     return httpResponse;
