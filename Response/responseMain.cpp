@@ -102,11 +102,11 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
             servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
         else
         {
-            if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
-            {
-                finalResponse = responseError(403, " Forbidden", ConfigPars);
-                return finalResponse;
-            }
+            // if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
+            // {
+            //     finalResponse = responseError(403, " Forbidden", ConfigPars);
+            //     return finalResponse;
+            // }
             std::ifstream inFile(uri.c_str(), std::ios::binary);
             if (inFile)
             {
