@@ -3,6 +3,7 @@
 
 
 #include "../allincludes.hpp"
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,7 @@ class ConfigNode {
 		std::map<std::string, std::vector<std::string> >& getValues() ;
 		static ConfigNode GetServer(std::vector<ConfigNode> ConfigPars, std::string ServerName);
 		static std::vector<std::string> getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
+		static std::string GetLocationValue(ConfigNode& ConfNode, const std::string& key, size_t index)  ;
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
 };
