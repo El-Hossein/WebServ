@@ -10,7 +10,7 @@ Get::~Get() {
 void	Get::CheckPath(std::string path)
 {
 	struct stat fileStat;
-
+	
 	// if (stat(path.c_str(), &fileStat) == -1)
 	// 	throw ("404 Not Found: file does not exist");
 
