@@ -13,7 +13,13 @@ enum	ContentType
 	UrlEncoded,
 	MultipartFormData,
 	ApplicationJson,
-	Unknown
+};
+
+enum	DataType
+{
+	Chunked,
+	FixedLength,
+	// Unknown
 };
 
 class Post
@@ -22,11 +28,13 @@ private:
 	Request	&obj;
 
 	ContentType							ContentType;
+	DataType							DataType;
 	std::string							Boundary;
 	std::string							BoundaryStart;
 	std::string							BoundaryEnd;
 
 	bool								EndOfRequest;
+
 	bool								BodyFullyRead;
 
 	
@@ -50,5 +58,5 @@ public:
 	void	PostRequiredHeaders();
 	void	ParseBody();
 	void	IsBodyFullyRead();
-	void	HandleBody();
+	void	HandlePost();
 };
