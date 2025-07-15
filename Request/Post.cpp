@@ -18,9 +18,9 @@ Post::~Post() {
  * If the boundary existes in the body -> malformed body
  * The boundary consists of {1 to 70} characters -> Done
  * allowed : DIGIT / ALPHA / "'" / "(" / ")" / "+" / "_" / "," / "-" / "." / "/" / ":" / "=" / "?" -> almost Done
-
  * 
  */
+
 void	Post::PostRequiredHeaders()
 {
 	std::map<std::string, std::string>	Headers = obj.GetHeaders();
@@ -34,10 +34,11 @@ void	Post::PostRequiredHeaders()
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length"), throw "400: Bad Request";
 		obj.SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
+		DataType = FixedLength;
 	}
 
-	if (Headers.find("transfer-encoding") != Headers.end() && Headers["transfer-encoding"] != "chunked")
-		throw "501 Not implemented - PostRequestHeaders()";
+	(Headers.find("transfer-encoding") != Headers.end() && Headers["transfer-encoding"] == "chunked") ?
+		DataType = Chunked : throw "501 Not implemented - PostRequestHeaders()";
 
 	if (Headers.find("content-type") != Headers.end())
 	{
@@ -208,16 +209,18 @@ void	Post::ParseBody()
 		case UrlEncoded			:	return ParseUrlEncoded(stream);
 		case MultipartFormData	:	return ParseMultipartFormData(stream, Body);
 		case ApplicationJson	:	return ParseApplicationJson(stream);
-		case Unknown			:	return throw "415 Unsupported Media Type";
+		default					:	return throw "415 Unsupported Media Type";
 	}
 }
 
-void	Post::HandleBody()
+void	Post::HandlePost()
 {
 	std::cout << "\n\t\t<# POST #>\t\t\n\n";
 
 	PostRequiredHeaders();
+
 	IsBodyFullyRead();
 	if (BodyFullyRead) // the Body has been entirely read
 		ParseBody();
+
 }
