@@ -64,7 +64,8 @@ std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigP
         return responseError(404, " not found", ConfigPars);
     std::string scriptOutput = executeCgiScript(scriptPath.c_str(), req, ConfigPars, _pathinfo._pathInfo);
     if (scriptOutput.empty())
-        return responseError(500, " internal server error", ConfigPars);
+        return responseError(500, " internal server error", ConfigPars); // check with status code li kayreturni child process
+    // need to check time out
     CgiResponse parsedCgi = parseOutput(scriptOutput);
     return formatHttpResponse(parsedCgi);
 }
