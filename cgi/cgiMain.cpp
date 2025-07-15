@@ -21,6 +21,11 @@ void    Cgi::setScriptPath(std::string _scriptPath)
     scriptPath = _scriptPath;
 }
 
+int Cgi::getStatus()
+{
+    return status;
+}
+
 std::string Cgi::getScriptOutput()
 {
     return scriptOutput;
@@ -95,8 +100,6 @@ std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigP
     else if (code == 404)
         return responseError(404, " not found", ConfigPars);
     obj.setScriptOutput(obj.executeCgiScript(req, ConfigPars, _pathinfo._pathInfo));
-    if (obj.getScriptOutput().empty())
-        return responseError(500, " internal server error", ConfigPars); // check with status code li kayreturni child process
     // need to check time out
     CgiResponse parsedCgi = obj.parseOutput(obj.getScriptOutput());
     return obj.formatHttpResponse(parsedCgi);
