@@ -132,7 +132,9 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
     else if (method == "POST")
     {
         // POST here
+        finalResponse = responseError(404, " Not Found", ConfigPars);
     }
+    // std::cout << "OUTPUUUUUUUUT  ==    " << finalResponse << std::endl;
     return finalResponse;
 }
 
