@@ -10,6 +10,24 @@ Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(
 
 Request::~Request() {
 }
+//done:
+int	Request::GetClientFd() const
+{
+	return this->ClientFd;
+}
+
+int	Request::GetNew() const
+{
+	return this->NewClient;
+}
+void	Request::SetNew(int is) 
+{
+	this->NewClient = is;
+}
+std::string	Request::GetHeaderBuffer() const
+{
+	return this->HeaderBuffer;
+}
 
 /*	|#----------------------------------#|
 	|#			 	GETTERS    			#|
@@ -232,38 +250,6 @@ void	Request::ReadHeaders(std::string Header)
 	}
 }
 
-void	Request::ReadRequestHeader()
-{
-	int			BytesRead = 0;
-	char		buffer[MAX_HEADER_SIZE];
-
-	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
-	if (BytesRead < 0)
-		throw ("Error: Read return.");
-	if (BytesRead == 0)
-		throw ("Nothing else to Read.\n");
-
-	buffer[BytesRead] = '\0';
-
-	std::string	StdBuffer(buffer);
-
-	//			READ RAW REQUEST		//
-	std::ofstream	Test;
-	Test.open("REQUEST_VALUE.txt");
-	Test << StdBuffer;
-
-	size_t npos = StdBuffer.find("\r\n\r\n");
-
-	if (npos == std::string::npos)
-		throw ("400: Invalide request header.");
-
-	BodyUnprocessedBuffer	= StdBuffer.substr(npos + 4);
-	StdBuffer				= StdBuffer.substr(0, npos);
-
-	ReadFirstLine(StdBuffer); // First line
-	ReadHeaders(StdBuffer); // other lines
-}
-
 void	Request::CheckRequiredHeaders()
 {
 	int	flag = 0;
@@ -278,12 +264,67 @@ void	Request::CheckRequiredHeaders()
 	}
 }
 
+
+void Request::ReadBodyChunk() {
+    int BytesRead = 0;
+    char buffer[MAX_HEADER_SIZE];
+
+    BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
+    if (BytesRead < 0) {
+        throw ("Error: Read failed.");
+    }
+
+    if (BytesRead == 0) {
+			SetNew(END_BODY);
+	}
+    buffer[BytesRead] = '\0';
+    std::string StdBuffer(buffer, BytesRead);
+    BodyUnprocessedBuffer += StdBuffer; // Append to BodyUnprocessedBuffer
+	if (BodyUnprocessedBuffer.size() >= 800)
+		SetNew(END_BODY);
+}
+
+void	Request::ReadRequestHeader()
+{
+	int			BytesRead = 0;
+	char		buffer[MAX_HEADER_SIZE];
+
+	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
+	if (BytesRead < 0)
+		throw ("Error: Read return.");
+	if (BytesRead == 0)
+		SetNew(END_BODY);
+
+
+	buffer[BytesRead] = '\0';
+
+	std::string	StdBuffer(buffer);
+	HeaderBuffer	+= StdBuffer;
+	size_t npos = HeaderBuffer.find("\r\n\r\n");
+	if (npos == std::string::npos)
+		throw ("400: Invalide request header.");
+
+	BodyUnprocessedBuffer	= HeaderBuffer.substr(npos + 4);
+	HeaderBuffer				= HeaderBuffer.substr(0, npos);
+	ReadFirstLine(HeaderBuffer); // First line
+	ReadHeaders(HeaderBuffer); // other lines
+	if (BodyUnprocessedBuffer.empty() != false)
+		SetNew(END_BODY);
+	else
+		SetNew(READ_BODY);
+}
+
 void	Request::SetUpRequest()
 {
 	RightServer = ConfigNode::GetServer(Servers, "myserver.com");
-
-	ReadRequestHeader();
-	CheckRequiredHeaders();
+	if (GetNew() ==  READ_HEADER)
+	{
+		ReadRequestHeader();
+		CheckRequiredHeaders();
+	}
+	else if (GetNew() == READ_BODY)
+		ReadBodyChunk();
+	// std::cout << Request::GetFullPath() << std::endl;
 
 	switch (Method)
 	{
@@ -291,6 +332,7 @@ void	Request::SetUpRequest()
 		case POST	:	{	Post	PostObj(*this);		return PostObj.HandlePost();	}
 		case DELETE	:	{	Delete	DeleteObj(*this);	return DeleteObj.DoDelete(GetFullPath());	}
 	}
+
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
 
 	// PrintHeaders(this->Headers);
