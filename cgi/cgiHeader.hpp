@@ -34,6 +34,7 @@ class Cgi
         std::string inpFile;
         std::string outFile;
         std::string output;
+        int         status;
 
 
     public :
@@ -46,6 +47,7 @@ class Cgi
         void        setScriptPath(std::string _scriptPath);
         std::string getScriptOutput();
         void        setScriptOutput(std::string _scriptOutput);
+        int         getStatus();
 
 
 };
