@@ -288,7 +288,7 @@ void	Request::SetUpRequest()
 	switch (Method)
 	{
 		case GET	:	{	Get		GetObj(*this);		return GetObj.CheckPath(GetFullPath()); }
-		case POST	:	{	Post	PostObj(*this);		return PostObj.HandleBody();	}
+		case POST	:	{	Post	PostObj(*this);		return PostObj.HandlePost();	}
 		case DELETE	:	{	Delete	DeleteObj(*this);	return DeleteObj.DoDelete(GetFullPath());	}
 	}
     // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
