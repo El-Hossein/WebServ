@@ -1,4 +1,5 @@
 #include "Post.hpp"
+#include "Request.hpp"
 
 Post::Post(Request	&_obj) :	obj(_obj),
 								BodyUnprocessedBuffer(_obj.GetUnprocessedBuffer()),
@@ -214,13 +215,17 @@ void	Post::ParseBody()
 }
 
 void	Post::HandlePost()
-{
-	std::cout << "\n\t\t<# POST #>\t\t\n\n";
+    {
+        std::cout << "\n\t\t<# POST #>\t\t\n\n";
+        std::cout << obj.GetNew() << std::endl;
 
-	PostRequiredHeaders();
-
-	IsBodyFullyRead();
-	if (BodyFullyRead) // the Body has been entirely read
-		ParseBody();
-
-}
+        PostRequiredHeaders();
+		IsBodyFullyRead();
+        if (BodyFullyRead) // the Body has been entirely read
+        { 
+            ParseBody();
+            obj.SetNew(END_BODY);
+        }
+        else
+        	obj.SetNew(READ_BODY);
+    }
