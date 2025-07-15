@@ -1,6 +1,6 @@
 #include "cgiHeader.hpp"
 
-std::string formatHttpResponse(const CgiResponse& cgiResponse)
+std::string Cgi::formatHttpResponse(const CgiResponse& cgiResponse)
 {
     // protocol version and status code and reason phrase 
     std::string httpResponse = "HTTP/1.1 " + intToString(cgiResponse.status_code);

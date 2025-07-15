@@ -1,6 +1,42 @@
 #include "responseHeader.hpp"
 
-std::string deleteResponseSuccess(const std::string& message)
+Response::Response(){
+    
+}
+
+Response::Response(Request	&req)
+{
+    uri = req.GetFullPath();
+    method = req.GetHeaderValue("method");
+    pathRequested = req.GetHeaderValue("path");
+}
+
+Response::~Response(){
+    
+}
+
+std::string Response::getMethod()
+{
+    return method;
+}
+
+std::string Response::getUri()
+{
+    return uri;
+}
+
+std::string Response::getFinalResponse()
+{
+    return finalResponse;
+}
+
+void    Response::setFinalResponse(std::string _finalResponse)
+{
+    finalResponse = _finalResponse;
+}
+
+
+std::string Response::deleteResponseSuccess(const std::string& message)
 {
     std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
     html += "<body><h1>";
@@ -10,7 +46,7 @@ std::string deleteResponseSuccess(const std::string& message)
     return html;
 }
 
-std::string generateListingDir(const std::string& uri, std::string &pathRequested)
+std::string Response::generateListingDir()
 {
     DIR *dirCheck = opendir(uri.c_str());
     if (!dirCheck)
@@ -41,9 +77,9 @@ std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, 
     return autoIndex[index];
 }
 
-std::string generateAutoIndexOn(std::string &finalResponse, std::string &uri, std::string &pathRequested)
+std::string Response::generateAutoIndexOn()
 {
-    std::string body = generateListingDir(uri, pathRequested);
+    std::string body = generateListingDir();
 
     finalResponse = "HTTP/1.1 200 OK\r\n";
     finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
@@ -54,14 +90,14 @@ std::string generateAutoIndexOn(std::string &finalResponse, std::string &uri, st
 
 }
 
-void    servListingDiren(std::string &uri, std::string &finalResponse, std::string &pathRequested, std::vector<ConfigNode> ConfigPars)
+void    Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
 {
-    std::string autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
-    std::string index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
+    index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
 
     if (index.empty() == 0)
     {
-        std::string htmlFound = uri + "/" + index; // i need to check if slash already there or not
+        htmlFound = uri + "/" + index; // i need to check if slash already there or not
         std::ifstream htmlStream(htmlFound.c_str(), std::ios::binary); 
         if (htmlStream)
         {
@@ -78,28 +114,28 @@ void    servListingDiren(std::string &uri, std::string &finalResponse, std::stri
             
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOn(finalResponse, uri, pathRequested);
+            generateAutoIndexOn();
         else
             finalResponse = responseError(403, " Forbidden", ConfigPars);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOn(finalResponse, uri, pathRequested);
+        generateAutoIndexOn();
     else
         finalResponse = responseError(403, " Forbidden", ConfigPars);
 }
 
 
-std::string getResponse(std::string finalResponse, std::string uri, Request	&req, std::vector<ConfigNode> ConfigPars, std::string method)
+std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
-    std::string pathRequested = req.GetHeaderValue("path");
+    // std::string pathRequested = req.GetHeaderValue("path");
 
     if (IsCgiRequest(uri.c_str()))
         finalResponse = handleCgiRequest(req, ConfigPars);
     else if (method == "GET")
     {
         if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-            servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
+            servListingDiren(ConfigPars);
         else
         {
             // if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
@@ -136,7 +172,7 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
     return finalResponse;
 }
 
-std::string deleteResponse(std::string &finalResponse, std::string uri, std::vector<ConfigNode> ConfigPars)
+std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
 
@@ -162,21 +198,19 @@ std::string deleteResponse(std::string &finalResponse, std::string uri, std::vec
 
 void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-    std::string uri = req.GetFullPath();
-    std::string finalResponse;
-    std::string method = req.GetHeaderValue("method");
-    
+    Response obj(req);
 
-    if (method == "GET" || method == "POST")
+    if (obj.getMethod() == "GET" || obj.getMethod() == "POST")
     {
-        finalResponse = getResponse(finalResponse, uri, req, ConfigPars, method);
+        obj.setFinalResponse(obj.getResponse(req, ConfigPars));
     }
-    else if (method == "DELETE") 
+    else if (obj.getMethod() == "DELETE")
     {
         // if method not allowed return 405 Method Not Allowed
-       finalResponse = deleteResponse(finalResponse, uri, ConfigPars);
+
+       obj.setFinalResponse(obj.deleteResponse(ConfigPars));
     }
     else
-        finalResponse = responseError(501, " Method not implemented", ConfigPars);
-    response_map[client_fd] = finalResponse;
+        obj.setFinalResponse(responseError(501, " Method not implemented", ConfigPars));
+    response_map[client_fd] = obj.getFinalResponse();
 }

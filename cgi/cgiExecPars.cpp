@@ -1,6 +1,6 @@
 #include "cgiHeader.hpp"
 
-CgiResponse parseOutput(const std::string& scriptOutput)
+CgiResponse Cgi::parseOutput(const std::string& scriptOutput)
 {
     CgiResponse response;
     response.status_code = 200;
@@ -126,12 +126,11 @@ void    execCgi(const char *scriptPath, char **envp)
     exit(1);
 }
 
-std::string executeCgiScript(const char* scriptPath, const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
+std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    const char *postRequestBody = "name=ismail";// testing purposes
-    std::string inpFile = "/tmp/cgiInput";
-    std::string outFile = "/tmp/cgiOutput";
-    std::string output;
+    // postRequestBody = "name=ismail";// testing purposes
+    inpFile = "/tmp/cgiInput";
+    outFile = "/tmp/cgiOutput";
     pid_t pid = fork();
     if (pid == -1)
         return "";
@@ -142,7 +141,7 @@ std::string executeCgiScript(const char* scriptPath, const Request &req, std::ve
         freopen(outFile.c_str(), "w", stderr);
         char **envp;
         envp = cgiEnvVariables(req, ConfigPars, _pathInfo);
-        execCgi(scriptPath, envp);
+        execCgi(scriptPath.c_str(), envp);
     }
     else
     {
