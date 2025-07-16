@@ -7,6 +7,9 @@ Response::Response(){
 Response::Response(Request	&req, int _clientFd)
 {
     clientFd = _clientFd;
+    filePos = 0;
+    fileSize = 0;
+    headerSent = 0;
 }
 
 Response::~Response(){
@@ -21,6 +24,53 @@ int Response::getClientFd()
 void    Response::setClientFd(int _clientFd)
 {
     clientFd = _clientFd;
+}
+
+bool Response::getNextChunk(std::string &out, size_t chunkSize)
+{
+    out.clear();
+
+    // Send remaining header first
+    if (headerSent < headers.size())
+    {
+        size_t left = headers.size() - headerSent;
+        size_t sendNow = std::min(chunkSize, left);
+        out = headers.substr(headerSent, sendNow);
+        headerSent += sendNow;
+
+        if (headerSent < headers.size() || file.is_open())
+            return true;
+        else
+            return false;
+    }
+
+    // Then send file content
+    if (file.is_open())
+    {
+        std::vector<char> buffer(chunkSize);
+        file.read(buffer.data(), chunkSize);
+        std::streamsize bytesRead = file.gcount();
+
+        if (bytesRead > 0)
+        {
+            out.assign(buffer.data(), bytesRead);
+            filePos += bytesRead;
+
+            if (file.eof() || filePos >= fileSize)
+            {
+                file.close();
+                return false;
+            }
+            return true;
+        }
+        else
+        {
+            file.close();
+            return false;
+        }
+    }
+
+    return false;
 }
 
 std::string Response::getMethod()
@@ -169,32 +219,29 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
             servListingDiren(ConfigPars);
         else
         {
-            // if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
+            if (prepareFileResponse(uri.c_str(), checkContentType()) == false)
+                return finalResponse = responseError(404, " Not Found", ConfigPars);
+            // std::ifstream inFile(uri.c_str(), std::ios::binary);
+            // if (inFile)
             // {
-            //     finalResponse = responseError(403, " Forbidden", ConfigPars);
-            //     return finalResponse;
+            //     std::ostringstream outStringFIle;
+            //     outStringFIle << inFile.rdbuf();
+            //     inFile.close();
+            //     std::string fileBody = outStringFIle.str();
+            //     finalResponse = "HTTP/1.1 200 OK\r\n";
+            //     finalResponse += "Content-Length: ";
+            //     finalResponse += intToString(fileBody.size()) + "\r\n";
+            //     finalResponse += checkContentType();
+            //     // finalResponse += "Accept-Ranges: bytes\r\n";
+            //     finalResponse += "Connection: close\r\n";
+            //     finalResponse += "\r\n";
+            //     finalResponse += fileBody;
             // }
-            std::ifstream inFile(uri.c_str(), std::ios::binary);
-            if (inFile)
-            {
-                std::ostringstream outStringFIle;
-                outStringFIle << inFile.rdbuf();
-                inFile.close();
-                std::string fileBody = outStringFIle.str();
-                finalResponse = "HTTP/1.1 200 OK\r\n";
-                finalResponse += "Content-Length: ";
-                finalResponse += intToString(fileBody.size()) + "\r\n";
-                finalResponse += checkContentType();
-                // finalResponse += "Accept-Ranges: bytes\r\n";
-                finalResponse += "Connection: close\r\n";
-                finalResponse += "\r\n";
-                finalResponse += fileBody;
-            }
-            else
-            {
-                // and need to display given error page
-                finalResponse = responseError(404, " Not Found", ConfigPars);
-            }
+            // else
+            // {
+            //     // and need to display given error page
+            //     finalResponse = responseError(404, " Not Found", ConfigPars);
+            // }
         }
     }
     else if (method == "POST")
@@ -227,6 +274,32 @@ std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
         finalResponse = responseError(404, " Not Found", ConfigPars);
     }
     return finalResponse;
+}
+
+bool Response::prepareFileResponse(const std::string& filepath, const std::string& contentType)
+{
+    // Open the file in binary mode
+    file.open(filepath.c_str(), std::ios::binary);
+    if (!file.is_open())
+        return false;  // file not found or can't open
+
+    // Get file size
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // Build HTTP response headers
+    headers = "HTTP/1.1 200 OK\r\n";
+    headers += "Content-Length: " + std::to_string(fileSize) + "\r\n";
+    headers += contentType;
+    headers += "Connection: close\r\n";
+    headers += "\r\n";
+
+    // Reset position trackers for sending
+    headerSent = 0;
+    filePos = 0;
+
+    return true;
 }
 
 void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
