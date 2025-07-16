@@ -217,15 +217,15 @@ void	Post::ParseBody()
 void	Post::HandlePost()
     {
         std::cout << "\n\t\t<# POST #>\t\t\n\n";
-        std::cout << obj.GetNew() << std::endl;
+        std::cout << obj.GetClientStatus() << std::endl;
 
         PostRequiredHeaders();
 		IsBodyFullyRead();
         if (BodyFullyRead) // the Body has been entirely read
         { 
             ParseBody();
-            obj.SetNew(END_BODY);
+            obj.SetClientStatus(EndBody);
         }
         else
-        	obj.SetNew(READ_BODY);
+        	obj.SetClientStatus(ReadBody);
     }
