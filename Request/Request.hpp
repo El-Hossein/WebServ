@@ -8,9 +8,9 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define    READ_HEADER -1
-#define    READ_BODY 0
-#define    END_BODY 1
+// #define    ReadHeader -1
+// #define    ReadBody 0
+// #define    EndBody 1
 
 #define BUFFER_SIZE 1024 // 1kb
 #define MAX_HEADER_SIZE 100//(8192 * 2) // 8kb
@@ -22,10 +22,17 @@ enum	Method
 	DELETE
 };
 
+enum	ClientStatus
+{
+	ReadHeader,
+	ReadBody,
+	EndBody
+};
+
 class	Request
 {
 private:
-	int						NewClient;
+	ClientStatus			Client;
 	int						ClientFd;
 	std::vector<ConfigNode>	Servers;
 	ConfigNode				RightServer;
@@ -41,7 +48,7 @@ private:
 	std::string					HeaderBuffer;
 	size_t						ContentLength;
 public:
-	Request(const int	&, std::vector<ConfigNode>);
+	Request(const int	&, ClientStatus, std::vector<ConfigNode>);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
 	std::map<std::string, std::string>	GetHeaders() const;
@@ -53,14 +60,14 @@ public:
 	bool								GetConnection() const;
 	size_t								GetContentLength() const;
 	ConfigNode							&GetRightServer();
-	int									GetNew() const;
+	int									GetClientStatus() const;
 	int									GetClientFd() const;
 	std::string							GetHeaderBuffer() const;
 
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
-	void	SetNew(int is) ;
+	void	SetClientStatus(ClientStatus	Status);
 
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //

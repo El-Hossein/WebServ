@@ -1,10 +1,10 @@
 #include "Request.hpp"
 
-									;
-Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
-																		Servers(_ConfigPars),
-																		ContentLength(0),
-																		KeepAlive(false)
+Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
+																								Client(ReadHeader),
+																								Servers(_ConfigPars),
+																								ContentLength(0),
+																								KeepAlive(false)
 {
 }
 
@@ -16,13 +16,13 @@ int	Request::GetClientFd() const
 	return this->ClientFd;
 }
 
-int	Request::GetNew() const
+int	Request::GetClientStatus() const
 {
-	return this->NewClient;
+	return this->Client;
 }
-void	Request::SetNew(int is) 
+void	Request::SetClientStatus(ClientStatus	Status) 
 {
-	this->NewClient = is;
+	this->Client = Status;
 }
 std::string	Request::GetHeaderBuffer() const
 {
@@ -134,7 +134,7 @@ void	Request::HandleQuery()
 			continue;
 		QueryParams.insert(make_pair(key, value));
 	}
-	std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
+	// std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
 }
 
 void   Request::HandlePath()
@@ -275,13 +275,13 @@ void Request::ReadBodyChunk() {
     }
 
     if (BytesRead == 0) {
-			SetNew(END_BODY);
+			SetClientStatus(EndBody);
 	}
     buffer[BytesRead] = '\0';
     std::string StdBuffer(buffer, BytesRead);
     BodyUnprocessedBuffer += StdBuffer; // Append to BodyUnprocessedBuffer
 	if (BodyUnprocessedBuffer.size() >= 800)
-		SetNew(END_BODY);
+		SetClientStatus(EndBody);
 }
 
 void	Request::ReadRequestHeader()
@@ -293,7 +293,7 @@ void	Request::ReadRequestHeader()
 	if (BytesRead < 0)
 		throw ("Error: Read return.");
 	if (BytesRead == 0)
-		SetNew(END_BODY);
+		SetClientStatus(EndBody);
 
 
 	buffer[BytesRead] = '\0';
@@ -309,20 +309,20 @@ void	Request::ReadRequestHeader()
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
 	if (BodyUnprocessedBuffer.empty() != false)
-		SetNew(END_BODY);
+		SetClientStatus(EndBody);
 	else
-		SetNew(READ_BODY);
+		SetClientStatus(ReadBody);
 }
 
 void	Request::SetUpRequest()
 {
 	RightServer = ConfigNode::GetServer(Servers, "myserver.com");
-	if (GetNew() ==  READ_HEADER)
+	if (GetClientStatus() ==  ReadHeader)
 	{
 		ReadRequestHeader();
 		CheckRequiredHeaders();
 	}
-	else if (GetNew() == READ_BODY)
+	else if (GetClientStatus() == ReadBody)
 		ReadBodyChunk();
 	// std::cout << Request::GetFullPath() << std::endl;
 
