@@ -42,6 +42,8 @@ class Response
         void       setClientFd(int _clientFd);
         bool    getNextChunk(std::string &out, size_t chunkSize);
         bool    prepareFileResponse(const std::string& filepath, const std::string& contentType);
+        size_t  getHeaderSent();
+        void    setHeaderSent(size_t _aa);
 };
 
 

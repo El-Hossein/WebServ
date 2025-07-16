@@ -55,6 +55,7 @@ int main(int argc, char **argv)
 		std::cerr << "./webserv [configuration file]" << std::endl;
 		return (1);
 	}
+	signal(SIGPIPE, SIG_IGN);
 	std::string ConfigFilePath = argv[1];
 	std::vector<ConfigNode> ConfigPars;
 	ConfigNode obj;

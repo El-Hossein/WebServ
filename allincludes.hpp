@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <signal.h>
 
 #include <poll.h>
 #include <cstdlib>
