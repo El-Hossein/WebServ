@@ -7,7 +7,7 @@
 #include "../pars_config/config.hpp"
 
 #define BUFFER_SIZE 1024 // 1kb
-#define MAX_HEADER_SIZE 8192 // 8kb
+#define MAX_HEADER_SIZE (8192 * 2) // 8kb
 
 enum	Method
 {
@@ -73,6 +73,7 @@ void			TrimSpaces(std::string& str);
 std::string		HexaToChar(std::string	Hexa);
 void			DecodeHexaToChar(std::string	&str);
 void			PrintHeaders(std::map<std::string, std::string> Headers);
+void			PrintError(const std::string	&Err);
 bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
