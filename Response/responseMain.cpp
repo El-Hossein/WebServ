@@ -177,6 +177,7 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
                 finalResponse += "Content-Length: ";
                 finalResponse += intToString(fileBody.size()) + "\r\n";
                 finalResponse += checkContentType();
+                // finalResponse += "Accept-Ranges: bytes\r\n";
                 finalResponse += "Connection: close\r\n";
                 finalResponse += "\r\n";
                 finalResponse += fileBody;
