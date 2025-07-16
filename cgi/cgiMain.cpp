@@ -1,5 +1,42 @@
 #include "cgiHeader.hpp"
 
+
+Cgi::Cgi()
+{
+
+}
+
+Cgi::~Cgi()
+{
+
+}
+
+std::string Cgi::getScriptPath()
+{
+    return scriptPath;
+}
+
+void    Cgi::setScriptPath(std::string _scriptPath)
+{
+    scriptPath = _scriptPath;
+}
+
+int Cgi::getStatus()
+{
+    return status;
+}
+
+std::string Cgi::getScriptOutput()
+{
+    return scriptOutput;
+}
+
+void    Cgi::setScriptOutput(std::string _scriptOutput)
+{
+    scriptOutput = _scriptOutput;
+}
+
+
 std::string intToString(int n)
 {
     std::ostringstream oss;
@@ -53,21 +90,19 @@ pathInfo splitPathInfo(const Request &req)
 
 std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
-    const char *requestBody = "";
+    Cgi obj;
 
     pathInfo _pathinfo = splitPathInfo(req);
-    std::string scriptPath = _pathinfo.scriptFile;
-    int code = fileChecking(scriptPath);
+    obj.setScriptPath(_pathinfo.scriptFile);
+    int code = fileChecking(obj.getScriptPath());
     if (code == 403)
         return responseError(403, " Forbidden", ConfigPars);
     else if (code == 404)
         return responseError(404, " not found", ConfigPars);
-    std::string scriptOutput = executeCgiScript(scriptPath.c_str(), req, ConfigPars, _pathinfo._pathInfo);
-    if (scriptOutput.empty())
-        return responseError(500, " internal server error", ConfigPars); // check with status code li kayreturni child process
+    obj.setScriptOutput(obj.executeCgiScript(req, ConfigPars, _pathinfo._pathInfo));
     // need to check time out
-    CgiResponse parsedCgi = parseOutput(scriptOutput);
-    return formatHttpResponse(parsedCgi);
+    CgiResponse parsedCgi = obj.parseOutput(obj.getScriptOutput());
+    return obj.formatHttpResponse(parsedCgi);
 }
 
 int IsCgiRequest(const char *uri)

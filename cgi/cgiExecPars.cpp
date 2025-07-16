@@ -1,6 +1,6 @@
 #include "cgiHeader.hpp"
 
-CgiResponse parseOutput(const std::string& scriptOutput)
+CgiResponse Cgi::parseOutput(const std::string& scriptOutput)
 {
     CgiResponse response;
     response.status_code = 200;
@@ -101,7 +101,7 @@ char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars
 
 void    execCgi(const char *scriptPath, char **envp)
 {
-    char* argv[3];
+    char* argv[5];
     if (strstr(scriptPath, ".py"))
     {
         argv[0] = (char*)"python3";
@@ -118,31 +118,32 @@ void    execCgi(const char *scriptPath, char **envp)
     else if (strstr(scriptPath, ".php"))
     {
         argv[0] = (char*)"php";
-        argv[1] = (char*)scriptPath;
-        argv[2] = NULL;
-        execve("/bin/php", argv, envp);
+        argv[1] = (char*)"-d";
+        argv[2] = (char*)"display_errors=0";
+        argv[3] = (char*)scriptPath;
+        argv[4] = NULL;
+        execve("/usr/bin/php", argv, envp);
     }
     perror("execve failed");
     exit(1);
 }
 
-std::string executeCgiScript(const char* scriptPath, const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
+std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    const char *postRequestBody = "name=ismail";// testing purposes
-    std::string inpFile = "/tmp/cgiInput";
-    std::string outFile = "/tmp/cgiOutput";
-    std::string output;
+    // postRequestBody = "name=ismail";// testing purposes
+    inpFile = "/tmp/cgiInput";
+    outFile = "/tmp/cgiOutput";
+    char **envp;
     pid_t pid = fork();
     if (pid == -1)
-        return "";
+        return responseError(500, " Internal Server Error", ConfigPars);
     else if (pid == 0)
     {
         freopen(inpFile.c_str(), "r", stdin);
         freopen(outFile.c_str(), "w", stdout);
         freopen(outFile.c_str(), "w", stderr);
-        char **envp;
         envp = cgiEnvVariables(req, ConfigPars, _pathInfo);
-        execCgi(scriptPath, envp);
+        execCgi(scriptPath.c_str(), envp);
     }
     else
     {
@@ -157,14 +158,18 @@ std::string executeCgiScript(const char* scriptPath, const Request &req, std::ve
                 inputFileStream.close();
             }
         }
-
-        int status;
+        
         waitpid(pid, &status, 0);
-        if (status != 0)
+        if (WIFEXITED(status))
         {
-            unlink(inpFile.c_str());
-            unlink(outFile.c_str());
-            return "";
+            int exit_code = WEXITSTATUS(status);
+            if (exit_code != 0)
+            {
+                unlink(inpFile.c_str());
+                unlink(outFile.c_str());
+                return responseError(500, " Internal Server Error", ConfigPars);
+            }
+
         }
         std::ifstream outFileStream(outFile.c_str());
         if (outFileStream.is_open())

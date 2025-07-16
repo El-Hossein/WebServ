@@ -25,11 +25,34 @@ struct pathInfo
     std::string _pathInfo;
 };
 
+class Cgi
+{
+    private :
+        char *postRequestBody; //testing
+        std::string scriptPath;
+        std::string scriptOutput;
+        std::string inpFile;
+        std::string outFile;
+        std::string output;
+        int         status;
 
-std::string formatHttpResponse(const CgiResponse& cgiResponse);
+
+    public :
+        Cgi();
+        ~Cgi();
+        std::string formatHttpResponse(const CgiResponse& cgiResponse);
+        CgiResponse parseOutput(const std::string& raw_output);
+        std::string executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo);
+        std::string getScriptPath();
+        void        setScriptPath(std::string _scriptPath);
+        std::string getScriptOutput();
+        void        setScriptOutput(std::string _scriptOutput);
+        int         getStatus();
+
+
+};
+
 std::string responseError(int status_code, const std::string& message, std::vector<ConfigNode> ConfigPars);
-CgiResponse parseOutput(const std::string& raw_output);
-std::string executeCgiScript(const char* script_path, const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo);
 std::string intToString(int n);
 std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars);
 int         IsCgiRequest(const char *uri);

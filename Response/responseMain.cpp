@@ -1,6 +1,53 @@
 #include "responseHeader.hpp"
 
-std::string deleteResponseSuccess(const std::string& message)
+Response::Response(){
+    
+}
+
+Response::Response(Request	&req, int _clientFd)
+{
+    uri = req.GetFullPath();
+    method = req.GetHeaderValue("method");
+    pathRequested = req.GetHeaderValue("path");
+    clientFd = _clientFd;
+}
+
+Response::~Response(){
+    
+}
+
+int Response::getClientFd()
+{
+    return clientFd;
+}
+
+void    Response::setClientFd(int _clientFd)
+{
+    clientFd = _clientFd;
+}
+
+std::string Response::getMethod()
+{
+    return method;
+}
+
+std::string Response::getUri()
+{
+    return uri;
+}
+
+std::string Response::getFinalResponse()
+{
+    return finalResponse;
+}
+
+void    Response::setFinalResponse(std::string _finalResponse)
+{
+    finalResponse = _finalResponse;
+}
+
+
+std::string Response::deleteResponseSuccess(const std::string& message)
 {
     std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
     html += "<body><h1>";
@@ -10,7 +57,7 @@ std::string deleteResponseSuccess(const std::string& message)
     return html;
 }
 
-std::string generateListingDir(const std::string& uri, std::string &pathRequested)
+std::string Response::generateListingDir()
 {
     DIR *dirCheck = opendir(uri.c_str());
     if (!dirCheck)
@@ -41,9 +88,9 @@ std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, 
     return autoIndex[index];
 }
 
-std::string generateAutoIndexOn(std::string &finalResponse, std::string &uri, std::string &pathRequested)
+std::string Response::generateAutoIndexOn()
 {
-    std::string body = generateListingDir(uri, pathRequested);
+    std::string body = generateListingDir();
 
     finalResponse = "HTTP/1.1 200 OK\r\n";
     finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
@@ -54,14 +101,14 @@ std::string generateAutoIndexOn(std::string &finalResponse, std::string &uri, st
 
 }
 
-void    servListingDiren(std::string &uri, std::string &finalResponse, std::string &pathRequested, std::vector<ConfigNode> ConfigPars)
+void    Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
 {
-    std::string autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
-    std::string index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
+    index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
 
     if (index.empty() == 0)
     {
-        std::string htmlFound = uri + "/" + index; // i need to check if slash already there or not
+        htmlFound = uri + "/" + index; // i need to check if slash already there or not
         std::ifstream htmlStream(htmlFound.c_str(), std::ios::binary); 
         if (htmlStream)
         {
@@ -75,31 +122,54 @@ void    servListingDiren(std::string &uri, std::string &finalResponse, std::stri
             finalResponse += "Content-Type: text/html\r\n";
             finalResponse += "Connection: close\r\n\r\n";
             finalResponse += body;
-            
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOn(finalResponse, uri, pathRequested);
+            generateAutoIndexOn();
         else
             finalResponse = responseError(403, " Forbidden", ConfigPars);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOn(finalResponse, uri, pathRequested);
+        generateAutoIndexOn();
     else
         finalResponse = responseError(403, " Forbidden", ConfigPars);
 }
 
 
-std::string getResponse(std::string finalResponse, std::string uri, Request	&req, std::vector<ConfigNode> ConfigPars, std::string method)
+std::string Response::checkContentType()
+{
+    size_t dotPos = uri.find(".");
+    if (dotPos != std::string::npos)
+    {
+        std::string extension = uri.substr(dotPos);
+        if (extension.compare(".png") == 0)
+            return "Content-Type: image/png\r\n";
+        else if (extension.compare(".jpeg") == 0)
+            return "Content-Type: image/jpeg\r\n";
+        else if (extension.compare(".mp4") == 0)
+            return "Content-Type: video/mp4\r\n";
+        else if (extension.compare("mpeg") == 0)
+            return "Content-Type: audio/mpeg\r\n";
+        else if (extension.compare("vorbis") == 0)
+            return "Content-Type: audio/vorbis\r\n";
+        else
+            return "Content-Type: text/html\r\n";
+    }
+    else
+        return "Content-Type: text/html\r\n";
+    return "";
+
+}
+
+std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
-    std::string pathRequested = req.GetHeaderValue("path");
 
     if (IsCgiRequest(uri.c_str()))
         finalResponse = handleCgiRequest(req, ConfigPars);
     else if (method == "GET")
     {
         if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-            servListingDiren(uri, finalResponse, pathRequested, ConfigPars);
+            servListingDiren(ConfigPars);
         else
         {
             // if (access(pathRequested.c_str(), R_OK | W_OK) == -1)
@@ -117,8 +187,9 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
                 finalResponse = "HTTP/1.1 200 OK\r\n";
                 finalResponse += "Content-Length: ";
                 finalResponse += intToString(fileBody.size()) + "\r\n";
+                finalResponse += checkContentType();
+                // finalResponse += "Accept-Ranges: bytes\r\n";
                 finalResponse += "Connection: close\r\n";
-                finalResponse += "Content-Type: text/html\r\n";
                 finalResponse += "\r\n";
                 finalResponse += fileBody;
             }
@@ -134,11 +205,10 @@ std::string getResponse(std::string finalResponse, std::string uri, Request	&req
         // POST here
         finalResponse = responseError(404, " Not Found", ConfigPars);
     }
-    // std::cout << "OUTPUUUUUUUUT  ==    " << finalResponse << std::endl;
     return finalResponse;
 }
 
-std::string deleteResponse(std::string &finalResponse, std::string uri, std::vector<ConfigNode> ConfigPars)
+std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
 
@@ -162,23 +232,21 @@ std::string deleteResponse(std::string &finalResponse, std::string uri, std::vec
     return finalResponse;
 }
 
-void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&req, std::vector<ConfigNode> ConfigPars)
+void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-    std::string uri = req.GetFullPath();
-    std::string finalResponse;
-    std::string method = req.GetHeaderValue("method");
-    
+    // Response obj(req, _client);
 
     if (method == "GET" || method == "POST")
     {
-        finalResponse = getResponse(finalResponse, uri, req, ConfigPars, method);
+        getResponse(req, ConfigPars);
     }
-    else if (method == "DELETE") 
+    else if (method == "DELETE")
     {
         // if method not allowed return 405 Method Not Allowed
-       finalResponse = deleteResponse(finalResponse, uri, ConfigPars);
+
+       deleteResponse(ConfigPars);
     }
     else
-        finalResponse = responseError(501, " Method not implemented", ConfigPars);
-    response_map[client_fd] = finalResponse;
+        responseError(501, " Method not implemented", ConfigPars);
+    // response_map[client_fd] = obj.getFinalResponse();
 }
