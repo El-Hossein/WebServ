@@ -15,6 +15,12 @@ class Response
         std::string index;
         std::string htmlFound;
         int         clientFd;
+        std::string headers;
+        size_t      headerSent;
+
+        std::ifstream   file;
+        size_t      filePos;
+        size_t      fileSize;
     public :
         Response();
         Response(Request &req, int _clientFd);
@@ -34,6 +40,8 @@ class Response
         void        moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars);
         int        getClientFd();
         void       setClientFd(int _clientFd);
+        bool    getNextChunk(std::string &out, size_t chunkSize);
+        bool    prepareFileResponse(const std::string& filepath, const std::string& contentType);
 };
 
 
