@@ -205,59 +205,54 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	}
 	/*        ismail part        */
 	if (event->filter == EVFILT_WRITE)
-{
-    std::string chunk;
-    bool hasMore = response->getNextChunk(chunk, 4096);
-    
-    if (!chunk.empty())
-    {
-        size_t totalSent = 0;
-        while (totalSent < chunk.size())
-        {
-            ssize_t bytes_written = send(client_fd, 
-                chunk.c_str() + totalSent, 
-                chunk.size() - totalSent, 
-                MSG_NOSIGNAL);
-                
-            if (bytes_written <= 0)
-            {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                {
-                    // Socket buffer full, try again later
-                    // You might want to store the unsent part
-                    return;
-                }
-                else
-                {
-                    remove_client(client_fd);
-                    return;
-                }
-            }
-            totalSent += bytes_written;
-        }
-    }
-
-		if (!hasMore)
+	{
+		std::string chunk;
+		bool hasMore = response->getNextChunk(chunk, 8000);
+		
+		// std::cout << hasMore << std::endl;
+		// std::cout << chunk << std::endl;
+		if (!chunk.empty())
 		{
-			struct kevent ev;
-			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-
-				// std::cout << client_fd << std::endl;
-				remove_client(client_fd);
-				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it)
+			size_t totalSent = 0;
+			ssize_t bytes_written = send(client_fd, chunk.c_str() + totalSent, chunk.size() - totalSent, 0);
+					
+				// std::cout << bytes_written << std::endl;
+				if (bytes_written <= 0)
 				{
-					if ((*it)->GetClientFd() == client_fd)
-					{
-						delete *it;
-						all.erase(it);
-						break;
-					}
+					remove_client(client_fd);
+					return;
 				}
-		}	
-		// else
-		// {
-		// 	AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
-		// }
+				totalSent += bytes_written;
+			}
+		
+			// NEED TO SEARCH FOR KEEP ALIVE
+			if (!hasMore)
+			{
+				response->setHeaderSent(0);
+				std::string chunk;
+				response->getNextChunk(chunk, 8000);
+				unsigned long resp = chunk.find("Connection: close");
+				std::cout << resp << " : " << std::string::npos << std::endl;
+				bool should_close = (resp != std::string::npos);
+				// response_map.erase(client_fd);
+
+				struct kevent ev;
+				AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
+				
+				if (true) {
+					// std::cout << client_fd << std::endl;
+					remove_client(client_fd);
+					for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
+						if ((*it)->GetClientFd() == client_fd) {
+							delete *it;
+							all.erase(it);
+							break;
+						}
+					}
+				} else {
+					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
+				}
+			}
 	}
 }
 

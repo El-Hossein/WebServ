@@ -16,6 +16,17 @@ Response::~Response(){
     
 }
 
+size_t  Response::getHeaderSent()
+{
+    return headerSent;
+
+}
+
+void  Response::setHeaderSent(size_t _aa)
+{
+    headerSent = _aa;
+}
+
 int Response::getClientFd()
 {
     return clientFd;
@@ -29,7 +40,7 @@ void    Response::setClientFd(int _clientFd)
 bool Response::getNextChunk(std::string &out, size_t chunkSize)
 {
     out.clear();
-
+    
     // Send remaining header first
     if (headerSent < headers.size())
     {
@@ -37,31 +48,34 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
         size_t sendNow = std::min(chunkSize, left);
         out = headers.substr(headerSent, sendNow);
         headerSent += sendNow;
-
-        if (headerSent < headers.size() || file.is_open())
-            return true;
-        else
-            return false;
+        
+        // Always return true if there's more header OR file data
+        return (headerSent < headers.size()) || (fileSize > 0);
     }
-
+    
     // Then send file content
-    if (file.is_open())
+    if (filePos < fileSize)  // Use filePos instead of file.is_open()
     {
+        if (!file.is_open())
+        {
+            return false;
+        }
+        
         std::vector<char> buffer(chunkSize);
         file.read(buffer.data(), chunkSize);
         std::streamsize bytesRead = file.gcount();
-
+        
         if (bytesRead > 0)
         {
             out.assign(buffer.data(), bytesRead);
             filePos += bytesRead;
-
-            if (file.eof() || filePos >= fileSize)
+            
+            if (filePos >= fileSize)
             {
                 file.close();
-                return false;
+                return false;  // Last chunk
             }
-            return true;
+            return true;  // More chunks to come
         }
         else
         {
@@ -69,7 +83,7 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
             return false;
         }
     }
-
+    
     return false;
 }
 
