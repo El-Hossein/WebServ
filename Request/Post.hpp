@@ -25,6 +25,10 @@ private:
 	std::string							Boundary;
 	std::string							BoundaryStart;
 	std::string							BoundaryEnd;
+
+	bool								EndOfRequest;
+	bool								BodyFullyRead;
+
 	
 	std::map<std::string, std::string>	BodyParams;
 	std::string							BodyUnprocessedBuffer;
@@ -37,13 +41,14 @@ public:
 
 	void	GetBoundaryFromHeader();
 	
-	void	GetBodyEntity(std::string	&SmallBody);
+	void	WriteToFile(std::string	&str);
+	void	GetSubBodys(std::string &Buffer);
 	void	ParseUrlEncoded(std::istringstream	&);
 	void	ParseMultipartFormData(std::istringstream	&, std::string &);
 	void	ParseApplicationJson(std::istringstream	&);
 
 	void	PostRequiredHeaders();
 	void	ParseBody();
-	bool	ReadFullBody();
+	void	IsBodyFullyRead();
 	void	HandleBody();
 };
