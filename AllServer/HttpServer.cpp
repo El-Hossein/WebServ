@@ -1,6 +1,6 @@
 #include "HttpServer.hpp"
 #include <vector>
-
+#include "../Response/responseHeader.hpp"
 HttpServer::HttpServer()	{ }
 
 HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
@@ -133,9 +133,9 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 }
 
 
-void	SetUpResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&Request, std::vector<ConfigNode> ConfigPars)
+void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars)
 {
-	moveToResponse(client_fd, response_map, Request, ConfigPars);
+	res->moveToResponse(client_fd, Request, ConfigPars);
 }
 
 // remove the client from the kqueue and close the connection
@@ -159,12 +159,19 @@ void remove_request(int fd, std::vector<Request*>& all) {
 	}
 }
 
-void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all) {
+void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all, std::vector<Response*>& all_res) {
 	// Find the corresponding Request object
 	Request* request = NULL;
 	for (size_t i = 0; i < all.size(); ++i) {
 		if (all[i]->GetClientFd() == client_fd) {
 			request = all[i];
+			break;
+		}
+	}
+	Response* response = NULL;
+	for (size_t i = 0; i < all_res.size(); ++i) {
+		if (all_res[i]->getClientFd() == client_fd) {
+			response = all_res[i];
 			break;
 		}
 	}
@@ -180,7 +187,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		}
 		if (request->GetNew() != END_BODY)
 			return;
-		SetUpResponse(client_fd, response_map, *request, ConfigPars);
+		SetUpResponse(client_fd, response, *request, ConfigPars);
 		// std::cout << response_map[client_fd] << std::endl;
 		struct kevent ev;
 		AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
@@ -198,13 +205,12 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	}
 	
 	if (event->filter == EVFILT_WRITE) {
-		if (response_map.find(client_fd) != response_map.end()) {
-			const std::string& response = response_map[client_fd];
+		std::string FullRes = response->getFinalResponse();
 			ssize_t total_written = 0;
-			ssize_t to_write = response.length();
+			ssize_t to_write = FullRes.length();
 
 			while (total_written < to_write) {
-				ssize_t bytes_written = write(client_fd, response.c_str() + total_written, to_write - total_written);
+				ssize_t bytes_written = write(client_fd, FullRes.c_str() + total_written, to_write - total_written);
 				if (bytes_written < 0) {
 					if (errno == EAGAIN || errno == EWOULDBLOCK) {
 						return; // Wait for next write event
@@ -213,10 +219,10 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 				}
 				total_written += bytes_written;
 			}
-			unsigned long resp = response.find("Connection: close");
+			unsigned long resp = FullRes.find("Connection: close");
 			std::cout << resp << " : " << std::string::npos << std::endl;
 			bool should_close = (resp != std::string::npos);
-			response_map.erase(client_fd);
+			// response_map.erase(client_fd);
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
@@ -234,13 +240,13 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			} else {
 				AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
 			}
-		}
 	}
 }
 
 void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 	struct kevent events[BACKLOG];
 	std::vector<Request*> all_request;
+	std::vector<Response*> all_res;
 	
 	while (true) {
 		int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
@@ -256,8 +262,10 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 				if (server_fds[j] == fd) {
 					Request* new_request = accept_new_client(fd, ConfigPars);
 					if (new_request->GetClientFd() != -1) {
+						Response * res = new Response(*new_request, new_request->GetClientFd());
 						all_request.push_back(new_request);
-						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request);
+						all_res.push_back(res);
+						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
 					} else {
 						delete new_request;
 					}
@@ -268,7 +276,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 			// Handle client socket
 			for (size_t j = 0; j < all_request.size(); ++j) {
 				if (all_request[j]->GetClientFd() == fd) {
-					handle_client(fd, &events[i], ConfigPars, all_request);
+					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
 					break;
 				}
 			}
