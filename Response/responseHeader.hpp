@@ -29,6 +29,7 @@ class Response
         std::string getUri();
         std::string getFinalResponse();
         void        setFinalResponse(std::string _finalResponse);
+        std::string        checkContentType();
 };
 
 

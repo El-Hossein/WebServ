@@ -111,7 +111,6 @@ void    Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
             finalResponse += "Content-Type: text/html\r\n";
             finalResponse += "Connection: close\r\n\r\n";
             finalResponse += body;
-            
         }
         else if (autoIndexOn == "on")
             generateAutoIndexOn();
@@ -125,10 +124,34 @@ void    Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
 }
 
 
+std::string Response::checkContentType()
+{
+    size_t dotPos = uri.find(".");
+    if (dotPos != std::string::npos)
+    {
+        std::string extension = uri.substr(dotPos);
+        if (extension.compare(".png") == 0)
+            return "Content-Type: image/png\r\n";
+        else if (extension.compare(".jpeg") == 0)
+            return "Content-Type: image/jpeg\r\n";
+        else if (extension.compare(".mp4") == 0)
+            return "Content-Type: video/mp4\r\n";
+        else if (extension.compare("mpeg") == 0)
+            return "Content-Type: audio/mpeg\r\n";
+        else if (extension.compare("vorbis") == 0)
+            return "Content-Type: audio/vorbis\r\n";
+        else
+            return "Content-Type: text/html\r\n";
+    }
+    else
+        return "Content-Type: text/html\r\n";
+    return "";
+
+}
+
 std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
-    // std::string pathRequested = req.GetHeaderValue("path");
 
     if (IsCgiRequest(uri.c_str()))
         finalResponse = handleCgiRequest(req, ConfigPars);
@@ -153,8 +176,8 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
                 finalResponse = "HTTP/1.1 200 OK\r\n";
                 finalResponse += "Content-Length: ";
                 finalResponse += intToString(fileBody.size()) + "\r\n";
+                finalResponse += checkContentType();
                 finalResponse += "Connection: close\r\n";
-                finalResponse += "Content-Type: text/html\r\n";
                 finalResponse += "\r\n";
                 finalResponse += fileBody;
             }
