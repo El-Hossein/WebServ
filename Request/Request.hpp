@@ -1,3 +1,5 @@
+#ifndef REQUEST_HPP
+#define REQUEST_HPP
 #pragma once
 
 #include "Get.hpp"
@@ -6,8 +8,12 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
+#define    READ_HEADER -1
+#define    READ_BODY 0
+#define    END_BODY 1
+
 #define BUFFER_SIZE 1024 // 1kb
-#define MAX_HEADER_SIZE (8192 * 2) // 8kb
+#define MAX_HEADER_SIZE 100//(8192 * 2) // 8kb
 
 enum	Method
 {
@@ -19,6 +25,7 @@ enum	Method
 class	Request
 {
 private:
+	int						NewClient;
 	int						ClientFd;
 	std::vector<ConfigNode>	Servers;
 	ConfigNode				RightServer;
@@ -31,11 +38,11 @@ private:
 
 	bool						KeepAlive;
 	std::string					BodyUnprocessedBuffer;
+	std::string					HeaderBuffer;
 	size_t						ContentLength;
 public:
 	Request(const int	&, std::vector<ConfigNode>);
 	~Request();
-
 	// ---------		GETTERS 	 	--------- //
 	std::map<std::string, std::string>	GetHeaders() const;
 	std::map<std::string, std::string>	GetQueryParams() const;
@@ -46,10 +53,14 @@ public:
 	bool								GetConnection() const;
 	size_t								GetContentLength() const;
 	ConfigNode							&GetRightServer();
+	int									GetNew() const;
+	int									GetClientFd() const;
+	std::string							GetHeaderBuffer() const;
 
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
+	void	SetNew(int is) ;
 
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
@@ -64,6 +75,7 @@ public:
 	void	SplitURI();
 	void	ParseURI(std::string	&URI);
 	void	SetUpRequest();
+	void	ReadBodyChunk();
 };
 
 // ---------	HELPER FUNCTIONS 	--------- //
@@ -78,3 +90,5 @@ bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
+
+#endif
