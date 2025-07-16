@@ -4,15 +4,26 @@ Response::Response(){
     
 }
 
-Response::Response(Request	&req)
+Response::Response(Request	&req, int _clientFd)
 {
     uri = req.GetFullPath();
     method = req.GetHeaderValue("method");
     pathRequested = req.GetHeaderValue("path");
+    clientFd = _clientFd;
 }
 
 Response::~Response(){
     
+}
+
+int Response::getClientFd()
+{
+    return clientFd;
+}
+
+void    Response::setClientFd(int _clientFd)
+{
+    clientFd = _clientFd;
 }
 
 std::string Response::getMethod()
@@ -194,7 +205,6 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
         // POST here
         finalResponse = responseError(404, " Not Found", ConfigPars);
     }
-    // std::cout << "OUTPUUUUUUUUT  ==    " << finalResponse << std::endl;
     return finalResponse;
 }
 
@@ -222,21 +232,21 @@ std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
     return finalResponse;
 }
 
-void    moveToResponse(int &client_fd, std::map<int, std::string>& response_map, Request	&req, std::vector<ConfigNode> ConfigPars)
+void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-    Response obj(req);
+    // Response obj(req, _client);
 
-    if (obj.getMethod() == "GET" || obj.getMethod() == "POST")
+    if (method == "GET" || method == "POST")
     {
-        obj.setFinalResponse(obj.getResponse(req, ConfigPars));
+        getResponse(req, ConfigPars);
     }
-    else if (obj.getMethod() == "DELETE")
+    else if (method == "DELETE")
     {
         // if method not allowed return 405 Method Not Allowed
 
-       obj.setFinalResponse(obj.deleteResponse(ConfigPars));
+       deleteResponse(ConfigPars);
     }
     else
-        obj.setFinalResponse(responseError(501, " Method not implemented", ConfigPars));
-    response_map[client_fd] = obj.getFinalResponse();
+        responseError(501, " Method not implemented", ConfigPars);
+    // response_map[client_fd] = obj.getFinalResponse();
 }
