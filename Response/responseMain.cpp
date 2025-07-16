@@ -192,7 +192,9 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
     else if (method == "POST")
     {
         // POST here
+        finalResponse = responseError(404, " Not Found", ConfigPars);
     }
+    // std::cout << "OUTPUUUUUUUUT  ==    " << finalResponse << std::endl;
     return finalResponse;
 }
 
