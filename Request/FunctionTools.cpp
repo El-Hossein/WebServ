@@ -47,6 +47,11 @@ void	PrintHeaders(std::map<std::string, std::string> Headers)
 	std::cout  << "-----------------------------------------------------" << std::endl;
 }
 
+void	PrintError(const std::string	&Err)
+{
+	std::cerr << Err << std::endl;
+}
+
 // --------------#	PARSERS	 #-------------- //
 
 bool	ValidContentLength(const std::string& value)

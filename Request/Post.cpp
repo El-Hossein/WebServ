@@ -2,7 +2,9 @@
 
 Post::Post(Request	&_obj) :	obj(_obj),
 								BodyUnprocessedBuffer(_obj.GetUnprocessedBuffer()),
-								MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)) // [0] First element -> "10M"
+								MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
+								EndOfRequest(false),
+								BodyFullyRead(false)
 {
 }
 
@@ -23,40 +25,42 @@ void	Post::PostRequiredHeaders()
 {
 	std::map<std::string, std::string>	Headers = obj.GetHeaders();
 	std::string							LowKey;
-	
-	if (Headers.find("transfer-encoding") != Headers.end() && Headers.find("transfer-encoding")->second != "chunked")
-		throw "501 Not implemented - PostRequestHeaders()";
+
+	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
+		PrintError("Missing POST required headers"), throw "400 Bad request";
 
 	if (Headers.find("content-length") != Headers.end())
 	{
-		if (!ValidContentLength(Headers.find("content-length")->second))	throw "400: Bad Request";
-		obj.SetContentLength(strtod(Headers.find("content-length")->second.c_str(), NULL));
+		if (!ValidContentLength(Headers["content-length"]))
+			PrintError("Invalide Content-Length"), throw "400: Bad Request";
+		obj.SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
 	}
+
+	if (Headers.find("transfer-encoding") != Headers.end() && Headers["transfer-encoding"] != "chunked")
+		throw "501 Not implemented - PostRequestHeaders()";
 
 	if (Headers.find("content-type") != Headers.end())
 	{
-		if (Headers.find("content-type")->second == "application/x-www-form-urlencoded")
+		if (Headers["content-type"] == "application/x-www-form-urlencoded")
 				this->ContentType = UrlEncoded;
-		if (Headers.find("content-type")->second.find("multipart/form-data") != std::string::npos)
+		if (Headers["content-type"].find("multipart/form-data") != std::string::npos)
 			this->ContentType = MultipartFormData;
-		if (Headers.find("content-type")->second == "application/json")
+		if (Headers["content-type"] == "application/json")
 			this->ContentType = ApplicationJson;
 	}
 }
 
-bool	Post::ReadFullBody()
+void	Post::IsBodyFullyRead()
 {
-	bool	flag = false;
 	MaxAllowedBodySize = 1028 * 10; // tmp value = 10280 -> 10MegaBytes
 	
 	std::cout << "Content-Length:{" << obj.GetContentLength() << "}" << std::endl;
 	std::cout << "UnprocessedBuffer-Length:{" << BodyUnprocessedBuffer.size() << "}" << std::endl;
 
-	if (obj.GetContentLength() > this->MaxAllowedBodySize)
-		throw "413 Request Entity Too Large";
+	// if (obj.GetContentLength() > this->MaxAllowedBodySize)
+	// 	throw "413 Request Entity Too Large";
 
-	BodyUnprocessedBuffer.size() == obj.GetContentLength() ? flag = true : flag = false;
-	return flag;
+	BodyUnprocessedBuffer.size() == obj.GetContentLength() ? BodyFullyRead = true : BodyFullyRead = false;
 }
 
 /*	|#----------------------------------#|
@@ -110,55 +114,84 @@ void	Post::GetBoundaryFromHeader()
 	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
 		throw "400 Bad Request -ParseMultipartFormData() -Boundary Parsing.";
 
-	BoundaryStart = "--" + Boundary;
-	BoundaryEnd = "--" + Boundary + "--";
+	BoundaryStart = "\r\n--" + Boundary;
+	BoundaryEnd = "\r\n--" + Boundary + "--";
 }
 
-void	Post::GetBodyEntity(std::string	&SmallBody)
+void	Post::WriteToFile(std::string	&Buffer)
 {
-	size_t				pos = 0;
-	std::istringstream	stream(SmallBody);
-	std::string			tmp, value;
+	size_t	FilenamePos = 0, FilenameEndPos = 0, BodyPos = 0;
+	std::ofstream		OutFile;
+	std::string			Filename, FilenamePath, BodyContent;
+	std::istringstream	stream(Buffer);
 
-	while (getline(stream, tmp))
+	//------------------	Find SubBodyContent	------------------//
+	BodyPos = Buffer.find("\r\n\r\n");
+	if (BodyPos == std::string::npos)
+		throw "400 Bad Request -WriteToFile()";
+	BodyContent = Buffer.substr(BodyPos + 4);
+	// std::cout << "BodyContent:{" << BodyContent << "}" << std::endl;
+
+	//------------------	Find FileName	------------------//
+	FilenamePos = Buffer.find("filename=\"");
+	if (FilenamePos != std::string::npos)
 	{
-		TrimSpaces(tmp);
-		// std::cout << "tmp value:{" << tmp << "}" <<  std::endl;
-		pos = tmp.find(": ");
-		if (pos == std::string::npos)
-			continue;
-		value = tmp.substr(pos + 2);
-		std::cout << "value of the body header:{" << value<< "}" << std::endl;
+		FilenameEndPos = Buffer.find("\"\r\n", FilenamePos + 10);
+		if (FilenameEndPos == std::string::npos)
+		throw "400 Bad Request -WriteToFile()";
+		
+		Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
+		std::cout << "Filename:{" << Filename << "}" << std::endl;
+		
+		FilenamePath = "Uploads/" + Filename;
+
+		OutFile.open(FilenamePath.c_str(), std::ios::app); // std::ios::app => to append
+		if (!OutFile.is_open())
+			throw "500 Internal Server Error";
+		OutFile << BodyContent;
+	}
+}
+
+void	Post::GetSubBodys(std::string &Buffer)
+{
+	Buffer = "\r\n" + Buffer;
+	std::string	tmp;
+	size_t start = 0, end = 0, RequestEnd = 0;
+	
+//------------------	Check if Request Ended	------------------//
+	if (Buffer.find(BoundaryEnd) != std::string::npos)
+		this->EndOfRequest = true;
+	while (true)
+	{
+		start = Buffer.find(BoundaryStart, end);
+		if (start == std::string::npos)		break;
+
+		end = Buffer.find(BoundaryStart, start + BoundaryStart.length());
+		if (end == std::string::npos)		break;
+
+		size_t	size = end - start;
+		tmp = Buffer.substr(start, size);
+
+		WriteToFile(tmp);
 	}
 }
 
 void	Post::ParseMultipartFormData(std::istringstream	&BodyStream, std::string &str)
 {
+
 	GetBoundaryFromHeader();
+/*	 Loop on to read the full request from socket	*/
+	GetSubBodys(str);
 
-	size_t 		start = 0, end = 0;
-	std::string	tmp;
-
-	start = str.find(BoundaryStart, start) + BoundaryStart.length();
-	if (start == std::string::npos)
-		throw "404 Invalide request ParseMultipartFormData()";
-	end = str.find(BoundaryEnd, start);
-	if (end == std::string::npos)
-		throw "404 Invalide request ParseMultipartFormData()";
-	else
-	{
-		std::cout << start << std::endl;
-		tmp = str.substr(start, end);
-		GetBodyEntity(tmp);
-		std::cout << "First Entity:\n" << "{" << tmp << "}" << std::endl;
-	}
+/*	 Check if the Request has been fully read	*/
+	if (EndOfRequest)	throw "200 Success";
+	else				PrintError("Invalide Boundary End"), throw "400 Bad request";
 }
 
 /*	|#----------------------------------#|
 	|#		ParseApplicationJson    	#|
 	|#----------------------------------#|
 */
-
 
 void	Post::ParseApplicationJson(std::istringstream	&stream)
 {
@@ -184,7 +217,7 @@ void	Post::HandleBody()
 	std::cout << "\n\t\t<# POST #>\t\t\n\n";
 
 	PostRequiredHeaders();
-	bool	flag = ReadFullBody();
-	if (flag) // the Body has been entirely read
+	IsBodyFullyRead();
+	if (BodyFullyRead) // the Body has been entirely read
 		ParseBody();
 }
