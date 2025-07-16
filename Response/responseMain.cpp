@@ -6,9 +6,6 @@ Response::Response(){
 
 Response::Response(Request	&req, int _clientFd)
 {
-    uri = req.GetFullPath();
-    method = req.GetHeaderValue("method");
-    pathRequested = req.GetHeaderValue("path");
     clientFd = _clientFd;
 }
 
@@ -234,8 +231,10 @@ std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
 
 void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-    // Response obj(req, _client);
 
+    uri = req.GetFullPath();
+    method = req.GetHeaderValue("method");
+    pathRequested = req.GetHeaderValue("path");
     if (method == "GET" || method == "POST")
     {
         getResponse(req, ConfigPars);
