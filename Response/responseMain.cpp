@@ -408,15 +408,22 @@ bool Response::prepareFileResponse(const std::string& filepath, const std::strin
     if (!file.is_open())
         return false;  // file not found or can't open
 
+    // struct stat fileStat;
+    // stat(filepath.c_str(), &fileStat);
+    // fileSize = fileStat.st_size;
+    
     // Get file size
     file.seekg(0, std::ios::end);
     fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
 
+    // std::cout << fileSize << std::endl;
     // Build HTTP response headers
+
     headers = "HTTP/1.1 200 OK\r\n";
     headers += "Content-Length: " + std::to_string(fileSize) + "\r\n";
     headers += contentType;
+    headers += "Accept-Ranges: bytes\r\n";
     headers += "Connection: close\r\n";
     headers += "\r\n";
 
