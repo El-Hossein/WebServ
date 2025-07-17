@@ -27,6 +27,11 @@ class Response
         size_t errorPos;
         bool usingError;
         std::string errorBody;
+        ssize_t  bytesSent;
+        ssize_t  bytesWritten;
+        std::string chunk;
+        bool hasMore;
+
     public :
         Response();
         Response(Request &req, int _clientFd);
@@ -46,11 +51,18 @@ class Response
         void        moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars);
         int        getClientFd();
         void       setClientFd(int _clientFd);
-        bool    getNextChunk(std::string &out, size_t chunkSize);
+        bool    getNextChunk(size_t chunkSize);
         bool    prepareFileResponse(const std::string& filepath, const std::string& contentType);
         size_t  getHeaderSent();
         void    setHeaderSent(size_t _aa);
         bool responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);
+        ssize_t getBytesSent();
+        void    setBytesSent(ssize_t _bytessent);
+        ssize_t getBytesWritten();
+        void    setBytesWritten(ssize_t _byteswritten);
+        bool    getHasMore();
+        void    setHasMore(bool _hasmore);
+        std::string getChunk();
 };
 
 

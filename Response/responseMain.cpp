@@ -14,10 +14,49 @@ Response::Response(Request	&req, int _clientFd)
     usingAutoIndex = false;
     usingError = false;
     errorPos = 0;
+    bytesSent = 0;
 }
 
 Response::~Response(){
-    
+
+}
+
+std::string Response::getChunk()
+{
+    return chunk;
+}
+
+bool Response::getHasMore()
+{
+    return hasMore;
+}
+
+void    Response::setHasMore(bool _hasmore)
+{
+    hasMore = _hasmore;
+}
+
+
+ssize_t  Response::getBytesSent()
+{
+    return bytesSent;
+
+}
+
+void  Response::setBytesSent(ssize_t _bytessent)
+{
+    bytesSent = _bytessent;
+}
+
+ssize_t  Response::getBytesWritten()
+{
+    return bytesWritten;
+
+}
+
+void  Response::setBytesWritten(ssize_t _byteswritten)
+{
+    bytesWritten = _byteswritten;
 }
 
 size_t  Response::getHeaderSent()
@@ -103,16 +142,16 @@ bool Response::responseError(int statusCode, const std::string& message, std::ve
     return true;
 }
 
-bool Response::getNextChunk(std::string &out, size_t chunkSize)
+bool Response::getNextChunk(size_t chunkSize)
 {
-    out.clear();
+    chunk.clear();
 
     // Send remaining header first
     if (headerSent < headers.size())
     {
         size_t left = headers.size() - headerSent;
         size_t sendNow = std::min(chunkSize, left);
-        out = headers.substr(headerSent, sendNow);
+        chunk = headers.substr(headerSent, sendNow);
         headerSent += sendNow;
         return true;
     }
@@ -120,30 +159,27 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
     // Send from autoIndex buffer if active
     if (usingAutoIndex)
     {
-        std::cout << "autoindex : " << autoIndexPos << std::endl;
         if (autoIndexPos < autoIndexBody.size())
         {
             size_t left = autoIndexBody.size() - autoIndexPos;
             size_t sendNow = std::min(chunkSize, left);
-            out = autoIndexBody.substr(autoIndexPos, sendNow);
+            chunk = autoIndexBody.substr(autoIndexPos, sendNow);
             autoIndexPos += sendNow;
             return autoIndexPos < autoIndexBody.size(); // true if more left
         }
         else
         {
-            std::cout << "check auto index : " << usingAutoIndex << std::endl;
             usingAutoIndex = false; // done
             // return false;
         }
     }
     if (usingError)
     {
-        std::cout << "Error : " << errorPos << std::endl;
         if (errorPos < errorBody.size())
         {
             size_t left = errorBody.size() - errorPos;
             size_t sendNow = std::min(chunkSize, left);
-            out = errorBody.substr(errorPos, sendNow);
+            chunk = errorBody.substr(errorPos, sendNow);
             errorPos += sendNow;
             return errorPos < errorBody.size(); // true if more left
         }
@@ -163,10 +199,10 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
 
         if (bytesRead > 0)
         {
-            out.assign(buffer.data(), bytesRead);
+            chunk.assign(buffer.data(), bytesRead);
             filePos += bytesRead;
 
-            std::cout << "?????" << std::endl;
+            // std::cout << "?????" << std::endl;
             if (filePos >= fileSize)
                 file.close();
 
@@ -174,7 +210,7 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
         }
         else
         {
-            std::cout << "!!!!!!!!!!!" << std::endl;
+            // std::cout << "!!!!!!!!!!!" << std::endl;
             file.close();
         }
     }
@@ -393,7 +429,6 @@ bool Response::prepareFileResponse(const std::string& filepath, const std::strin
 
 void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
-
     uri = req.GetFullPath();
     method = req.GetHeaderValue("method");
     pathRequested = req.GetHeaderValue("path");
