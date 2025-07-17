@@ -52,7 +52,7 @@ class Response
         int        getClientFd();
         void       setClientFd(int _clientFd);
         bool    getNextChunk(size_t chunkSize);
-        bool    prepareFileResponse(const std::string& filepath, const std::string& contentType);
+        bool    prepareFileResponse(const std::string& filepath, const std::string& contentType, Request &req);
         size_t  getHeaderSent();
         void    setHeaderSent(size_t _aa);
         bool responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);

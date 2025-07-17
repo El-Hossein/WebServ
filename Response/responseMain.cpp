@@ -165,11 +165,11 @@ bool Response::getNextChunk(size_t chunkSize)
             size_t sendNow = std::min(chunkSize, left);
             chunk = autoIndexBody.substr(autoIndexPos, sendNow);
             autoIndexPos += sendNow;
-            return autoIndexPos < autoIndexBody.size(); // true if more left
+            return autoIndexPos < autoIndexBody.size();
         }
         else
         {
-            usingAutoIndex = false; // done
+            usingAutoIndex = false;
             // return false;
         }
     }
@@ -181,7 +181,7 @@ bool Response::getNextChunk(size_t chunkSize)
             size_t sendNow = std::min(chunkSize, left);
             chunk = errorBody.substr(errorPos, sendNow);
             errorPos += sendNow;
-            return errorPos < errorBody.size(); // true if more left
+            return errorPos < errorBody.size();
         }
         else
         {
@@ -190,31 +190,25 @@ bool Response::getNextChunk(size_t chunkSize)
         }
     }
 
-    // Send file content (existing behavior)
-    if (file.is_open() && filePos < fileSize)
+    if (file.is_open())
     {
-        std::vector<char> buffer(chunkSize);
-        file.read(buffer.data(), chunkSize);
-        std::streamsize bytesRead = file.gcount();
+        char buffer[chunkSize];
+        file.read(buffer, chunkSize);
+        int bytesRead = file.gcount();
 
         if (bytesRead > 0)
         {
-            chunk.assign(buffer.data(), bytesRead);
+            chunk.assign(buffer, bytesRead);
             filePos += bytesRead;
 
-            // std::cout << "?????" << std::endl;
             if (filePos >= fileSize)
                 file.close();
 
-            return filePos < fileSize;
+            return true;
         }
-        else
-        {
-            // std::cout << "!!!!!!!!!!!" << std::endl;
-            file.close();
-        }
-    }
 
+        file.close();
+    }
     return false;
 }
 
@@ -311,8 +305,8 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
         std::cout << htmlFound << std::endl;
 
         // Try to serve index file
-        if (prepareFileResponse(htmlFound, "Content-Type: text/html\r\n"))
-            return;  // success — ready for getNextChunk()
+        // if (prepareFileResponse(htmlFound, "Content-Type: text/html\r\n"))
+        //     return;  // success — ready for getNextChunk()
 
         // If index file not found and autoindex is on
         if (autoIndexOn == "on")
@@ -364,7 +358,7 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
             servListingDiren(ConfigPars);
         else
         {
-            if (prepareFileResponse(uri.c_str(), checkContentType()) == false)
+            if (prepareFileResponse(uri.c_str(), checkContentType(), req) == false)
                 return finalResponse = responseError(404, " Not Found", ConfigPars);
             
         }
@@ -401,33 +395,26 @@ std::string Response::deleteResponse(std::vector<ConfigNode> ConfigPars)
     return finalResponse;
 }
 
-bool Response::prepareFileResponse(const std::string& filepath, const std::string& contentType)
+bool Response::prepareFileResponse(const std::string& filepath, const std::string& contentType, Request &req)
 {
-    // Open the file in binary mode
     file.open(filepath.c_str(), std::ios::binary);
     if (!file.is_open())
-        return false;  // file not found or can't open
+        return false;
 
-    // struct stat fileStat;
-    // stat(filepath.c_str(), &fileStat);
-    // fileSize = fileStat.st_size;
-    
-    // Get file size
-    file.seekg(0, std::ios::end);
-    fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
+    struct stat fileStat;
+    stat(filepath.c_str(), &fileStat);
+    fileSize = fileStat.st_size;
 
-    // std::cout << fileSize << std::endl;
-    // Build HTTP response headers
+
+    (void)req;
 
     headers = "HTTP/1.1 200 OK\r\n";
     headers += "Content-Length: " + std::to_string(fileSize) + "\r\n";
     headers += contentType;
-    headers += "Accept-Ranges: bytes\r\n";
-    headers += "Connection: close\r\n";
+    headers += "Accept-Ranges: none\r\n";
+    headers += "Connection: Keep-Alive\r\n";
     headers += "\r\n";
 
-    // Reset position trackers for sending
     headerSent = 0;
     filePos = 0;
 
