@@ -10,6 +10,8 @@ Response::Response(Request	&req, int _clientFd)
     filePos = 0;
     fileSize = 0;
     headerSent = 0;
+    autoIndexPos = 0;
+    usingAutoIndex = false;
 }
 
 Response::~Response(){
@@ -40,7 +42,7 @@ void    Response::setClientFd(int _clientFd)
 bool Response::getNextChunk(std::string &out, size_t chunkSize)
 {
     out.clear();
-    
+
     // Send remaining header first
     if (headerSent < headers.size())
     {
@@ -48,42 +50,50 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
         size_t sendNow = std::min(chunkSize, left);
         out = headers.substr(headerSent, sendNow);
         headerSent += sendNow;
-        
-        // Always return true if there's more header OR file data
-        return (headerSent < headers.size()) || (fileSize > 0);
+        return true;
     }
-    
-    // Then send file content
-    if (filePos < fileSize)  // Use filePos instead of file.is_open()
+
+    // Send from autoIndex buffer if active
+    if (usingAutoIndex)
     {
-        if (!file.is_open())
+        if (autoIndexPos < autoIndexBody.size())
         {
+            size_t left = autoIndexBody.size() - autoIndexPos;
+            size_t sendNow = std::min(chunkSize, left);
+            out = autoIndexBody.substr(autoIndexPos, sendNow);
+            autoIndexPos += sendNow;
+            return autoIndexPos < autoIndexBody.size(); // true if more left
+        }
+        else
+        {
+            usingAutoIndex = false; // done
             return false;
         }
-        
+    }
+
+    // Send file content (existing behavior)
+    if (file.is_open() && filePos < fileSize)
+    {
         std::vector<char> buffer(chunkSize);
         file.read(buffer.data(), chunkSize);
         std::streamsize bytesRead = file.gcount();
-        
+
         if (bytesRead > 0)
         {
             out.assign(buffer.data(), bytesRead);
             filePos += bytesRead;
-            
+
             if (filePos >= fileSize)
-            {
                 file.close();
-                return false;  // Last chunk
-            }
-            return true;  // More chunks to come
+
+            return filePos < fileSize;
         }
         else
         {
             file.close();
-            return false;
         }
     }
-    
+
     return false;
 }
 
@@ -149,43 +159,43 @@ std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, 
     return autoIndex[index];
 }
 
-std::string Response::generateAutoIndexOn()
+bool Response::generateAutoIndexOn()
 {
-    std::string body = generateListingDir();
+    autoIndexBody = generateListingDir(); // Save full body to string
+    autoIndexPos = 0;
+    usingAutoIndex = true;
 
-    finalResponse = "HTTP/1.1 200 OK\r\n";
-    finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
-    finalResponse += "Content-Type: text/html\r\n";
-    finalResponse += "Connection: close\r\n\r\n";
-    finalResponse += body;
-    return finalResponse;
+    headers = "HTTP/1.1 200 OK\r\n";
+    headers += "Content-Length: " + std::to_string(autoIndexBody.size()) + "\r\n";
+    headers += "Content-Type: text/html\r\n";
+    headers += "Connection: close\r\n\r\n";
 
+    headerSent = 0;
+    return true;
 }
 
-void    Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
+void Response::servListingDiren(std::vector<ConfigNode> ConfigPars)
 {
-    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0); // need to pass which location and server
-    index = getInfoConfig(ConfigPars, "index", "NULL", 0); // need to pass which location and server
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0);
+    index = getInfoConfig(ConfigPars, "index", "NULL", 0);
 
-    if (index.empty() == 0)
+    std::cout << index << std::endl;
+    // Check if we need to append slash
+    if (!index.empty())
     {
-        htmlFound = uri + "/" + index; // i need to check if slash already there or not
-        std::ifstream htmlStream(htmlFound.c_str(), std::ios::binary); 
-        if (htmlStream)
-        {
-            std::ostringstream htmlContent;
-            htmlContent << htmlStream.rdbuf();
-            htmlStream.close();
-            std::string body = htmlContent.str();
+        htmlFound = uri;
+        if (!uri.empty() && uri.back() != '/')
+            htmlFound += "/";
+        htmlFound += index;
+        std::cout << htmlFound << std::endl;
 
-            finalResponse = "HTTP/1.1 200 OK\r\n";
-            finalResponse += "Content-Length: " + intToString(body.size()) + "\r\n";
-            finalResponse += "Content-Type: text/html\r\n";
-            finalResponse += "Connection: close\r\n\r\n";
-            finalResponse += body;
-        }
-        else if (autoIndexOn == "on")
-            generateAutoIndexOn();
+        // Try to serve index file
+        if (prepareFileResponse(htmlFound, "Content-Type: text/html\r\n"))
+            return;  // success — ready for getNextChunk()
+
+        // If index file not found and autoindex is on
+        if (autoIndexOn == "on")
+            generateAutoIndexOn();  // sets up headers + autoIndexBody
         else
             finalResponse = responseError(403, " Forbidden", ConfigPars);
     }
@@ -235,27 +245,7 @@ std::string Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigP
         {
             if (prepareFileResponse(uri.c_str(), checkContentType()) == false)
                 return finalResponse = responseError(404, " Not Found", ConfigPars);
-            // std::ifstream inFile(uri.c_str(), std::ios::binary);
-            // if (inFile)
-            // {
-            //     std::ostringstream outStringFIle;
-            //     outStringFIle << inFile.rdbuf();
-            //     inFile.close();
-            //     std::string fileBody = outStringFIle.str();
-            //     finalResponse = "HTTP/1.1 200 OK\r\n";
-            //     finalResponse += "Content-Length: ";
-            //     finalResponse += intToString(fileBody.size()) + "\r\n";
-            //     finalResponse += checkContentType();
-            //     // finalResponse += "Accept-Ranges: bytes\r\n";
-            //     finalResponse += "Connection: close\r\n";
-            //     finalResponse += "\r\n";
-            //     finalResponse += fileBody;
-            // }
-            // else
-            // {
-            //     // and need to display given error page
-            //     finalResponse = responseError(404, " Not Found", ConfigPars);
-            // }
+            
         }
     }
     else if (method == "POST")
