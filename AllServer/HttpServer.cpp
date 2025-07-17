@@ -215,9 +215,11 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		{
 			size_t totalSent = 0;
 			ssize_t bytes_written = send(client_fd, chunk.c_str() + totalSent, chunk.size() - totalSent, 0);
-					
+			// std::cout << "bytes_written : " << bytes_written << std::endl;
+			// std::cout << "totalSent : " << totalSent << std::endl;
+					 
 				// std::cout << bytes_written << std::endl;
-				if (bytes_written <= 0)
+				if (bytes_written == 0)
 				{
 					remove_client(client_fd);
 					return;

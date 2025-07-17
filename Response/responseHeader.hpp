@@ -24,6 +24,9 @@ class Response
         std::string autoIndexBody;
         size_t autoIndexPos;
         bool usingAutoIndex;
+        size_t errorPos;
+        bool usingError;
+        std::string errorBody;
     public :
         Response();
         Response(Request &req, int _clientFd);
@@ -47,6 +50,7 @@ class Response
         bool    prepareFileResponse(const std::string& filepath, const std::string& contentType);
         size_t  getHeaderSent();
         void    setHeaderSent(size_t _aa);
+        bool responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);
 };
 
 

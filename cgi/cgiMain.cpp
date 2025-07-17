@@ -96,9 +96,9 @@ std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigP
     obj.setScriptPath(_pathinfo.scriptFile);
     int code = fileChecking(obj.getScriptPath());
     if (code == 403)
-        return responseError(403, " Forbidden", ConfigPars);
+        return responseErrorcgi(403, " Forbidden", ConfigPars);
     else if (code == 404)
-        return responseError(404, " not found", ConfigPars);
+        return responseErrorcgi(404, " not found", ConfigPars);
     obj.setScriptOutput(obj.executeCgiScript(req, ConfigPars, _pathinfo._pathInfo));
     // need to check time out
     CgiResponse parsedCgi = obj.parseOutput(obj.getScriptOutput());

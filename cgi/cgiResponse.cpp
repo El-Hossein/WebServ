@@ -22,7 +22,7 @@ std::string Cgi::formatHttpResponse(const CgiResponse& cgiResponse)
     return httpResponse;
 }
 
-std::string readFileToString(const std::string& path)
+std::string readFileToStringcgi(const std::string& path)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
     if (!file)  // need to give error pages and check if they are valid
@@ -33,7 +33,7 @@ std::string readFileToString(const std::string& path)
     return contents.str();
 }
 
-std::string handWritingError(const std::string& message, int statusCode)
+std::string handWritingErrorcgi(const std::string& message, int statusCode)
 {
     std::string _code = intToString(statusCode);
 
@@ -47,7 +47,7 @@ std::string handWritingError(const std::string& message, int statusCode)
     return html;
 }
 
-std::string responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars)
+std::string responseErrorcgi(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars)
 {
     std::string body;
     (void)ConfigPars;
@@ -59,13 +59,13 @@ std::string responseError(int statusCode, const std::string& message, std::vecto
     // }
     switch (statusCode)
     {
-        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
-        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
-        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
+        case 403: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
+        case 404: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
+        case 500: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 501: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
     }
     if (body.empty())
-        body = handWritingError(message, statusCode);
+        body = handWritingErrorcgi(message, statusCode);
     std::string response = "HTTP/1.1 " + intToString(statusCode);
     switch (statusCode)
     {
