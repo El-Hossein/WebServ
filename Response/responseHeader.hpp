@@ -21,6 +21,9 @@ class Response
         std::ifstream   file;
         size_t      filePos;
         size_t      fileSize;
+        std::string autoIndexBody;
+        size_t autoIndexPos;
+        bool usingAutoIndex;
     public :
         Response();
         Response(Request &req, int _clientFd);
@@ -28,7 +31,7 @@ class Response
         
         std::string deleteResponse(std::vector<ConfigNode> ConfigPars);
         void        servListingDiren(std::vector<ConfigNode> ConfigPars);
-        std::string generateAutoIndexOn();
+        bool        generateAutoIndexOn();
         std::string getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
         std::string generateListingDir();
         std::string deleteResponseSuccess(const std::string& message);
