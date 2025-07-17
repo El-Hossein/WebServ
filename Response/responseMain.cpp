@@ -12,6 +12,8 @@ Response::Response(Request	&req, int _clientFd)
     headerSent = 0;
     autoIndexPos = 0;
     usingAutoIndex = false;
+    usingError = false;
+    errorPos = 0;
 }
 
 Response::~Response(){
@@ -39,6 +41,68 @@ void    Response::setClientFd(int _clientFd)
     clientFd = _clientFd;
 }
 
+std::string readFileToString(const std::string& path)
+{
+    std::ifstream file(path.c_str(), std::ios::binary);
+    if (!file)  // need to give error pages and check if they are valid
+        return "";
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    file.close();
+    return contents.str();
+}
+
+std::string handWritingError(const std::string& message, int statusCode)
+{
+    std::string _code = intToString(statusCode);
+
+    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
+    html += "<body><h1>";
+    html += _code;
+    html += " ";
+    html += message;
+    html += "</h1></body></html>";
+
+    return html;
+}
+
+bool Response::responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars)
+{
+    std::string body;
+    (void)ConfigPars;
+
+    switch (statusCode)
+    {
+        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
+        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
+        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
+    }
+
+    if (body.empty())
+        body = handWritingError(message, statusCode);
+
+    errorBody = body;
+    errorPos = 0;
+    usingError = true;
+
+    headers = "HTTP/1.1 " + intToString(statusCode);
+    switch (statusCode)
+    {
+        case 403: headers += " Forbidden"; break;
+        case 404: headers += " Not Found"; break;
+        case 500: headers += " Internal Server Error"; break;
+        case 501: headers += " Method not implemented"; break;
+    }
+    headers += "\r\n";
+    headers += "Content-Type: text/html\r\n";
+    headers += "Content-Length: " + intToString(errorBody.size()) + "\r\n";
+    headers += "Connection: close\r\n\r\n";
+
+    headerSent = 0;
+    return true;
+}
+
 bool Response::getNextChunk(std::string &out, size_t chunkSize)
 {
     out.clear();
@@ -56,6 +120,7 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
     // Send from autoIndex buffer if active
     if (usingAutoIndex)
     {
+        std::cout << "autoindex : " << autoIndexPos << std::endl;
         if (autoIndexPos < autoIndexBody.size())
         {
             size_t left = autoIndexBody.size() - autoIndexPos;
@@ -66,8 +131,26 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
         }
         else
         {
+            std::cout << "check auto index : " << usingAutoIndex << std::endl;
             usingAutoIndex = false; // done
-            return false;
+            // return false;
+        }
+    }
+    if (usingError)
+    {
+        std::cout << "Error : " << errorPos << std::endl;
+        if (errorPos < errorBody.size())
+        {
+            size_t left = errorBody.size() - errorPos;
+            size_t sendNow = std::min(chunkSize, left);
+            out = errorBody.substr(errorPos, sendNow);
+            errorPos += sendNow;
+            return errorPos < errorBody.size(); // true if more left
+        }
+        else
+        {
+            usingError = false; // done
+            // return false;
         }
     }
 
@@ -83,6 +166,7 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
             out.assign(buffer.data(), bytesRead);
             filePos += bytesRead;
 
+            std::cout << "?????" << std::endl;
             if (filePos >= fileSize)
                 file.close();
 
@@ -90,6 +174,7 @@ bool Response::getNextChunk(std::string &out, size_t chunkSize)
         }
         else
         {
+            std::cout << "!!!!!!!!!!!" << std::endl;
             file.close();
         }
     }
@@ -226,7 +311,7 @@ std::string Response::checkContentType()
             return "Content-Type: text/html\r\n";
     }
     else
-        return "Content-Type: text/html\r\n";
+        return "Content-Type:z text/html\r\n";
     return "";
 
 }

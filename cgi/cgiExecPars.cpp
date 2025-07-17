@@ -136,7 +136,7 @@ std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> Co
     char **envp;
     pid_t pid = fork();
     if (pid == -1)
-        return responseError(500, " Internal Server Error", ConfigPars);
+        return responseErrorcgi(500, " Internal Server Error", ConfigPars);
     else if (pid == 0)
     {
         freopen(inpFile.c_str(), "r", stdin);
@@ -167,7 +167,7 @@ std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> Co
             {
                 unlink(inpFile.c_str());
                 unlink(outFile.c_str());
-                return responseError(500, " Internal Server Error", ConfigPars);
+                return responseErrorcgi(500, " Internal Server Error", ConfigPars);
             }
 
         }

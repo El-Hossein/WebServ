@@ -52,7 +52,7 @@ class Cgi
 
 };
 
-std::string responseError(int status_code, const std::string& message, std::vector<ConfigNode> ConfigPars);
+std::string responseErrorcgi(int status_code, const std::string& message, std::vector<ConfigNode> ConfigPars);
 std::string intToString(int n);
 std::string handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars);
 int         IsCgiRequest(const char *uri);
