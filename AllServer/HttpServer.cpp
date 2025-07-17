@@ -207,7 +207,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	if (event->filter == EVFILT_WRITE)
 	{
 		// std::string chunk;
-		response->setHasMore(response->getNextChunk(8000));
+		response->setHasMore(response->getNextChunk(4096));
 
 		if (!response->getChunk().empty())
 		{
@@ -228,7 +228,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			// std::string chunk;
 			response->getNextChunk(8000);
 			unsigned long resp = response->getChunk().find("Connection: close");
-			std::cout << resp << " : " << std::string::npos << std::endl;
+			// std::cout << resp << " : " << std::string::npos << std::endl;
 			bool should_close = (resp != std::string::npos);
 			// response_map.erase(client_fd);
 
@@ -283,21 +283,14 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 			}
 			
 			// Handle client socket
-			// try
-			// {
-				for (size_t j = 0; j < all_request.size(); ++j)
+			for (size_t j = 0; j < all_request.size(); ++j)
+			{
+				if (all_request[j]->GetClientFd() == fd)
 				{
-					if (all_request[j]->GetClientFd() == fd)
-					{
-						handle_client(fd, &events[i], ConfigPars, all_request, all_res);
-						break;
-					}
+					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
+					break;
 				}
-			// }
-			// catch(const char *m)
-			// {
-			// 	std::cout << m << std::endl;
-			// }
+			}
 		}
 	}
 }
