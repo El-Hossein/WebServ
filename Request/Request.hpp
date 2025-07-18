@@ -1,5 +1,3 @@
-#ifndef REQUEST_HPP
-#define REQUEST_HPP
 #pragma once
 
 #include "Get.hpp"
@@ -8,12 +6,8 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-// #define    ReadHeader -1
-// #define    ReadBody 0
-// #define    EndBody 1
-
-#define BUFFER_SIZE 1024 // 1kb
-#define MAX_HEADER_SIZE 100//(8192 * 2) // 8kb
+#define BUFFER_SIZE		1024 // 1kb
+#define MAX_HEADER_SIZE	8192 // 8kb
 
 enum	Method
 {
@@ -26,7 +20,26 @@ enum	ClientStatus
 {
 	ReadHeader,
 	ReadBody,
-	EndBody
+	EndReading
+};	
+
+enum	DataType
+{
+	Chunked,
+	FixedLength
+};
+
+enum	ContentType
+{
+	Boundary,
+	Other
+};
+
+struct	BoundarySettings
+{
+	std::string	Boundary;
+	std::string	BoundaryStart;
+	std::string	BoundaryEnd;
 };
 
 class	Request
@@ -38,15 +51,20 @@ private:
 	ConfigNode				RightServer;
 
 	Method								Method;
+	DataType							DataType;
+	ContentType							ContentType;
 	std::map<std::string, std::string>	Headers;
 	std::map<std::string, std::string>	QueryParams;
 	std::string							FullSystemPath;
 	std::vector<std::string>			PathParts;
 
-	bool						KeepAlive;
-	std::string					BodyUnprocessedBuffer;
+	BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
+	std::string					BodyUnprocessedBuffer;
+	size_t						TotalBytesRead;
+	bool						KeepAlive;
 	size_t						ContentLength;
+
 public:
 	Request(const int	&, ClientStatus, std::vector<ConfigNode>);
 	~Request();
@@ -63,17 +81,20 @@ public:
 	int									GetClientStatus() const;
 	int									GetClientFd() const;
 	std::string							GetHeaderBuffer() const;
-
+	int									GetDataType() const;
+	int									GetContentType() const;
+	BoundarySettings					GetBoundarySettings() const;
+	
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
-
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
+	void	PostRequiredHeaders();
 
 	void	CheckRequiredHeaders();
 
@@ -83,6 +104,7 @@ public:
 	void	ParseURI(std::string	&URI);
 	void	SetUpRequest();
 	void	ReadBodyChunk();
+	void	GetBoundaryFromHeader();
 };
 
 // ---------	HELPER FUNCTIONS 	--------- //
@@ -97,5 +119,3 @@ bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
-
-#endif
