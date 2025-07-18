@@ -174,18 +174,15 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			break;
 		}
 	}
-	// std::cout << request->GetClientFd() << std::endl;
 	if (!request) return; // Request requestect not found
 
-	if (event->filter == EVFILT_READ) {
-		// std::cout << client_fd << std::endl;
-		try {
-			request->SetUpRequest();
-		} catch (const char* e) {
+	if (event->filter == EVFILT_READ)
+	{
+		try { request->SetUpRequest(); }
+			catch (const char* e) { std::cout << e << std::endl; return; }
+		if (request->GetClientStatus() != EndReading)
 			return;
-		}
-		if (request->GetClientStatus() != EndBody)
-			return;
+
 		SetUpResponse(client_fd, response, *request, ConfigPars);
 		// std::cout << response_map[client_fd] << std::endl;
 		struct kevent ev;
