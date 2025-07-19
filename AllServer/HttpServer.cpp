@@ -132,9 +132,26 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 }
 
 
+int	stringtoint(const char *e)
+{
+	int num = 0;
+
+	std::stringstream ss(e);
+	ss >> num;
+	return num;
+}
+
 void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, const char *e)
 {
-	(void)e;
+	int num = stringtoint(e);
+	switch (num)
+	{
+		case 500: res->responseError(500, " Internal Server Error", ConfigPars); return;
+		case 501: res->responseError(501, " Not Implemented", ConfigPars); return;
+		case 400: res->responseError(400, " Bad Request", ConfigPars); return;
+		case 413: res->responseError(413, " Content Too Large", ConfigPars); return;
+		case 414: res->responseError(414, " URI Too Long", ConfigPars); return;
+	}
 	res->moveToResponse(client_fd, Request, ConfigPars);
 }
 
