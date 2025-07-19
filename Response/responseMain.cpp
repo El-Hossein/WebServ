@@ -122,6 +122,9 @@ void     Response::responseError(int statusCode, const std::string& message, std
         case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
         case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
         case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
+        case 400: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/400.html"); break;
+        case 413: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/413.html"); break;
+        case 414: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/414.html"); break;
     }
 
     if (body.empty())
@@ -138,6 +141,9 @@ void     Response::responseError(int statusCode, const std::string& message, std
         case 404: headers += " Not Found"; break;
         case 500: headers += " Internal Server Error"; break;
         case 501: headers += " Method not implemented"; break;
+        case 400: headers += " Bad Request"; break;
+        case 413: headers += " Content Too Large"; break;
+        case 414: headers += " URI Too Long"; break;
     }
     headers += "\r\n";
     headers += "Content-Type: text/html\r\n";
