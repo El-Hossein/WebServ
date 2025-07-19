@@ -408,15 +408,21 @@ std::string Response::checkContentType()
             return "Content-Type: image/jpeg\r\n";
         else if (extension.compare(".mp4") == 0)
             return "Content-Type: video/mp4\r\n";
-        else if (extension.compare("mpeg") == 0)
+        else if (extension.compare(".mpeg") == 0)
             return "Content-Type: audio/mpeg\r\n";
-        else if (extension.compare("vorbis") == 0)
+        else if (extension.compare(".vorbis") == 0)
             return "Content-Type: audio/vorbis\r\n";
-        else
+        else if (extension.compare(".js") == 0)
+            return "Content-Type: application/javascript\r\n";
+        else if (extension.compare(".json") == 0)
+            return "Content-Type: application/json\r\n";
+        else if (extension.compare(".html") == 0)
             return "Content-Type: text/html\r\n";
+        else
+            return "Content-Type: text/plein\r\n";
     }
     else
-        return "Content-Type:z text/html\r\n";
+        return "Content-Type: application/octet-stream\r\n";
     return "";
 
 }
@@ -507,6 +513,8 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     // need to check for Connection
     headers += "Connection: Keep-Alive\r\n";
     headers += "\r\n";
+
+    std::cout << headers << std::endl;
 
     headerSent = 0;
     filePos = 0;
