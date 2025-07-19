@@ -132,8 +132,9 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 }
 
 
-void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars)
+void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, const char *e)
 {
+	(void)e;
 	res->moveToResponse(client_fd, Request, ConfigPars);
 }
 
@@ -181,12 +182,14 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		// std::cout << client_fd << std::endl;
 		try {
 			request->SetUpRequest();
-		} catch (const char* e) {
-			return;
 		}
-		if (request->GetClientStatus() != EndBody)
-			return;
-		SetUpResponse(client_fd, response, *request, ConfigPars);
+		catch (const char* e)
+		{
+			// return;
+			if (request->GetClientStatus() != EndBody)
+				return;
+			SetUpResponse(client_fd, response, *request, ConfigPars, e);
+		}
 		// std::cout << response_map[client_fd] << std::endl;
 		struct kevent ev;
 		AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
