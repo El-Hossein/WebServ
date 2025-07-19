@@ -207,8 +207,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	if (event->filter == EVFILT_WRITE)
 	{
 		// std::string chunk;
-		response->setHasMore(response->getNextChunk(4096));
-
+		response->setHasMore(response->getNextChunk(8000));
 		if (!response->getChunk().empty())
 		{
 			response->setBytesSent(0);
@@ -225,6 +224,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		if (!response->getHasMore())
 		{
 			response->setHeaderSent(0);
+			response->_cgi.setCgiHeaderSent(0);
 			// std::string chunk;
 			response->getNextChunk(8000);
 			unsigned long resp = response->getChunk().find("Connection: close");

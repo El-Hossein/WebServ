@@ -2,6 +2,7 @@
 
 #include "../AllServer/HttpServer.hpp"
 #include <dirent.h>
+#include "../cgi/cgiHeader.hpp"
 
 
 class Response
@@ -21,26 +22,25 @@ class Response
         std::ifstream   file;
         size_t      filePos;
         size_t      fileSize;
-        std::string autoIndexBody;
-        size_t autoIndexPos;
-        bool usingAutoIndex;
-        size_t errorPos;
-        bool usingError;
-        std::string errorBody;
+        std::string staticFileBody;
+        size_t staticFilePos;
+        bool usingStaticFile;
         ssize_t  bytesSent;
         ssize_t  bytesWritten;
         std::string chunk;
-        bool hasMore;
+        bool        hasMore;
+
 
     public :
+        Cgi _cgi;
         Response();
         Response(Request &req, int _clientFd);
         ~Response();
         
-        std::string deleteResponse(std::vector<ConfigNode> ConfigPars);
-        void        servListingDiren(std::vector<ConfigNode> ConfigPars);
+        void         deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req);
+        void        servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req);
         bool        generateAutoIndexOn();
-        std::string getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
+        void        getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
         std::string generateListingDir();
         std::string deleteResponseSuccess(const std::string& message);
         std::string getMethod();
@@ -52,10 +52,10 @@ class Response
         int        getClientFd();
         void       setClientFd(int _clientFd);
         bool    getNextChunk(size_t chunkSize);
-        bool    prepareFileResponse(const std::string& filepath, const std::string& contentType, Request &req);
+        int    prepareFileResponse(std::string filepath, std::string contentType, Request &req);
         size_t  getHeaderSent();
         void    setHeaderSent(size_t _aa);
-        bool responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);
+        void    responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);
         ssize_t getBytesSent();
         void    setBytesSent(ssize_t _bytessent);
         ssize_t getBytesWritten();
