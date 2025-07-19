@@ -1,21 +1,21 @@
 #include "cgiHeader.hpp"
 
-CgiResponse Cgi::parseOutput(const std::string& scriptOutput)
+void     Cgi::parseOutput()
 {
-    CgiResponse response;
-    response.status_code = 200;
-
-    std::istringstream stream(scriptOutput);
+    cgiStatusCode = 200;
+    std::ifstream file(outFile.c_str());
     std::string line;
     bool readHeader = true;
+    cgiHeader = "";
+    cgiBody = "";
 
-    while (std::getline(stream, line))
+    while (std::getline(file, line))
     {
         if (!line.empty() && line[line.size()-1] == '\r')
             line.erase(line.size() - 1);
         if (readHeader)
         {
-            if (line.empty() || line == "\r") //    we reached the end of headers
+            if (line.empty() || line == "\r")
             {
                 readHeader = false;
                 continue;
@@ -30,23 +30,23 @@ CgiResponse Cgi::parseOutput(const std::string& scriptOutput)
                 while (!headerValue.empty() && (headerValue[headerValue.size() - 1] == '\r' || headerValue[headerValue.size() - 1] == '\n'))
                     headerValue.erase(headerValue.size() - 1);
                 if (headerName == "Status")
-                    response.status_code = atoi(headerValue.c_str());
+                    cgiStatusCode = atoi(headerValue.c_str());
                 else
-                    response.headers += line + "\r\n";
+                    cgiHeader += line + "\r\n";
             }
             else
             {
                 readHeader = false;
-                response.body += line + "\n";
+                cgiBody += line + "\n";
             }
         }
         else
-            response.body += line + "\n";
+            cgiBody += line + "\n";
     }
-    if (response.headers.find("Content-Type:") == std::string::npos)
-        response.headers = "Content-Type: text/html\r\n" + response.headers;
+    cgiFileSize = cgiBody.size();
 
-    return response;
+    if (cgiHeader.find("Content-Type:") == std::string::npos)
+        cgiHeader = "Content-Type: text/html\r\n" + cgiHeader;
 }
 
 char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
@@ -128,22 +128,21 @@ void    execCgi(const char *scriptPath, char **envp)
     exit(1);
 }
 
-std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
+bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
     // postRequestBody = "name=ismail";// testing purposes
     inpFile = "/tmp/cgiInput";
     outFile = "/tmp/cgiOutput";
-    char **envp;
-    pid_t pid = fork();
+    pid = fork();
     if (pid == -1)
-        return responseError(500, " Internal Server Error", ConfigPars);
+       return responseErrorcgi(500, " Internal Server Error", ConfigPars);
     else if (pid == 0)
     {
-        freopen(inpFile.c_str(), "r", stdin);
-        freopen(outFile.c_str(), "w", stdout);
-        freopen(outFile.c_str(), "w", stderr);
-        envp = cgiEnvVariables(req, ConfigPars, _pathInfo);
-        execCgi(scriptPath.c_str(), envp);
+        std::freopen(inpFile.c_str(), "r", stdin);
+        std::freopen(outFile.c_str(), "w", stdout);
+        std::freopen(outFile.c_str(), "w", stderr);
+        envp = cgiEnvVariables(req, ConfigPars, pathInfo);
+        execCgi(scriptFile.c_str(), envp);
     }
     else
     {
@@ -162,25 +161,18 @@ std::string Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> Co
         waitpid(pid, &status, 0);
         if (WIFEXITED(status))
         {
-            int exit_code = WEXITSTATUS(status);
-            if (exit_code != 0)
+            exitCode = WEXITSTATUS(status);
+            if (exitCode != 0)
             {
                 unlink(inpFile.c_str());
                 unlink(outFile.c_str());
-                return responseError(500, " Internal Server Error", ConfigPars);
+                return responseErrorcgi(500, " Internal Server Error", ConfigPars);
+                
             }
 
-        }
-        std::ifstream outFileStream(outFile.c_str());
-        if (outFileStream.is_open())
-        {
-            std::ostringstream buffer;
-            buffer << outFileStream.rdbuf();
-            output = buffer.str();
-            outFileStream.close();
-        }
+        }  
+        inpFile.clear();
         unlink(inpFile.c_str());
-        unlink(outFile.c_str());
     }
-    return output;
+    return true;
 }
