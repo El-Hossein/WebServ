@@ -315,31 +315,27 @@ std::string Response::generateListingDir()
         return "<html><body><h1>Cannot open directory</h1></body></html>";
 
     std::string html = "<!DOCTYPE html>\n";
-        html += "<html>\n<head>\n<title>Index of " + uri + "</title>\n";
-        html += "<style>\n"
-        "body { background-color: #f0f4f8; font-family: Arial, sans-serif; color: #333; padding: 40px; }\n"
-        "h1 { color: #2c3e50; }\n"
-        "ul { list-style-type: none; padding-left: 0; }\n"
-        "li { margin: 10px 0; }\n"
-        "a { text-decoration: none; color: #3498db; font-weight: bold; }\n"
-        "a:hover { text-decoration: underline; color: #1abc9c; }\n"
-        ".container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 8px; }\n"
-        "</style>\n"
-        "</head>\n<body>\n<div class=\"container\">\n"
-        "<h1>Index of " + uri + "</h1>\n<ul>\n";
+    html += "<html>\n<head>\n<title>Index of " + uri + "</title>\n";
+    html += "<style>\n"
+            "body { background-color: #f0f4f8; font-family: Arial, sans-serif; color: #333; padding: 40px; }\n"
+            "h1 { color: #2c3e50; }\n"
+            "ul { list-style-type: none; padding-left: 0; }\n"
+            "li { margin: 10px 0; }\n"
+            "a { text-decoration: none; color: #3498db; font-weight: bold; }\n"
+            "a:hover { text-decoration: underline; color: #1abc9c; }\n"
+            ".container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 8px; }\n"
+            "</style>\n"
+            "</head>\n<body>\n<div class=\"container\">\n"
+            "<h1>Index of " + uri + "</h1>\n<ul>\n";
 
     struct dirent *dir;
     while ((dir = readdir(dirCheck)) != NULL)
     {
         std::string name = pathRequested + (pathRequested[pathRequested.length() - 1] == '/' ? "" : "/") + dir->d_name;
-        if (std::string(dir->d_name) != "." && std::string(dir->d_name) != "..")
-            html += "<li><a href=\"" + name + "\">" + dir->d_name + "</a></li>\n";
+        html += "<li><a href=\"" + name + "\">" + dir->d_name + "</a></li>\n";
     }
-
     closedir(dirCheck);
-
     html += "</ul>\n</div>\n</body>\n</html>\n";
-
     return html;
 }
 

@@ -143,15 +143,16 @@ int	stringtoint(const char *e)
 
 void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, const char *e)
 {
-	int num = stringtoint(e);
-	switch (num)
-	{
-		case 500: res->responseError(500, " Internal Server Error", ConfigPars); return;
-		case 501: res->responseError(501, " Not Implemented", ConfigPars); return;
-		case 400: res->responseError(400, " Bad Request", ConfigPars); return;
-		case 413: res->responseError(413, " Content Too Large", ConfigPars); return;
-		case 414: res->responseError(414, " URI Too Long", ConfigPars); return;
-	}
+	// int num = stringtoint(e);
+	// switch (num)
+	// {
+	// 	case 500: res->responseError(500, " Internal Server Error", ConfigPars); return;
+	// 	case 501: res->responseError(501, " Not Implemented", ConfigPars); return;
+	// 	case 400: res->responseError(400, " Bad Request", ConfigPars); return;
+	// 	case 413: res->responseError(413, " Content Too Large", ConfigPars); return;
+	// 	case 414: res->responseError(414, " URI Too Long", ConfigPars); return;
+	// }
+	(void)e;
 	res->moveToResponse(client_fd, Request, ConfigPars);
 }
 
@@ -202,11 +203,11 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		}
 		catch (const char* e)
 		{
-			// return;
-			if (request->GetClientStatus() != EndBody)
-				return;
-			SetUpResponse(client_fd, response, *request, ConfigPars, e);
+			return;
 		}
+		if (request->GetClientStatus() != EndBody)
+			return;
+		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
 		// std::cout << response_map[client_fd] << std::endl;
 		struct kevent ev;
 		AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
