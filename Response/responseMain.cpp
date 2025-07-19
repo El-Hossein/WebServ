@@ -514,7 +514,6 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     headers += "Connection: Keep-Alive\r\n";
     headers += "\r\n";
 
-
     headerSent = 0;
     filePos = 0;
 
