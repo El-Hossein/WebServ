@@ -84,26 +84,11 @@ class Cgi
         void        setUsingStatCgiFile(bool _usingcgistatfile);
         std::string getStatCgiFileBody();
         void        setcgiHeader(std::string _cgiheader);
-        int         getcgistatus()
-        {
-            return cgistatus;
-        }
-        void         setcgistatus(int hh)
-        {
-            cgistatus = hh;
-        }
-        pid_t         getpid_1()
-        {
-            return pid_1;
-        }
-        time_t         gettime()
-        {
-            return startTime;
-        }
-        std::string         getoutfile()
-        {
-            return outFile;
-        }
+        int         getcgistatus();
+        void         setcgistatus(int _cgistatus);
+        pid_t         getpid_1();
+        time_t         gettime();
+        std::string    getoutfile();
         
         
 

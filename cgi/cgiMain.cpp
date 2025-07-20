@@ -18,6 +18,31 @@ Cgi::~Cgi()
 
 }
 
+std::string    Cgi::getoutfile()
+{
+    return outFile;
+}
+
+time_t   Cgi::gettime()
+{
+    return startTime;
+}
+
+pid_t    Cgi::getpid_1()
+{
+    return pid_1;
+}
+
+void    Cgi::setcgistatus(int _cgistatus)
+{
+    cgistatus = _cgistatus;
+}
+
+int   Cgi::getcgistatus()
+{
+    return cgistatus;
+}
+
 void    Cgi::setcgiHeader(std::string _cgiHeader)
 {
     cgiHeader = _cgiHeader;
@@ -203,15 +228,13 @@ void Cgi::handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPar
         responseErrorcgi(404, " not found", ConfigPars);
         return ;
     }
-    int hh = executeCgiScript(req, ConfigPars);
+    int _status = executeCgiScript(req, ConfigPars);
     pid_1 = pid;
-    if (hh == 1)
+    if (_status == 1)
     {
         parseOutput();
         formatHttpResponse(outFile);
     }
-    
-    // need to check time out
 }
 
 int IsCgiRequest(const char *uri)
