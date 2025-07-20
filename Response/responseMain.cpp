@@ -430,7 +430,12 @@ std::string Response::checkContentType()
             return "Content-Type: text/plein\r\n";
     }
     else
-        return "Content-Type: application/octet-stream\r\n";
+    {
+        if (access(uri.c_str(), X_OK) != 0)
+            return "Content-Type: text/plein\r\n";
+        else
+            return "Content-Type: application/octet-stream\r\n";
+    }
     return "";
 
 }
