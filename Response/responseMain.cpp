@@ -21,6 +21,11 @@ Response::~Response(){
 }
 
 
+bool    Response::gethasPendingCgi()
+{
+    return hasPendingCgi;
+}
+
 std::string Response::getChunk()
 {
     return chunk;
@@ -436,10 +441,10 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 
 
     _cgi.setcgiHeader("");
-    if (IsCgiRequest(uri.c_str())) // time out // loop infini
+    if (IsCgiRequest(uri.c_str()))
     {
         _cgi.handleCgiRequest(req, ConfigPars);
-        if (_cgi.getcgistatus() == 2)
+        if (_cgi.getcgistatus() == CGI_RUNNING)
         {
             hasPendingCgi = true;
             return;
@@ -515,10 +520,11 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     (void)req;
 
     headers = "HTTP/1.1 200 OK\r\n";
-    headers += "Content-Length: " + intToString(fileSize) + "\r\n";
     headers += contentType;
     if ( contentType == "video/mp4\r\n" == 0)
         headers += "Accept-Ranges: none\r\n";
+    headers += "Content-Length: " + intToString(fileSize) + "\r\n";
+
     // need to check for Connection
     headers += "Connection: Keep-Alive\r\n";
     headers += "\r\n";
@@ -553,8 +559,8 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
         return false;
 
     int status;
-    pid_t child_pid = _cgi.getpid_1();
-    int result = waitpid(child_pid, &status, WNOHANG);
+    pid_t childPid = _cgi.getpid_1();
+    int result = waitpid(childPid, &status, WNOHANG);
 
     if (result > 0) // in case of success and syntax error in cgi
     {
@@ -565,18 +571,18 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
             {
                 _cgi.parseOutput();
                 _cgi.formatHttpResponse(_cgi.getoutfile());
-                _cgi.setcgistatus(1);
+                _cgi.setcgistatus(CGI_COMPLETED);
             }
             else
             {
                 _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
                 // unlink(inpFile.c_str());
                 // unlink(outFile.c_str());
-                _cgi.setcgistatus(0);
+                _cgi.setcgistatus(CGI_ERROR);
             }
         }
         else
-            _cgi.setcgistatus(0);
+            _cgi.setcgistatus(CGI_ERROR);
 
         hasPendingCgi = false;
         return true;
@@ -585,28 +591,25 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
 
     else if (result == -1)
     {
-        _cgi.setcgistatus(0);
+        _cgi.setcgistatus(CGI_ERROR);
         hasPendingCgi = false;
         return true;
     }
 
     if (time(NULL) - _cgi.gettime() > 10)
     {
-        kill(child_pid, SIGKILL);
+        kill(childPid, SIGKILL);
         usleep(10000);
         
-        // Try non-blocking reap first
-        int reap_result = waitpid(child_pid, &status, WNOHANG);
+        int reap_result = waitpid(childPid, &status, WNOHANG);
         if (reap_result == 0)
         {
-            waitpid(child_pid, &status, 0);
+            waitpid(childPid, &status, 0);
         }
         _cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
-        _cgi.setcgistatus(0);
+        _cgi.setcgistatus(CGI_ERROR);
         hasPendingCgi = false;
         return true;
     }
-        
-
     return false;
 }
