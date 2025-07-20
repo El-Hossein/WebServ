@@ -203,7 +203,9 @@ void Cgi::handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPar
         responseErrorcgi(404, " not found", ConfigPars);
         return ;
     }
-    if (executeCgiScript(req, ConfigPars) == true)
+    int hh = executeCgiScript(req, ConfigPars);
+    pid_1 = pid;
+    if (hh == 1)
     {
         parseOutput();
         formatHttpResponse(outFile);

@@ -128,7 +128,56 @@ void    execCgi(const char *scriptPath, char **envp)
     exit(1);
 }
 
-bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
+// bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
+// {
+//     // postRequestBody = "name=ismail";// testing purposes
+//     inpFile = "/tmp/cgiInput";
+//     outFile = "/tmp/cgiOutput";
+//     pid = fork();
+//     if (pid == -1)
+//        return responseErrorcgi(500, " Internal Server Error", ConfigPars);
+//     else if (pid == 0)
+//     {
+//         std::freopen(inpFile.c_str(), "r", stdin);
+//         std::freopen(outFile.c_str(), "w", stdout);
+//         std::freopen(outFile.c_str(), "w", stderr);
+//         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
+//         execCgi(scriptFile.c_str(), envp);
+//     }
+//     else
+//     {
+//         // this is for POST data 
+//         if (req.GetHeaderValue("method") == "POST")
+//         {
+//             std::ofstream inputFileStream(inpFile.c_str());
+//             if (inputFileStream.is_open())
+//             {
+//                 if (postRequestBody && strlen(postRequestBody) > 0)
+//                     inputFileStream << postRequestBody;
+//                 inputFileStream.close();
+//             }
+//         }
+        
+//         waitpid(pid, &status, WNOHANG);
+//         if (WIFEXITED(status))
+//         {
+//             exitCode = WEXITSTATUS(status);
+//             if (exitCode != 0)
+//             {
+//                 unlink(inpFile.c_str());
+//                 unlink(outFile.c_str());
+//                 return responseErrorcgi(500, " Internal Server Error", ConfigPars);
+                
+//             }
+
+//         }  
+//         inpFile.clear();
+//         unlink(inpFile.c_str());
+//     }
+//     return true;
+// }
+
+int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
     // postRequestBody = "name=ismail";// testing purposes
     inpFile = "/tmp/cgiInput";
@@ -147,6 +196,7 @@ bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPar
     else
     {
         // this is for POST data 
+        startTime = time(NULL);
         if (req.GetHeaderValue("method") == "POST")
         {
             std::ofstream inputFileStream(inpFile.c_str());
@@ -158,7 +208,7 @@ bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPar
             }
         }
         
-        waitpid(pid, &status, 0);
+        waitpid(pid, &status, WNOHANG);
         if (WIFEXITED(status))
         {
             exitCode = WEXITSTATUS(status);
@@ -166,11 +216,17 @@ bool Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPar
             {
                 unlink(inpFile.c_str());
                 unlink(outFile.c_str());
-                return responseErrorcgi(500, " Internal Server Error", ConfigPars);
-                
+                cgistatus = 0;
+                return 0;
             }
-
-        }  
+            cgistatus = 1;
+            return 1;
+        } 
+        else
+        {
+            cgistatus = 2;
+            return 2;
+        }
         inpFile.clear();
         unlink(inpFile.c_str());
     }

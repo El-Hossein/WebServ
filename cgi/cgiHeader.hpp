@@ -13,6 +13,12 @@
 
 class Response;
 
+enum CgiStatus {
+            CGI_ERROR = 0,
+            CGI_COMPLETED = 1,
+            CGI_RUNNING = 2
+};
+
 class Cgi
 {
     private :
@@ -39,14 +45,18 @@ class Cgi
         std::string statCgiFileBody;
         size_t statCgiFilePos;
         bool usingCgiStatFile;
+        pid_t pid_1;
+        int cgistatus;
+        time_t startTime;
 
 
     public :
         Cgi();
         ~Cgi();
+        
         bool        formatHttpResponse(std::string cgiFilePath);
         void        parseOutput();
-        bool        executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars);
+        int   executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars);
         std::string getScriptPath();
         void        setScriptPath(std::string _scriptPath);
         std::string getScriptOutput();
@@ -74,6 +84,26 @@ class Cgi
         void        setUsingStatCgiFile(bool _usingcgistatfile);
         std::string getStatCgiFileBody();
         void        setcgiHeader(std::string _cgiheader);
+        int         getcgistatus()
+        {
+            return cgistatus;
+        }
+        void         setcgistatus(int hh)
+        {
+            cgistatus = hh;
+        }
+        pid_t         getpid_1()
+        {
+            return pid_1;
+        }
+        time_t         gettime()
+        {
+            return startTime;
+        }
+        std::string         getoutfile()
+        {
+            return outFile;
+        }
         
         
 

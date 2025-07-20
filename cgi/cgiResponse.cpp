@@ -29,7 +29,7 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath)
         httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
     //need to check connection 
     if (cgiHeader.find("Connection") == std::string::npos)
-        httpResponse += "Connection: 22close\r\n\r\n";
+        httpResponse += "Connection: close\r\n\r\n";
     cgiHeader = httpResponse;
     cgiHeaderSent = 0;
     
