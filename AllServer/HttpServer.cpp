@@ -197,32 +197,30 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	// std::cout << request->GetClientFd() << std::endl;
 	if (!request) return; // Request requestect not found
 	if (event->filter == EVFILT_READ) {
-		// std::cout << client_fd << std::endl;
-		try {
-			request->SetUpRequest();
-		}
-		catch (const char* e)
-		{
-			return;
-		}
-		if (request->GetClientStatus() != EndBody)
-			return;
-		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
-		// std::cout << response_map[client_fd] << std::endl;
-		struct kevent ev;
-		AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-		AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-		// std::cerr << "Request processing failed: " << e << std::endl;
-		// remove_client(client_fd);
-		// response_map.erase(client_fd);
-		// for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
-		//     if ((*it)->GetClientFd() == client_fd) {
-		//         delete *it;
-		//         all.erase(it);
-		//         break;
-		//     }
-		// }
-	}
+    try {
+        request->SetUpRequest();
+    }
+    catch (const char* e)
+    {
+        return;
+    }
+    if (request->GetClientStatus() != EndBody)
+        return;
+    
+    // FIRST: Set up the response
+    SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+    
+    // THEN: Check if it has pending CGI
+    if (response->gethasPendingCgi()) {
+        // Don't switch to WRITE mode yet, keep checking
+        return;
+    } else {
+        // Ready to send response
+        struct kevent ev;
+        AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+        AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+    }
+}
 
 	if (event->filter == EVFILT_WRITE)
 	{
@@ -256,7 +254,6 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
 			
 			if (true) {
-				// std::cout << client_fd << std::endl;
 				remove_client(client_fd);
 				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
 					if ((*it)->GetClientFd() == client_fd) {
@@ -278,15 +275,22 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 	std::vector<Response*> all_res;
 	
 	while (true) {
-		int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
+		// ADD THIS: timeout so kevent doesn't block forever
+		struct timespec timeout;
+		timeout.tv_sec = 0;
+		timeout.tv_nsec = 100000000; // 100ms timeout
+		
+		// CHANGE THIS LINE: add &timeout parameter
+		int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
 		if (nev < 0) {
 			std::cerr << "kevent error: " << strerror(errno) << std::endl;
 			continue;
 		}
 
+		// FIRST: Handle all kevent events
 		for (int i = 0; i < nev; ++i) {
 			int fd = events[i].ident;
-			// Check if it's a server socket`
+			// Check if it's a server socket
 			for (size_t j = 0; j < server_fds.size(); ++j) {
 				if (server_fds[j] == fd) {
 					Request* new_request = accept_new_client(fd, ConfigPars);
@@ -295,7 +299,8 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 						all_request.push_back(new_request);
 						all_res.push_back(res);
 						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
-					} else {
+					}
+					else {
 						delete new_request;
 					}
 					break;
@@ -310,6 +315,22 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
 					break;
 				}
+			}
+		}
+		
+		// THEN: Check pending CGI (after events are processed)
+		for (size_t i = 0; i < all_res.size(); ++i)
+		{
+			if (all_res[i]->gethasPendingCgi())
+			{
+					if (all_res[i]->checkPendingCgi(ConfigPars))
+					{
+						// CGI finished, switch to write mode
+						struct kevent ev;
+						int client_fd = all_res[i]->getClientFd();
+						AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+						AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+					}
 			}
 		}
 	}

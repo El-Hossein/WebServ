@@ -13,6 +13,7 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
+    hasPendingCgi = false;
 }
 
 Response::~Response(){
@@ -410,6 +411,8 @@ std::string Response::checkContentType()
             return "Content-Type: video/mp4\r\n";
         else if (extension.compare(".mpeg") == 0)
             return "Content-Type: audio/mpeg\r\n";
+        else if (extension.compare(".mp3") == 0)
+            return "Content-Type: audio/mp3\r\n";
         else if (extension.compare(".vorbis") == 0)
             return "Content-Type: audio/vorbis\r\n";
         else if (extension.compare(".js") == 0)
@@ -433,9 +436,15 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 
 
     _cgi.setcgiHeader("");
-    if (IsCgiRequest(uri.c_str()))
+    if (IsCgiRequest(uri.c_str())) // time out // loop infini
     {
         _cgi.handleCgiRequest(req, ConfigPars);
+        if (_cgi.getcgistatus() == 2)
+        {
+            hasPendingCgi = true;
+            return;
+        }
+        hasPendingCgi = false;
     }
     else if (method == "GET")
     {
@@ -508,7 +517,7 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     headers = "HTTP/1.1 200 OK\r\n";
     headers += "Content-Length: " + intToString(fileSize) + "\r\n";
     headers += contentType;
-    if (std::strcmp(contentType.c_str(), "video/mp4") == 0)
+    if ( contentType == "video/mp4\r\n" == 0)
         headers += "Accept-Ranges: none\r\n";
     // need to check for Connection
     headers += "Connection: Keep-Alive\r\n";
@@ -536,4 +545,68 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
     }
     else
         responseError(501, " Method not implemented", ConfigPars);
+}
+
+bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars) 
+{
+    if (!hasPendingCgi)
+        return false;
+
+    int status;
+    pid_t child_pid = _cgi.getpid_1();
+    int result = waitpid(child_pid, &status, WNOHANG);
+
+    if (result > 0) // in case of success and syntax error in cgi
+    {
+        if (WIFEXITED(status))
+        {
+            int exitCode = WEXITSTATUS(status);
+            if (exitCode == 0)
+            {
+                _cgi.parseOutput();
+                _cgi.formatHttpResponse(_cgi.getoutfile());
+                _cgi.setcgistatus(1);
+            }
+            else
+            {
+                _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
+                // unlink(inpFile.c_str());
+                // unlink(outFile.c_str());
+                _cgi.setcgistatus(0);
+            }
+        }
+        else
+            _cgi.setcgistatus(0);
+
+        hasPendingCgi = false;
+        return true;
+    }
+
+
+    else if (result == -1)
+    {
+        _cgi.setcgistatus(0);
+        hasPendingCgi = false;
+        return true;
+    }
+
+    if (time(NULL) - _cgi.gettime() > 10)
+    {
+        kill(child_pid, SIGKILL);
+        usleep(10000);
+        
+        // Try non-blocking reap first
+        int reap_result = waitpid(child_pid, &status, WNOHANG);
+        if (reap_result == 0)
+        {
+            waitpid(child_pid, &status, 0);
+        }
+        _cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
+        _cgi.setcgistatus(0);
+        hasPendingCgi = false;
+        return true;
+    }
+        
+
+    return false;
 }
