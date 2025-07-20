@@ -29,6 +29,7 @@ class Response
         ssize_t  bytesWritten;
         std::string chunk;
         bool        hasMore;
+        bool hasPendingCgi;
 
 
     public :
@@ -63,6 +64,12 @@ class Response
         bool    getHasMore();
         void    setHasMore(bool _hasmore);
         std::string getChunk();
+        bool checkPendingCgi(std::vector<ConfigNode> ConfigPars);
+
+        bool    gethasPendingCgi()
+        {
+            return hasPendingCgi;
+        }
 };
 
 
