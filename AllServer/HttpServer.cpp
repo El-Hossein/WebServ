@@ -206,16 +206,10 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
     }
     if (request->GetClientStatus() != EndBody)
         return;
-    
-    // FIRST: Set up the response
     SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
-    
-    // THEN: Check if it has pending CGI
-    if (response->gethasPendingCgi()) {
-        // Don't switch to WRITE mode yet, keep checking
+    if (response->gethasPendingCgi())
         return;
-    } else {
-        // Ready to send response
+	else{
         struct kevent ev;
         AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
         AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
@@ -275,12 +269,10 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 	std::vector<Response*> all_res;
 	
 	while (true) {
-		// ADD THIS: timeout so kevent doesn't block forever
 		struct timespec timeout;
 		timeout.tv_sec = 0;
-		timeout.tv_nsec = 100000000; // 100ms timeout
+		timeout.tv_nsec = 100000000; // bach kevent matb9ach mblockya 
 		
-		// CHANGE THIS LINE: add &timeout parameter
 		int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
 		if (nev < 0) {
 			std::cerr << "kevent error: " << strerror(errno) << std::endl;
@@ -318,7 +310,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 			}
 		}
 		
-		// THEN: Check pending CGI (after events are processed)
+		// Check cgi running 
 		for (size_t i = 0; i < all_res.size(); ++i)
 		{
 			if (all_res[i]->gethasPendingCgi())
