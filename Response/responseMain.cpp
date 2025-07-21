@@ -581,8 +581,6 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
             else
             {
                 _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
-                // unlink(inpFile.c_str());
-                // unlink(outFile.c_str());
                 _cgi.setcgistatus(CGI_ERROR);
             }
         }
@@ -590,6 +588,8 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
             _cgi.setcgistatus(CGI_ERROR);
 
         hasPendingCgi = false;
+        unlink(_cgi.getinfile().c_str());
+        unlink(_cgi.getoutfile().c_str());
         return true;
     }
 
@@ -597,11 +597,13 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
     else if (result == -1)
     {
         _cgi.setcgistatus(CGI_ERROR);
+        unlink(_cgi.getinfile().c_str());
+        unlink(_cgi.getoutfile().c_str());
         hasPendingCgi = false;
         return true;
     }
 
-    if (time(NULL) - _cgi.gettime() > 10)
+    if (_cgi.getcgistatus() == CGI_RUNNING && time(NULL) - _cgi.gettime() > 10)
     {
         kill(childPid, SIGKILL);
         usleep(10000);
@@ -613,6 +615,8 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
         }
         _cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
         _cgi.setcgistatus(CGI_ERROR);
+        unlink(_cgi.getinfile().c_str());
+        unlink(_cgi.getoutfile().c_str());
         hasPendingCgi = false;
         return true;
     }
