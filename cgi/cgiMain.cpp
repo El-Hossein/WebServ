@@ -13,6 +13,7 @@ Cgi::Cgi()
     std::ostringstream ss;
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
+    
 }
 
 Cgi::~Cgi()
@@ -20,14 +21,14 @@ Cgi::~Cgi()
 
 }
 
-std::string    Cgi::getinfile()
-{
-    return inpFile;
-}
-
 std::string    Cgi::getoutfile()
 {
     return outFile;
+}
+
+std::string    Cgi::getinfile()
+{
+    return inpFile;
 }
 
 time_t   Cgi::gettime()

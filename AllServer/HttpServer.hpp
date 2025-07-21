@@ -8,6 +8,8 @@
 #include "../Request/Request.hpp"
 #include "../Response/responseHeader.hpp"
 
+extern int globalKq;
+
 class Response;
 
 class HttpServer{

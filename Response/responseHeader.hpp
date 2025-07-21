@@ -66,6 +66,7 @@ class Response
         std::string         getChunk();
         bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars);
         bool                gethasPendingCgi();
+        void                sethasPendingCgi(bool pendingcgi);
 };
 
 

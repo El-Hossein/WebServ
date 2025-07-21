@@ -41,6 +41,11 @@ void    Response::setHasMore(bool _hasmore)
     hasMore = _hasmore;
 }
 
+void    Response::sethasPendingCgi(bool pendingcgi)
+{
+    hasPendingCgi = pendingcgi;
+}
+
 
 ssize_t  Response::getBytesSent()
 {
@@ -241,7 +246,7 @@ bool Response::getNextChunk(size_t chunkSize)
 
         f.seekg(_cgi.getFilePos());
 
-        char buffer[chunkSize];
+        char *buffer = new char[chunkSize];
         f.read(buffer, chunkSize);
         int bytesRead = f.gcount();
 
@@ -250,19 +255,20 @@ bool Response::getNextChunk(size_t chunkSize)
             chunk.assign(buffer, bytesRead);
             _cgi.setFilePos(_cgi.getFilePos() + bytesRead);
 
+            delete [] buffer;
             if (_cgi.getFilePos() >= _cgi.getFileSize())
                 f.close();
 
             return true;
         }
-
+        delete [] buffer;
         f.close();
     }
 
     // body static file
     if (file.is_open())
     {
-        char buffer[chunkSize];
+        char *buffer = new char[chunkSize];
         file.read(buffer, chunkSize);
         int bytesRead = file.gcount();
 
@@ -270,13 +276,14 @@ bool Response::getNextChunk(size_t chunkSize)
         {
             chunk.assign(buffer, bytesRead);
             filePos += bytesRead;
-
+            delete [] buffer;
             if (filePos >= fileSize)
                 file.close();
 
             return true;
         }
 
+        delete [] buffer;
         file.close();
     }
     return false;
@@ -416,6 +423,12 @@ std::string Response::checkContentType()
             return "Content-Type: video/mp4\r\n";
         else if (extension.compare(".mpeg") == 0)
             return "Content-Type: audio/mpeg\r\n";
+        else if (extension.compare(".pdf") == 0)
+            return "Content-Type: application/pdf\r\n";
+        else if (extension.compare(".zip") == 0)
+            return "Content-Type: application/zip\r\n";
+        else if (extension.compare(".svg") == 0)
+            return "Content-Type: image/svg+xml\r\n";
         else if (extension.compare(".mp3") == 0)
             return "Content-Type: audio/mp3\r\n";
         else if (extension.compare(".vorbis") == 0)
@@ -567,7 +580,7 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
     pid_t childPid = _cgi.getpid_1();
     int result = waitpid(childPid, &status, WNOHANG);
 
-    if (result > 0) // in case of success and syntax error in cgi
+    if (result > 0) // Process finished
     {
         if (WIFEXITED(status))
         {
@@ -585,40 +598,35 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
             }
         }
         else
+        {
+            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
             _cgi.setcgistatus(CGI_ERROR);
+        }
+
+        if (!_cgi.getinfile().empty())
+            unlink(_cgi.getinfile().c_str());
+        if (!_cgi.getoutfile().empty())   
+            unlink(_cgi.getoutfile().c_str());
+
+        struct kevent kev;
+        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
 
         hasPendingCgi = false;
-        unlink(_cgi.getinfile().c_str());
-        unlink(_cgi.getoutfile().c_str());
         return true;
     }
-
-
     else if (result == -1)
     {
+        _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
         _cgi.setcgistatus(CGI_ERROR);
-        unlink(_cgi.getinfile().c_str());
-        unlink(_cgi.getoutfile().c_str());
         hasPendingCgi = false;
+        if (!_cgi.getinfile().empty())
+            unlink(_cgi.getinfile().c_str());
+        if (!_cgi.getoutfile().empty())   
+            unlink(_cgi.getoutfile().c_str());
+        
         return true;
     }
 
-    if (_cgi.getcgistatus() == CGI_RUNNING && time(NULL) - _cgi.gettime() > 10)
-    {
-        kill(childPid, SIGKILL);
-        usleep(10000);
-        
-        int reap_result = waitpid(childPid, &status, WNOHANG);
-        if (reap_result == 0)
-        {
-            waitpid(childPid, &status, 0);
-        }
-        _cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
-        _cgi.setcgistatus(CGI_ERROR);
-        unlink(_cgi.getinfile().c_str());
-        unlink(_cgi.getoutfile().c_str());
-        hasPendingCgi = false;
-        return true;
-    }
     return false;
 }
