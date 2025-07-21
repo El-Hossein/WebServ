@@ -10,12 +10,19 @@ Cgi::Cgi()
     cgiHeaderSent = 0;
     usingCgiStatFile = false;
     statCgiFilePos = 0;
-    
+    std::ostringstream ss;
+    ss << getpid() << "_" << time(NULL) << "_" << rand();
+    uniq = ss.str();
 }
 
 Cgi::~Cgi()
 {
 
+}
+
+std::string    Cgi::getinfile()
+{
+    return inpFile;
 }
 
 std::string    Cgi::getoutfile()
