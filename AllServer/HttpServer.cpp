@@ -201,32 +201,32 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	
 	// std::cout << request->GetClientFd() << std::endl;
 	if (!request) return; // Request requestect not found
-	if (event->filter == EVFILT_READ) {
-    try {
-        request->SetUpRequest();
-    }
-    catch (const char* e)
-    {
-        return;
-    }
-    if (request->GetClientStatus() != EndBody)
-        return;
-    SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
-    if (response->gethasPendingCgi())
-        return;
-	else{
-        struct kevent ev;
-        AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-        AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-    }
-}
+		if (event->filter == EVFILT_READ) {
+		try {
+			request->SetUpRequest();
+		}
+		catch (const char* e)
+		{
+			return;
+		}
+		if (request->GetClientStatus() != EndBody)
+			return;
+		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+		if (response->gethasPendingCgi())
+			return;
+		else{
+			struct kevent ev;
+			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+			AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+		}
+	}
 
 	if (event->filter == EVFILT_WRITE)
 	{
 		// Get first chunk or next chunk if current one is fully sent
 		if (response->getChunk().empty() || response->getBytesSent() >= response->getChunk().size())
 		{
-			response->setHasMore(response->getNextChunk(50000));
+			response->setHasMore(response->getNextChunk(100000));
 			response->setBytesSent(0);
 		}
 		if (!response->getChunk().empty())
@@ -249,15 +249,17 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			response->setHeaderSent(0);
 			response->_cgi.setCgiHeaderSent(0);
 			
-			bool should_close = true;
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
 
-			if (should_close) {
+			if (true)
+			{
 				remove_client(client_fd);
-				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
-					if ((*it)->GetClientFd() == client_fd) {
+				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it)
+				{
+					if ((*it)->GetClientFd() == client_fd)
+					{
 						delete *it;
 						all.erase(it);
 						break;
@@ -346,12 +348,10 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
                 {
                     pid_t pid = all_res[i]->_cgi.getpid_1();
                     
-                    // Clean up kevent monitoring BEFORE killing
                     struct kevent kev;
                     EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
                     kevent(globalKq, &kev, 1, NULL, 0, NULL);
                     
-                    // Kill the process
                     kill(pid, SIGTERM);
                     usleep(100000);
                     
