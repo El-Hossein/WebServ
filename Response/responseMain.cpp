@@ -583,6 +583,10 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
 
     if (result > 0) // Process finished
     {
+        struct kevent kev;
+        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        
         if (WIFEXITED(status))
         {
             int exitCode = WEXITSTATUS(status);
@@ -598,6 +602,11 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
                 _cgi.setcgistatus(CGI_ERROR);
             }
         }
+        else if (WIFSIGNALED(status))
+        {
+            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
+            _cgi.setcgistatus(CGI_ERROR);
+        }
         else
         {
             _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
@@ -609,18 +618,19 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
         if (!_cgi.getoutfile().empty())   
             unlink(_cgi.getoutfile().c_str());
 
-        struct kevent kev;
-        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
-
         hasPendingCgi = false;
         return true;
     }
     else if (result == -1)
     {
+        struct kevent kev;
+        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        
         _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
         _cgi.setcgistatus(CGI_ERROR);
         hasPendingCgi = false;
+        
         if (!_cgi.getinfile().empty())
             unlink(_cgi.getinfile().c_str());
         if (!_cgi.getoutfile().empty())   
