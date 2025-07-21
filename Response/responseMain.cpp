@@ -241,7 +241,7 @@ bool Response::getNextChunk(size_t chunkSize)
 
         f.seekg(_cgi.getFilePos());
 
-        char buffer[chunkSize];
+        char *buffer = new char[chunkSize];
         f.read(buffer, chunkSize);
         int bytesRead = f.gcount();
 
@@ -250,19 +250,20 @@ bool Response::getNextChunk(size_t chunkSize)
             chunk.assign(buffer, bytesRead);
             _cgi.setFilePos(_cgi.getFilePos() + bytesRead);
 
+            delete [] buffer;
             if (_cgi.getFilePos() >= _cgi.getFileSize())
                 f.close();
 
             return true;
         }
-
+        delete [] buffer;
         f.close();
     }
 
     // body static file
     if (file.is_open())
     {
-        char buffer[chunkSize];
+        char *buffer = new char[chunkSize];
         file.read(buffer, chunkSize);
         int bytesRead = file.gcount();
 
@@ -270,13 +271,14 @@ bool Response::getNextChunk(size_t chunkSize)
         {
             chunk.assign(buffer, bytesRead);
             filePos += bytesRead;
-
+            delete [] buffer;
             if (filePos >= fileSize)
                 file.close();
 
             return true;
         }
 
+        delete [] buffer;
         file.close();
     }
     return false;
@@ -416,6 +418,12 @@ std::string Response::checkContentType()
             return "Content-Type: video/mp4\r\n";
         else if (extension.compare(".mpeg") == 0)
             return "Content-Type: audio/mpeg\r\n";
+        else if (extension.compare(".pdf") == 0)
+            return "Content-Type: application/pdf\r\n";
+        else if (extension.compare(".zip") == 0)
+            return "Content-Type: application/zip\r\n";
+        else if (extension.compare(".svg") == 0)
+            return "Content-Type: image/svg+xml\r\n";
         else if (extension.compare(".mp3") == 0)
             return "Content-Type: audio/mp3\r\n";
         else if (extension.compare(".vorbis") == 0)
