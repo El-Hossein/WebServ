@@ -48,6 +48,7 @@ class Cgi
         pid_t pid_1;
         int cgistatus;
         time_t startTime;
+        std::string uniqueId;
 
 
     public :
@@ -89,6 +90,7 @@ class Cgi
         pid_t         getpid_1();
         time_t         gettime();
         std::string    getoutfile();
+        std::string    getinfile();
         
         
 

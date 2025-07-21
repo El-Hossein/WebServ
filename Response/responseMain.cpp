@@ -41,6 +41,11 @@ void    Response::setHasMore(bool _hasmore)
     hasMore = _hasmore;
 }
 
+void    Response::sethasPendingCgi(bool pendingcgi)
+{
+    hasPendingCgi = pendingcgi;
+}
+
 
 ssize_t  Response::getBytesSent()
 {
@@ -575,7 +580,7 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
     pid_t childPid = _cgi.getpid_1();
     int result = waitpid(childPid, &status, WNOHANG);
 
-    if (result > 0) // in case of success and syntax error in cgi
+    if (result > 0) // Process finished
     {
         if (WIFEXITED(status))
         {
@@ -589,40 +594,39 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars)
             else
             {
                 _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
-                // unlink(inpFile.c_str());
-                // unlink(outFile.c_str());
                 _cgi.setcgistatus(CGI_ERROR);
             }
         }
         else
+        {
+            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
             _cgi.setcgistatus(CGI_ERROR);
+        }
+
+        if (!_cgi.getinfile().empty())
+            unlink(_cgi.getinfile().c_str());
+        if (!_cgi.getoutfile().empty())   
+            unlink(_cgi.getoutfile().c_str());
+
+        struct kevent kev;
+        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
 
         hasPendingCgi = false;
         return true;
     }
-
-
     else if (result == -1)
     {
+        _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars);
         _cgi.setcgistatus(CGI_ERROR);
         hasPendingCgi = false;
+        if (!_cgi.getinfile().empty())
+            unlink(_cgi.getinfile().c_str());
+        if (!_cgi.getoutfile().empty())   
+            unlink(_cgi.getoutfile().c_str());
+        
         return true;
     }
 
-    if (time(NULL) - _cgi.gettime() > 10)
-    {
-        kill(childPid, SIGKILL);
-        usleep(10000);
-        
-        int reap_result = waitpid(childPid, &status, WNOHANG);
-        if (reap_result == 0)
-        {
-            waitpid(childPid, &status, 0);
-        }
-        _cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
-        _cgi.setcgistatus(CGI_ERROR);
-        hasPendingCgi = false;
-        return true;
-    }
     return false;
 }
