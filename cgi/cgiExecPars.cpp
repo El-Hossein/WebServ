@@ -132,8 +132,12 @@ void    execCgi(const char *scriptPath, char **envp)
 int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
     // postRequestBody = "name=ismail";// testing purposes
-    inpFile = "/tmp/cgiInput";
-    outFile = "/tmp/cgiOutput";
+    std::ostringstream inp;
+    std::ostringstream out;
+    inp << "/tmp/cgiInput_" << uniq;
+    out << "/tmp/cgiOutput_" << uniq;
+    inpFile = inp.str();
+    outFile = out.str();
     pid = fork();
     if (pid == -1)
        return responseErrorcgi(500, " Internal Server Error", ConfigPars);
