@@ -268,6 +268,7 @@ bool Response::getNextChunk(size_t chunkSize)
     // body static file
     if (file.is_open())
     {
+
         char *buffer = new char[chunkSize];
         file.read(buffer, chunkSize);
         int bytesRead = file.gcount();

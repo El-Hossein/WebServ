@@ -223,41 +223,50 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 
 	if (event->filter == EVFILT_WRITE)
 	{
-		// std::string chunk;
-		response->setHasMore(response->getNextChunk(8000));
+		// Get first chunk or next chunk if current one is fully sent
+		if (response->getChunk().empty() || response->getBytesSent() >= response->getChunk().size())
+		{
+			response->setHasMore(response->getNextChunk(50000));
+			response->setBytesSent(0);
+		}
 		if (!response->getChunk().empty())
 		{
-			response->setBytesSent(0);
 			response->setBytesWritten(send(client_fd, response->getChunk().c_str() + response->getBytesSent(), response->getChunk().size() - response->getBytesSent(), 0));
-			if (response->getBytesWritten() == 0)
+			if (response->getBytesWritten() < 0)
+				return;
+			else if (response->getBytesWritten() == 0)
 			{
 				remove_client(client_fd);
 				return;
 			}
 			response->setBytesSent(response->getBytesSent() + response->getBytesWritten());
+			if (response->getBytesSent() < response->getChunk().size())
+				return;
 		}
-		
-		// NEED TO SEARCH FOR KEEP ALIVE
+
 		if (!response->getHasMore())
 		{
 			response->setHeaderSent(0);
 			response->_cgi.setCgiHeaderSent(0);
-			// std::string chunk;
-			response->getNextChunk(8000);
-			unsigned long resp = response->getChunk().find("Connection: close");
-			// std::cout << resp << " : " << std::string::npos << std::endl;
-			bool should_close = (resp != std::string::npos);
-			// response_map.erase(client_fd);
+			
+			bool should_close = true;
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-			
-			if (true) {
+
+			if (should_close) {
 				remove_client(client_fd);
 				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
 					if ((*it)->GetClientFd() == client_fd) {
 						delete *it;
 						all.erase(it);
+						break;
+					}
+				}
+				for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
+					if ((*it)->getClientFd() == client_fd) {
+						delete *it;
+						all_res.erase(it);
 						break;
 					}
 				}
