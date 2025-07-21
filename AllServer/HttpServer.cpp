@@ -1,6 +1,9 @@
 #include "HttpServer.hpp"
 #include <vector>
 #include "../Response/responseHeader.hpp"
+
+int globalKq = -1;
+
 HttpServer::HttpServer()	{ }
 
 HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
@@ -62,6 +65,8 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
 	std::cout << "Setting up server..." << std::endl;
 	kq = kqueue();
 	if (kq == -1) throw std::runtime_error("Failed to create kqueue");
+
+	globalKq = kq;
 	
 	std::vector<std::vector<int> > AllPorts;
 	GetAllPorts(ConfigPars, AllPorts);
@@ -310,19 +315,38 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 			}
 		}
 		
-		// Check cgi running 
 		for (size_t i = 0; i < all_res.size(); ++i)
 		{
 			if (all_res[i]->gethasPendingCgi())
 			{
-					if (all_res[i]->checkPendingCgi(ConfigPars))
-					{
-						// CGI finished, switch to write mode
-						struct kevent ev;
-						int client_fd = all_res[i]->getClientFd();
-						AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-						AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-					}
+				if (all_res[i]->checkPendingCgi(ConfigPars))
+				{
+					struct kevent ev;
+					int client_fd = all_res[i]->getClientFd();
+					AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+					continue;
+				}
+
+				time_t currentTime = time(NULL);
+				time_t cgiStart = all_res[i]->_cgi.gettime();
+				if (currentTime - cgiStart > 10)
+				{
+					pid_t pid = all_res[i]->_cgi.getpid_1();
+					kill(pid, SIGKILL);
+					usleep(10000);
+					int status;
+					waitpid(pid, &status, 0);
+
+					all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
+					all_res[i]->_cgi.setcgistatus(CGI_ERROR);
+					all_res[i]->sethasPendingCgi(false);
+
+					struct kevent ev;
+					int client_fd = all_res[i]->getClientFd();
+					AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+				}
 			}
 		}
 	}

@@ -1,5 +1,7 @@
 #include "cgiHeader.hpp"
 
+extern int globalKq;
+
 void     Cgi::parseOutput()
 {
     cgiStatusCode = 200;
@@ -151,8 +153,9 @@ int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars
     }
     else
     {
-        // this is for POST data 
         startTime = time(NULL);
+        
+        // Write POST data
         if (req.GetHeaderValue("method") == "POST")
         {
             std::ofstream inputFileStream(inpFile.c_str());
@@ -163,28 +166,12 @@ int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars
                 inputFileStream.close();
             }
         }
-        
-        waitpid(pid, &status, WNOHANG);
-        if (WIFEXITED(status))
-        {
-            exitCode = WEXITSTATUS(status);
-            if (exitCode != 0)
-            {
-                unlink(inpFile.c_str());
-                unlink(outFile.c_str());
-                cgistatus = CGI_ERROR;
-                return 0;
-            }
-            cgistatus = CGI_COMPLETED;
-            return 1;
-        } 
-        else
-        {
-            cgistatus = CGI_RUNNING;
-            return 2;
-        }
-        inpFile.clear();
-        unlink(inpFile.c_str());
+        cgistatus = CGI_RUNNING;
+
+        struct kevent kev;
+        EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        return 2;
     }
     return true;
 }
