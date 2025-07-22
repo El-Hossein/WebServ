@@ -30,6 +30,7 @@ class Response
         std::string chunk;
         bool        hasMore;
         bool hasPendingCgi;
+        size_t remaining;
 
 
     public :
@@ -67,6 +68,13 @@ class Response
         bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
+        size_t      getremaining(){
+            return remaining;
+        }
+        void    setremaining(size_t aa)
+        {
+            remaining = aa;
+        }
 };
 
 
