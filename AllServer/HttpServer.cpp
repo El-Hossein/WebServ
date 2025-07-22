@@ -296,51 +296,62 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
         }
 
         // Handle all kevent events
-        for (int i = 0; i < nev; ++i) {
-            int fd = events[i].ident;
-            
-            // Check if it's a server socket
-            for (size_t j = 0; j < server_fds.size(); ++j) {
-                if (server_fds[j] == fd) {
-                    Request* new_request = accept_new_client(fd, ConfigPars);
-                    if (new_request->GetClientFd() != -1) {
-                        Response * res = new Response(*new_request, new_request->GetClientFd());
-                        all_request.push_back(new_request);
-                        all_res.push_back(res);
-                        handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
-                    }
-                    else {
-                        delete new_request;
-                    }
-                    break;
-                }
-            }
-            
-            // Handle client socket
-            for (size_t j = 0; j < all_request.size(); ++j)
-            {
-                if (all_request[j]->GetClientFd() == fd)
-                {
-                    handle_client(fd, &events[i], ConfigPars, all_request, all_res);
-                    break;
-                }
-            }
-        }
+		for (int i = 0; i < nev; ++i) {
+			// 1. Handle CGI process exit notification
+			if (events[i].filter == EVFILT_PROC && (events[i].fflags & NOTE_EXIT)) {
+				pid_t exitedPid = events[i].ident;
+
+				// Match this PID with the correct Response object
+				for (size_t j = 0; j < all_res.size(); ++j) {
+					if (all_res[j]->gethasPendingCgi() &&
+						all_res[j]->_cgi.getpid_1() == exitedPid) {
+
+						if (all_res[j]->checkPendingCgi(ConfigPars)) {
+							struct kevent ev;
+							int client_fd = all_res[j]->getClientFd();
+							AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+							AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+						}
+
+						break; // Stop once found
+					}
+				}
+
+				continue; // done with this event
+			}
+
+			// 2. Check if it's a server socket
+			int fd = events[i].ident;
+			for (size_t j = 0; j < server_fds.size(); ++j) {
+				if (server_fds[j] == fd) {
+					Request* new_request = accept_new_client(fd, ConfigPars);
+					if (new_request->GetClientFd() != -1) {
+						Response * res = new Response(*new_request, new_request->GetClientFd());
+						all_request.push_back(new_request);
+						all_res.push_back(res);
+						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
+					}
+					else {
+						delete new_request;
+					}
+					break;
+				}
+			}
+
+			// 3. Handle client socket
+			for (size_t j = 0; j < all_request.size(); ++j) {
+				if (all_request[j]->GetClientFd() == fd) {
+					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
+					break;
+				}
+			}
+		}
         
         // Handle CGI processes
         for (size_t i = 0; i < all_res.size(); ++i)
         {
             if (all_res[i]->gethasPendingCgi())
             {
-                if (all_res[i]->checkPendingCgi(ConfigPars))
-                {
-                    struct kevent ev;
-                    int client_fd = all_res[i]->getClientFd();
-                    AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-                    AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-                    continue;
-                }
-
                 // Check for timeout
                 time_t currentTime = time(NULL);
                 time_t cgiStart = all_res[i]->_cgi.gettime();
