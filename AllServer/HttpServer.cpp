@@ -201,63 +201,74 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	
 	// std::cout << request->GetClientFd() << std::endl;
 	if (!request) return; // Request requestect not found
-	if (event->filter == EVFILT_READ) {
-    try {
-        request->SetUpRequest();
-    }
-    catch (const char* e)
-    {
-        return;
-    }
-    if (request->GetClientStatus() != EndBody)
-        return;
-    SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
-    if (response->gethasPendingCgi())
-        return;
-	else{
-        struct kevent ev;
-        AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-        AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-    }
-}
+		if (event->filter == EVFILT_READ) {
+		try {
+			request->SetUpRequest();
+		}
+		catch (const char* e)
+		{
+			return;
+		}
+		if (request->GetClientStatus() != EndBody)
+			return;
+		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+		if (response->gethasPendingCgi())
+			return;
+		else{
+			struct kevent ev;
+			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+			AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+		}
+	}
 
 	if (event->filter == EVFILT_WRITE)
 	{
-		// std::string chunk;
-		response->setHasMore(response->getNextChunk(8000));
+		// Get first chunk or next chunk if current one is fully sent
+		if (response->getChunk().empty() || response->getBytesSent() >= response->getChunk().size())
+		{
+			response->setHasMore(response->getNextChunk(100000));
+			response->setBytesSent(0);
+		}
 		if (!response->getChunk().empty())
 		{
-			response->setBytesSent(0);
 			response->setBytesWritten(send(client_fd, response->getChunk().c_str() + response->getBytesSent(), response->getChunk().size() - response->getBytesSent(), 0));
-			if (response->getBytesWritten() == 0)
+			if (response->getBytesWritten() < 0)
+				return;
+			else if (response->getBytesWritten() == 0)
 			{
 				remove_client(client_fd);
 				return;
 			}
 			response->setBytesSent(response->getBytesSent() + response->getBytesWritten());
+			if (response->getBytesSent() < response->getChunk().size())
+				return;
 		}
-		
-		// NEED TO SEARCH FOR KEEP ALIVE
+
 		if (!response->getHasMore())
 		{
 			response->setHeaderSent(0);
 			response->_cgi.setCgiHeaderSent(0);
-			// std::string chunk;
-			response->getNextChunk(8000);
-			unsigned long resp = response->getChunk().find("Connection: close");
-			// std::cout << resp << " : " << std::string::npos << std::endl;
-			bool should_close = (resp != std::string::npos);
-			// response_map.erase(client_fd);
+			
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-			
-			if (true) {
+
+			if (true)
+			{
 				remove_client(client_fd);
-				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
-					if ((*it)->GetClientFd() == client_fd) {
+				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it)
+				{
+					if ((*it)->GetClientFd() == client_fd)
+					{
 						delete *it;
 						all.erase(it);
+						break;
+					}
+				}
+				for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
+					if ((*it)->getClientFd() == client_fd) {
+						delete *it;
+						all_res.erase(it);
 						break;
 					}
 				}
@@ -269,85 +280,100 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 }
 
 void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
-	struct kevent events[BACKLOG];
-	std::vector<Request*> all_request;
-	std::vector<Response*> all_res;
-	
-	while (true) {
-		struct timespec timeout;
-		timeout.tv_sec = 0;
-		timeout.tv_nsec = 100000000; // bach kevent matb9ach mblockya 
-		
-		int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
-		if (nev < 0) {
-			std::cerr << "kevent error: " << strerror(errno) << std::endl;
-			continue;
-		}
+    struct kevent events[BACKLOG];
+    std::vector<Request*> all_request;
+    std::vector<Response*> all_res;
+    
+    while (true) {
+        struct timespec timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_nsec = 100000000;
+        
+        int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
+        if (nev < 0) {
+            std::cerr << "kevent error: " << strerror(errno) << std::endl;
+            continue;
+        }
 
-		// FIRST: Handle all kevent events
-		for (int i = 0; i < nev; ++i) {
-			int fd = events[i].ident;
-			// Check if it's a server socket
-			for (size_t j = 0; j < server_fds.size(); ++j) {
-				if (server_fds[j] == fd) {
-					Request* new_request = accept_new_client(fd, ConfigPars);
-					if (new_request->GetClientFd() != -1) {
-						Response * res = new Response(*new_request, new_request->GetClientFd());
-						all_request.push_back(new_request);
-						all_res.push_back(res);
-						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
-					}
-					else {
-						delete new_request;
-					}
-					break;
-				}
-			}
-			
-			// Handle client socket
-			for (size_t j = 0; j < all_request.size(); ++j)
-			{
-				if (all_request[j]->GetClientFd() == fd)
-				{
-					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
-					break;
-				}
-			}
-		}
-		
-		for (size_t i = 0; i < all_res.size(); ++i)
-		{
-			if (all_res[i]->gethasPendingCgi())
-			{
-				if (all_res[i]->checkPendingCgi(ConfigPars))
-				{
-					struct kevent ev;
-					int client_fd = all_res[i]->getClientFd();
-					AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-					continue;
-				}
+        // Handle all kevent events
+        for (int i = 0; i < nev; ++i) {
+            int fd = events[i].ident;
+            
+            // Check if it's a server socket
+            for (size_t j = 0; j < server_fds.size(); ++j) {
+                if (server_fds[j] == fd) {
+                    Request* new_request = accept_new_client(fd, ConfigPars);
+                    if (new_request->GetClientFd() != -1) {
+                        Response * res = new Response(*new_request, new_request->GetClientFd());
+                        all_request.push_back(new_request);
+                        all_res.push_back(res);
+                        handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
+                    }
+                    else {
+                        delete new_request;
+                    }
+                    break;
+                }
+            }
+            
+            // Handle client socket
+            for (size_t j = 0; j < all_request.size(); ++j)
+            {
+                if (all_request[j]->GetClientFd() == fd)
+                {
+                    handle_client(fd, &events[i], ConfigPars, all_request, all_res);
+                    break;
+                }
+            }
+        }
+        
+        // Handle CGI processes
+        for (size_t i = 0; i < all_res.size(); ++i)
+        {
+            if (all_res[i]->gethasPendingCgi())
+            {
+                if (all_res[i]->checkPendingCgi(ConfigPars))
+                {
+                    struct kevent ev;
+                    int client_fd = all_res[i]->getClientFd();
+                    AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+                    AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+                    continue;
+                }
 
-				time_t currentTime = time(NULL);
-				time_t cgiStart = all_res[i]->_cgi.gettime();
-				if (currentTime - cgiStart > 10)
-				{
-					pid_t pid = all_res[i]->_cgi.getpid_1();
-					kill(pid, SIGKILL);
-					usleep(10000);
-					int status;
-					waitpid(pid, &status, 0);
+                // Check for timeout
+                time_t currentTime = time(NULL);
+                time_t cgiStart = all_res[i]->_cgi.gettime();
+                if (currentTime - cgiStart > 10)
+                {
+                    pid_t pid = all_res[i]->_cgi.getpid_1();
+                    
+                    struct kevent kev;
+                    EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+                    kevent(globalKq, &kev, 1, NULL, 0, NULL);
+                    
+                    kill(pid, SIGTERM);
+                    usleep(100000);
+                    
+                    int status;
+                    int result = waitpid(pid, &status, WNOHANG);
+                    if (result == 0)
+                    {
+                        kill(pid, SIGKILL);
+                        usleep(50000);
+                        waitpid(pid, &status, 0);
+                    }
 
-					all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
-					all_res[i]->_cgi.setcgistatus(CGI_ERROR);
-					all_res[i]->sethasPendingCgi(false);
+                    all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
+                    all_res[i]->_cgi.setcgistatus(CGI_ERROR);
+                    all_res[i]->sethasPendingCgi(false);
 
-					struct kevent ev;
-					int client_fd = all_res[i]->getClientFd();
-					AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-				}
-			}
-		}
-	}
+                    struct kevent ev;
+                    int client_fd = all_res[i]->getClientFd();
+                    AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+                    AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+                }
+            }
+        }
+    }
 }
