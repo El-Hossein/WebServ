@@ -441,12 +441,12 @@ std::string Response::checkContentType()
         else if (extension.compare(".html") == 0)
             return "Content-Type: text/html\r\n";
         else
-            return "Content-Type: text/plein\r\n";
+            return "Content-Type: text/plain\r\n";
     }
     else
     {
         if (access(uri.c_str(), X_OK) != 0)
-            return "Content-Type: text/plein\r\n";
+            return "Content-Type: text/plain\r\n";
         else
             return "Content-Type: application/octet-stream\r\n";
     }
@@ -541,7 +541,7 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     headers = "HTTP/1.1 200 OK\r\n";
     headers += contentType;
     if ( contentType == "video/mp4\r\n" == 0)
-        headers += "Accept-Ranges: none\r\n";
+        headers += "Accept-Ranges: bytes\r\n";
     headers += "Content-Length: " + intToString(fileSize) + "\r\n";
 
     // need to check for Connection
