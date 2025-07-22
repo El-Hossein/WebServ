@@ -16,6 +16,7 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath)
     switch (cgiStatusCode)
     {
         case 200: httpResponse += " OK"; break;
+        case 302: httpResponse += " Found"; break;
         case 403: httpResponse += " Forbidden"; break;
         case 404: httpResponse += " Not Found"; break;
         case 500: httpResponse += " Internal Server Error"; break;
