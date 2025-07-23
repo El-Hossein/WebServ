@@ -47,7 +47,7 @@ class Cgi
         pid_t pid_1;
         int cgistatus;
         time_t startTime;
-        std::string uniqueId;
+        std::string uniq;
 
 
     public :
