@@ -12,7 +12,7 @@ Cgi::Cgi()
     statCgiFilePos = 0;
     std::ostringstream ss;
     ss << getpid() << "_" << time(NULL) << "_" << rand();
-    uniqueId = ss.str();
+    uniq = ss.str();
     
 }
 
