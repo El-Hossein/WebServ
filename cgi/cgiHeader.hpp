@@ -22,7 +22,6 @@ enum CgiStatus {
 class Cgi
 {
     private :
-        char *postRequestBody; //testing
         std::string scriptPath;
         std::string scriptOutput;
         std::string inpFile;
