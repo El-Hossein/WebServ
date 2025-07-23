@@ -49,6 +49,7 @@ void     Cgi::parseOutput()
 
     if (cgiHeader.find("Content-Type:") == std::string::npos)
         cgiHeader = "Content-Type: text/html\r\n" + cgiHeader;
+    
 }
 
 char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
@@ -133,7 +134,6 @@ void    execCgi(const char *scriptPath, char **envp)
 
 int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars)
 {
-    // postRequestBody = "name=ismail";// testing purposes
     std::ostringstream inp;
     std::ostringstream out;
     inp << "/tmp/cgiInput_" << uniqueId;
@@ -156,16 +156,16 @@ int Cgi::executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars
         startTime = time(NULL);
         
         // Write POST data
-        if (req.GetHeaderValue("method") == "POST")
-        {
-            std::ofstream inputFileStream(inpFile.c_str());
-            if (inputFileStream.is_open())
-            {
-                if (postRequestBody && strlen(postRequestBody) > 0)
-                    inputFileStream << postRequestBody;
-                inputFileStream.close();
-            }
-        }
+        // if (req.GetHeaderValue("method") == "POST")
+        // {
+        //     std::ofstream inputFileStream(inpFile.c_str());
+        //     if (inputFileStream.is_open())
+        //     {
+        //         if (postRequestBody && strlen(postRequestBody) > 0)
+        //             inputFileStream << postRequestBody;
+        //         inputFileStream.close();
+        //     }
+        // }
         cgistatus = CGI_RUNNING;
 
         struct kevent kev;
