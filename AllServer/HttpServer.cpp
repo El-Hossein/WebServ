@@ -96,7 +96,8 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
 			std::cout << "Server " << i << " listening on port " << AllPorts[i][j] << std::endl;
 		}
 	}
-	std::cout << "--------------------------------------------------------" << std::endl;
+	std::cout << "------------------------------------------------------------------------------" << std::endl;
+	std::cout << "------------------------------------------------------------------------------" << std::endl;
 }
 
 
@@ -124,6 +125,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 	inet_ntop(AF_INET, &server_addr.sin_addr, server_ip, INET_ADDRSTRLEN);
 	int server_port = ntohs(server_addr.sin_port);
 
+	std::cout << "-----------------------------------------------------------------------------" << std::endl;
 	std::cout << "Client " << client_ip << ":" << client_port << " connected to server at " 
 			<< server_ip << ":" << server_port << "\n" << std::endl;
 
@@ -133,6 +135,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 	AddToKqueue(event, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
 	AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_DISABLE);
 	Request * new_request = new Request(client_fd, ReadHeader, ConfigPars);
+	std::cout << "[" << client_fd << "]" << std::endl;
 	return new_request;
 }
 
@@ -181,23 +184,31 @@ void remove_request(int fd, std::vector<Request*>& all) {
 		}
 	}
 }
-
-void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all, std::vector<Response*>& all_res) {
-	// Find the corresponding Request object
-	Request* request = NULL;
-	for (size_t i = 0; i < all.size(); ++i) {
-		if (all[i]->GetClientFd() == client_fd) {
-			request = all[i];
-			break;
+Request * RightRequest(int client_fd, std::vector<Request*>& all_req)
+{
+	for (size_t i = 0; i < all_req.size(); ++i) {
+		if (all_req[i]->GetClientFd() == client_fd) {
+			return  all_req[i];
 		}
 	}
-	Response* response = NULL;
+	return NULL;
+}
+Response * RightResponse(int client_fd, std::vector<Response*>& all_res)
+{
 	for (size_t i = 0; i < all_res.size(); ++i) {
 		if (all_res[i]->getClientFd() == client_fd) {
-			response = all_res[i];
-			break;
+			return all_res[i];
 		}
 	}
+	return NULL;
+}
+
+void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all_req, std::vector<Response*>& all_res) {
+	// Find the corresponding Request object
+	Request* request = RightRequest(client_fd, all_req);
+	
+	Response* response = RightResponse(client_fd, all_res);
+
 	
 	// std::cout << request->GetClientFd() << std::endl;
 	if (!request) return; // Request requestect not found
@@ -211,7 +222,17 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		}
 		if (request->GetClientStatus() != EndBody)
 			return;
+		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
+		std::map<std::string, std::string> all_header = request->GetHeaders();
+		for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
+			std::cout << it->first << ": " << it->second << std::endl;
+		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
+		// response->setHasMore(response->getNextChunk(100000));
+		// response->setBytesSent(0);
+		// std::cout << "response: " << response->getChunk().c_str() << std::endl;
+		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		if (response->gethasPendingCgi())
 			return;
 		else{
@@ -256,12 +277,12 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			if (true)
 			{
 				remove_client(client_fd);
-				for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it)
+				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
 				{
 					if ((*it)->GetClientFd() == client_fd)
 					{
 						delete *it;
-						all.erase(it);
+						all_req.erase(it);
 						break;
 					}
 				}
