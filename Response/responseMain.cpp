@@ -566,7 +566,18 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
     else if (method == "DELETE")
     {
         // if method not allowed return 405 Method Not Allowed
-       deleteResponse(ConfigPars, req);
+        _cgi.setcgiHeader("");
+        if (IsCgiRequest(uri.c_str()))
+        {
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                hasPendingCgi = true;
+                return;
+            }
+            hasPendingCgi = false;
+        }
+        deleteResponse(ConfigPars, req);
     }
     else
         responseError(501, " Method not implemented", ConfigPars);
