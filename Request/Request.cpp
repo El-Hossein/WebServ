@@ -8,7 +8,9 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 																								HeaderBuffer(""),
 																								ContentLength(0),
 																								TotalBytesRead(0),
-																								KeepAlive(false)
+																								KeepAlive(false),
+																								RequestNotComplete(true),
+																								zbi("")
 {
 }
 
@@ -101,6 +103,11 @@ BoundarySettings	Request::GetBoundarySettings() const
 int			Request::GetContentType() const
 {
 	return this->ContentType;
+}
+
+size_t				Request::GetTotatlBytesRead() const
+{
+	return this->TotalBytesRead;
 }
 
 /*	|#----------------------------------#|
@@ -283,7 +290,6 @@ void	Request::ReadHeaders(std::string Header)
 
 		std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
 
-		std::cout << "{" << headerName <<"}{" << headerValue << "}\n";
 		Headers[headerName] = headerValue;
 	}
 }
@@ -311,7 +317,7 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = Boundary;
 			GetBoundaryFromHeader();
 			
-			std::cout << "{" << BoundaryAttri.Boundary << "}" << std::endl;
+			std::cout << "Boundary : {" << BoundaryAttri.Boundary << "}" << std::endl;
 		}
 	}
 }
@@ -324,15 +330,12 @@ void	Request::CheckRequiredHeaders()
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	if (Method == POST)
 	{
-
 		PostRequiredHeaders();
 	}
 }
 
 void Request::ReadBodyChunk()
 {
-	if (!BodyUnprocessedBuffer.empty()) // Condition for the first Read Unprocessed buffer
-		return ;
     int		BytesRead = 0;
     char	buffer[BUFFER_SIZE];
 
@@ -340,11 +343,18 @@ void Request::ReadBodyChunk()
     if (BytesRead < 0)
         throw ("Error: Read failed.");
     if (BytesRead == 0)
-			Client = EndReading;
-	buffer[BytesRead] = '\0';
+	{
+		Client = EndReading;
+		return ;
+	}
+	buffer[BytesRead] = '\0', TotalBytesRead += BytesRead;
+
+	if (TotalBytesRead == ContentLength)
+		Client = EndReading;
+
+	zbi += buffer;
 
     BodyUnprocessedBuffer = buffer;
-	TotalBytesRead += BodyUnprocessedBuffer.size();
 }
 
 void	Request::ReadRequestHeader()
@@ -360,20 +370,22 @@ void	Request::ReadRequestHeader()
 
 	buffer[BytesRead] = '\0';
 
-	std::ofstream File;
-	File.open("RawRequest.txt");
-	File << buffer ;
-
 	HeaderBuffer += buffer; // append to get full header
-	size_t npos = HeaderBuffer.find("\r\n\r\n");
-	if (npos == std::string::npos)	throw ("400: Invalide request header.");
-		else	Client = ReadBody;
+	zbi += buffer;
 
-	BodyUnprocessedBuffer		= HeaderBuffer.substr(npos + 4);
+	size_t npos = HeaderBuffer.find("\r\n\r\n");
+	if (npos == std::string::npos)
+		return ;
+	else
+		RequestNotComplete = false, Client = ReadBody;
+
+	BodyUnprocessedBuffer		= HeaderBuffer.substr(npos + 2);
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
+	TotalBytesRead += BodyUnprocessedBuffer.size();
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
+	CheckRequiredHeaders();
 }
 
 void	Request::SetUpRequest()
@@ -384,17 +396,32 @@ void	Request::SetUpRequest()
 		case	ReadHeader	:
 		{
 			ReadRequestHeader();
-			CheckRequiredHeaders();
+			break ;
 		}
-		case	ReadBody	:	ReadBodyChunk();	;
-		case	EndReading	:	;
+		case	ReadBody	:
+		{
+			ReadBodyChunk();
+			break ;
+		}
+		case	EndReading	:
+		{
+			std::cout << "salam" << std::endl;
+			break ;
+		}
+	}
+
+	if (Client == EndReading)
+	{
+		if (RequestNotComplete == true)
+			throw "404 Bad Request";
+
+		std::ofstream File; File.open("RawRequest.txt"), File << zbi ;
 	}
 	if (Method == POST)
 	{
-		std::cout << "Here in POST method\n";
-		Post	PostObj(*this);
+		static	Post	PostObj(*this);
 		PostObj.HandlePost();
-		BodyUnprocessedBuffer.clear();
 	}
-    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
 }
+
+// std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");

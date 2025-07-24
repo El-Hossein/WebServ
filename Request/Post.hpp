@@ -8,6 +8,12 @@
 class Request;
 class ConfigNode;
 
+struct	BoundaryFlager
+{
+	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
+	size_t	CrlfCount = 0;
+};
+
 class Post
 {
 private:
@@ -18,7 +24,6 @@ private:
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							BodyUnprocessedBuffer;
-	char								BodyBuffer[BODY_BUFFER_SIZE];
 
 	size_t			MaxAllowedBodySize;
 public:
