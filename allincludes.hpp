@@ -1,5 +1,4 @@
-#ifndef ALLINCLUDES_HPP
-#define ALLINCLUDES_HPP
+#pragma once
 
 #include <cstdio> 
 #include <cstddef>
@@ -12,7 +11,6 @@
 #include <vector>
 #include <map>
 #include <algorithm>
-
 #include <poll.h>
 #include <cstdlib>
 #include <fcntl.h>
@@ -22,8 +20,17 @@
 #include <arpa/inet.h>
 #include <sys/event.h>
 #include <sys/stat.h>
-
 #include <csignal>
 
+struct	BoundarySettings
+{
+	std::string	Boundary;
+	std::string	BoundaryStart;
+	std::string	BoundaryEnd;
+};
 
-#endif
+struct	BoundaryFlager
+{
+	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
+	size_t	CrlfCount = 0;
+};

@@ -170,12 +170,13 @@ void	Post::ParseBoundary(std::string	Body)
 	std::ofstream		OutFileName;
 	BoundarySettings	Helper = obj.GetBoundarySettings();
 
-	std::cout << "\n----->{"<< Body << "}\n\n";
-
 	// GetSubBodys(Body);
 
-	if (obj.GetTotatlBytesRead() == obj.GetContentLength())
+	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
+	{
+		obj.SetClientStatus(EndReading);
 		throw "200 Success";
+	}
 }
 
 void	Post::HandlePost()
