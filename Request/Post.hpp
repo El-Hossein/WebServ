@@ -8,12 +8,6 @@
 class Request;
 class ConfigNode;
 
-struct	BoundaryFlager
-{
-	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
-	size_t	CrlfCount = 0;
-};
-
 class Post
 {
 private:

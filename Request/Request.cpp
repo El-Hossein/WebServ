@@ -371,6 +371,9 @@ void	Request::ReadRequestHeader()
 	buffer[BytesRead] = '\0';
 
 	HeaderBuffer += buffer; // append to get full header
+	if (HeaderBuffer.size() >= 8000) // 8kb
+		PrintError("Header too long."), throw "400 Bad Request";
+
 	zbi += buffer;
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
@@ -382,7 +385,10 @@ void	Request::ReadRequestHeader()
 	BodyUnprocessedBuffer		= HeaderBuffer.substr(npos + 2);
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	TotalBytesRead += BodyUnprocessedBuffer.size();
+	if (BodyUnprocessedBuffer.size() == 2)
+		Client = EndReading;
+	TotalBytesRead += BodyUnprocessedBuffer.size() - 2; // (- 2) For CRLF
+
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
 	CheckRequiredHeaders();
@@ -404,10 +410,7 @@ void	Request::SetUpRequest()
 			break ;
 		}
 		case	EndReading	:
-		{
-			std::cout << "salam" << std::endl;
 			break ;
-		}
 	}
 
 	if (Client == EndReading)

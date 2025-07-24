@@ -4,8 +4,8 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define BUFFER_SIZE		1000
 #define MAX_HEADER_SIZE	100
+#define BUFFER_SIZE		100
 
 enum	Method
 {
@@ -33,13 +33,6 @@ enum	ContentType
 	Binary,
 	Raw,
 	Other
-};
-
-struct	BoundarySettings
-{
-	std::string	Boundary;
-	std::string	BoundaryStart;
-	std::string	BoundaryEnd;
 };
 
 class	Request
