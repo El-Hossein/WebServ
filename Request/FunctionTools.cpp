@@ -112,3 +112,18 @@ void	TrimSpaces(std::string& str)
 
 	str = str.substr(start, end - start);
 }
+
+// --------------#	COUNTERS	 #-------------- //
+
+size_t	CrlfCounter(std::string	&str)
+{
+	std::string	CRLF("\n\r");
+	size_t Pos = 0, Count = 0;
+	
+	while ((Pos = str.find(CRLF, Pos))!= std::string::npos)
+	{
+		Pos += CRLF.length();
+		Count++;
+	}
+	return Count;
+}
