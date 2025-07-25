@@ -4,35 +4,27 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define MAX_HEADER_SIZE	100
-#define BUFFER_SIZE		100
+#define MAX_HEADER_SIZE	50000
+#define BUFFER_SIZE		50000
 
 enum	Method
 {
-	GET,
-	POST,
-	DELETE
+	GET, POST, DELETE
 };
 
 enum	ClientStatus
 {
-	ReadHeader,
-	ReadBody,
-	EndReading
+	ReadHeader, ReadBody, EndReading
 };	
 
 enum	DataType
 {
-	Chunked,
-	FixedLength
+	Chunked, FixedLength
 };
 
 enum	ContentType
 {
-	Boundary,
-	Binary,
-	Raw,
-	Other
+	Boundary, Binary, Raw, Other
 };
 
 class	Request
@@ -54,7 +46,7 @@ private:
 	std::string							FullSystemPath;
 	std::vector<std::string>			PathParts;
 
-	BoundarySettings			BoundaryAttri;
+	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
 	std::string					BodyUnprocessedBuffer;
 	size_t						TotalBytesRead;
@@ -81,7 +73,7 @@ public:
 	std::map<std::string, std::string>	GetHeaders() const;
 	std::map<std::string, std::string>	GetQueryParams() const;
 	ConfigNode							&GetRightServer();
-	BoundarySettings					GetBoundarySettings() const;
+	_BoundarySettings					GetBoundarySettings() const;
 
 	
 	// ---------		SETTERS 	 	--------- //

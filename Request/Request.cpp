@@ -95,7 +95,7 @@ int			Request::GetDataType() const
 	return this->DataType;
 }
 
-BoundarySettings	Request::GetBoundarySettings() const
+_BoundarySettings	Request::GetBoundarySettings() const
 {
 	return this->BoundaryAttri;
 }
@@ -371,7 +371,7 @@ void	Request::ReadRequestHeader()
 	buffer[BytesRead] = '\0';
 
 	HeaderBuffer += buffer; // append to get full header
-	if (HeaderBuffer.size() >= 8000) // 8kb
+	if (HeaderBuffer.size() >= 8192) // 8kb
 		PrintError("Header too long."), throw "400 Bad Request";
 
 	zbi += buffer;
