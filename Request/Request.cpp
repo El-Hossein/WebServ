@@ -52,7 +52,7 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 		if (key == it->first)
 			return it->second;
 	}
-	throw "";
+	return "";
 }
 
 std::map<std::string, std::string>	Request::GetQueryParams() const
@@ -370,7 +370,8 @@ void	Request::ReadRequestHeader()
 
 	buffer[BytesRead] = '\0';
 
-	HeaderBuffer += buffer; // append to get full header
+	HeaderBuffer += buffer;
+
 	if (HeaderBuffer.size() >= 8192) // 8kb
 		PrintError("Header too long."), throw "400 Bad Request";
 

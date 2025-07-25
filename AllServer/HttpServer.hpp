@@ -6,8 +6,9 @@
 #include "../pars_config/config.hpp"
 
 #include "../Request/Request.hpp"
-#include "../cgi/cgiHeader.hpp"
 #include "../Response/responseHeader.hpp"
+
+extern int globalKq;
 
 class Response;
 

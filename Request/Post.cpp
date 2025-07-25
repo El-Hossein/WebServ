@@ -150,7 +150,7 @@ void	Post::ParseBoundary(std::string	Body)
 	static	std::string	FileName;
 	std::ofstream		OutFileName;
 	
-	GetSubBodies(Body);
+	// GetSubBodies(Body);
 	
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
