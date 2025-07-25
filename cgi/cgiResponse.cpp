@@ -1,84 +1,106 @@
 #include "cgiHeader.hpp"
 
-std::string Cgi::formatHttpResponse(const CgiResponse& cgiResponse)
+bool Cgi::formatHttpResponse(std::string cgiFilePath)
 {
-    // protocol version and status code and reason phrase 
-    std::string httpResponse = "HTTP/1.1 " + intToString(cgiResponse.status_code);
-    httpResponse += " OK";
-    // switch (cgiResponse.status_code)
-    // {
-    //     case 200: httpResponse += " OK"; break;
-    //     // case 403: httpResponse += " Forbidden"; break;
-    //     // case 404: httpResponse += " Not Found"; break;
-    //     // case 500: httpResponse += " Internal Server Error"; break;
-    // }
-    // headers
+    file.open(outFile.c_str(), std::ios::binary);
+    if (!file.is_open())
+        return false;
+    
+    cgiFilePos = 0;
+    usingCgi = true;
+
+
+    std::string httpResponse;
+    if (cgiHeader.find("Status") == std::string::npos)
+        httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
+    switch (cgiStatusCode)
+    {
+        case 200: httpResponse += " OK"; break;
+        case 403: httpResponse += " Forbidden"; break;
+        case 404: httpResponse += " Not Found"; break;
+        case 500: httpResponse += " Internal Server Error"; break;
+        case 501: httpResponse += " Method not implemented"; break;
+    }
     httpResponse += "\r\n";
-    httpResponse += cgiResponse.headers;
-    httpResponse += "Content-Length: " + intToString(cgiResponse.body.length()) + "\r\n";
-    httpResponse += "Connection: close\r\n\r\n";
-    // body
-    httpResponse += cgiResponse.body;
-    return httpResponse;
+    httpResponse += cgiHeader;
+    if (cgiHeader.find("Content-Type") == std::string::npos)
+        httpResponse += "Content-Type: text/html\r\n";
+    if (cgiHeader.find("Content-Length") == std::string::npos)
+        httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+    //need to check connection 
+    if (cgiHeader.find("Connection") == std::string::npos)
+        httpResponse += "Connection: close\r\n\r\n";
+    cgiHeader = httpResponse;
+    cgiHeaderSent = 0;
+    
+    return true;
 }
 
-std::string readFileToString(const std::string& path)
+std::string readFileToStringcgi(const std::string& path)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
-    if (!file)  // need to give error pages and check if they are valid
-        return "";
+    if (!file)
+        return ""; // if not found need to give the ones that are saved
     std::ostringstream contents;
     contents << file.rdbuf();
     file.close();
     return contents.str();
 }
 
-std::string handWritingError(const std::string& message, int statusCode)
+std::string handWritingErrorcgi(const std::string& message, int statusCode)
 {
     std::string _code = intToString(statusCode);
 
-    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
-    html += "<body><h1>";
-    html += _code;
-    html += " ";
-    html += message;
-    html += "</h1></body></html>";
+    std::string html = "<!DOCTYPE html><html lang=\"en\">";
+    html += "<head><meta charset=\"UTF-8\">";
+    html += "<title>Error ";
+    html += _code + "</title>";
+    html += "<style>";
+    html += "body { background-color: #f8f9fa; font-family: Arial, sans-serif; text-align: center; padding-top: 100px; }";
+    html += "h1 { font-size: 48px; color: #dc3545; }";
+    html += "p { font-size: 20px; color: #6c757d; }";
+    html += "</style></head>";
+    html += "<body>";
+    html += "<h1>Error " + _code + "</h1>";
+    html += "<p>" + message + "</p>";
+    html += "</body></html>";
 
     return html;
 }
 
-std::string responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars)
+bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars)
 {
     std::string body;
     (void)ConfigPars;
-    // std::string re = getInfoConfig(ConfigPars, "error_page", "NULL", 0);
-    // if (!re.empty())
-    // {
-    //     body = handWritingError(message, statusCode);
-
-    // }
     switch (statusCode)
     {
-        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
-        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
-        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
+        // i need to read error pages provided by config file
+        case 403: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
+        case 404: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
+        case 500: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 501: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
     }
     if (body.empty())
-        body = handWritingError(message, statusCode);
-    std::string response = "HTTP/1.1 " + intToString(statusCode);
+        body = handWritingErrorcgi(message, statusCode);
+    statCgiFileBody = body;
+    statCgiFilePos = 0;
+    usingCgiStatFile = true;
+
+
+    cgiHeader = "HTTP/1.1 " + intToString(statusCode);
     switch (statusCode)
     {
-        case 403: response += " Forbidden"; break;
-        case 404: response += " Not Found"; break;
-        case 500: response += " Internal Server Error"; break;
-        case 501: response += " Method not implemented"; break;
+        case 403: cgiHeader += " Forbidden"; break;
+        case 404: cgiHeader += " Not Found"; break;
+        case 500: cgiHeader += " Internal Server Error"; break;
+        case 501: cgiHeader += " Method not implemented"; break;
     }
-    response += "\r\n";
-    response += "Content-Type: text/html\r\n"; // its not always text/html i need to search abt this
-    response += "Content-Length: " + intToString(body.length()) + "\r\n";
-    response += "Connection: close\r\n\r\n";
-    response += body;
+    cgiHeader += "\r\n";
+    cgiHeader += "Content-Type: text/html\r\n";
+    cgiHeader += "Content-Length: " + intToString(body.length()) + "\r\n";
+    cgiHeader += "Connection: close\r\n\r\n";
+
     
-    return response;
+    cgiHeaderSent = 0;
+    return false;
 }
