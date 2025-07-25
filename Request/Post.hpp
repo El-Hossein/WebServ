@@ -3,21 +3,20 @@
 #include "Request.hpp"
 #include "../allincludes.hpp"
 
-#define	BODY_BUFFER_SIZE 1028
-
 class Request;
-class ConfigNode;
 
 class Post
 {
 private:
 	Request	&obj;
+	_BoundarySettings					Boundary;
+	_SubBodyStatus						SubBodyStatus;
 
 	bool								EndOfRequest;
 	bool								BodyFullyRead;
 
 	std::map<std::string, std::string>	BodyParams;
-	std::string							BodyUnprocessedBuffer;
+	std::string							UnprocessedBuffer;
 
 	size_t			MaxAllowedBodySize;
 public:
@@ -25,7 +24,7 @@ public:
 	~Post();
 
 	void	WriteToFile(std::string	&str);
-	void	GetSubBodys(std::string &Buffer);
+	void	GetSubBodies(std::string &Buffer);
 	void	ParseChunked(std::string);
 	void	ParseBoundary(std::string);
 	void	IsBodyFullyRead();
