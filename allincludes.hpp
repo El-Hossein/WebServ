@@ -22,11 +22,18 @@
 #include <sys/stat.h>
 #include <csignal>
 
-struct	BoundarySettings
+struct	_BoundarySettings
 {
 	std::string	Boundary;
 	std::string	BoundaryStart;
 	std::string	BoundaryEnd;
+};
+
+enum	_SubBodyStatus
+{
+	WithBoundaryStart,
+	WithBothBoundaries,
+	WithNoBoundary
 };
 
 struct	BoundaryFlager
