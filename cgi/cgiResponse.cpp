@@ -1,6 +1,6 @@
 #include "cgiHeader.hpp"
 
-bool Cgi::formatHttpResponse(std::string cgiFilePath)
+bool Cgi::formatHttpResponse(std::string cgiFilePath, Request &req)
 {
     file.open(outFile.c_str(), std::ios::binary);
     if (!file.is_open())
@@ -30,7 +30,19 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath)
         httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
     //need to check connection 
     if (cgiHeader.find("Connection") == std::string::npos)
-        httpResponse += "Connection: close\r\n\r\n";
+    {
+        if (req.GetHeaderValue("connection") == "keep-alive")
+        {
+            httpResponse += "Connection: keep-alive\r\n\r\n";
+            checkConnection = keepAlive;
+        }
+        else
+        {
+            httpResponse += "Connection: close\r\n\r\n";
+            checkConnection = _close;
+        }
+
+    }
     cgiHeader = httpResponse;
     cgiHeaderSent = 0;
     
@@ -69,7 +81,7 @@ std::string handWritingErrorcgi(const std::string& message, int statusCode)
     return html;
 }
 
-bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars)
+bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req)
 {
     std::string body;
     (void)ConfigPars;
@@ -99,7 +111,16 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
     cgiHeader += "\r\n";
     cgiHeader += "Content-Type: text/html\r\n";
     cgiHeader += "Content-Length: " + intToString(body.length()) + "\r\n";
-    cgiHeader += "Connection: close\r\n\r\n";
+    if (req.GetHeaderValue("connection") == "keep-alive")
+    {
+        cgiHeader += "Connection: keep-alive\r\n\r\n";
+        checkConnection = keepAlive;
+    }
+    else
+    {
+        cgiHeader += "Connection: close\r\n\r\n";
+        checkConnection = _close;
+    }
 
     
     cgiHeaderSent = 0;

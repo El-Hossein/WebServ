@@ -14,9 +14,15 @@
 class Response;
 
 enum CgiStatus {
-            CGI_ERROR = 0,
-            CGI_COMPLETED = 1,
-            CGI_RUNNING = 2
+            CGI_ERROR,
+            CGI_COMPLETED,
+            CGI_RUNNING
+};
+
+enum Connection {
+    _close,
+    keepAlive,
+    None
 };
 
 class Cgi
@@ -48,15 +54,16 @@ class Cgi
         int cgistatus;
         time_t startTime;
         std::string uniq;
+        int checkConnection;
 
 
     public :
         Cgi();
         ~Cgi();
         
-        bool        formatHttpResponse(std::string cgiFilePath);
+        bool        formatHttpResponse(std::string cgiFilePath, Request &req);
         void        parseOutput();
-        int   executeCgiScript(const Request &req, std::vector<ConfigNode> ConfigPars);
+        int   executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars);
         std::string getScriptPath();
         void        setScriptPath(std::string _scriptPath);
         std::string getScriptOutput();
@@ -66,8 +73,8 @@ class Cgi
         void        setScriptFile(std::string _scriptfile);
         std::string getPathInfo();
         void        setPathInfo(std::string _pathinfo);
-        void        splitPathInfo(const Request &req);
-        void        handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars);
+        void        splitPathInfo(Request &req);
+        void        handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars);
         bool        getUsingCgi();
         std::ifstream& getFile();
         std::string getCgiChunk();
@@ -77,7 +84,7 @@ class Cgi
         std::string getCgiHeader();
         size_t      getCgiHeaderSent();
         void        setCgiHeaderSent(size_t aa);
-        bool        responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars);
+        bool        responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req);
         size_t      getStatCgiFilePos();
         void        setStatCgiFilePos(size_t _statCgifilepos);
         bool        getUsingStatCgiFile();
@@ -90,6 +97,8 @@ class Cgi
         time_t         gettime();
         std::string    getoutfile();
         std::string    getinfile();
+        bool                getCheckConnection();
+        void                setCheckConnection(int conn);
         
         
 

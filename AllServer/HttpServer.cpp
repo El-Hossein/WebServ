@@ -273,9 +273,10 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-
-			if (true)
+			if (response->_cgi.getCheckConnection() == _close)
 			{
+				std::cout << "daaaaz" << std::endl;
+				response->_cgi.setCheckConnection(None);
 				remove_client(client_fd);
 				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
 				{
@@ -326,8 +327,9 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 				for (size_t j = 0; j < all_res.size(); ++j) {
 					if (all_res[j]->gethasPendingCgi() &&
 						all_res[j]->_cgi.getpid_1() == exitedPid) {
-
-						if (all_res[j]->checkPendingCgi(ConfigPars)) {
+						int tempClientFd = all_res[j]->getClientFd();
+						Request* _reqPtr = RightRequest(tempClientFd, all_request);
+						if (all_res[j]->checkPendingCgi(ConfigPars, *_reqPtr)) {
 							struct kevent ev;
 							int client_fd = all_res[j]->getClientFd();
 							AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
@@ -395,8 +397,9 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
                         usleep(50000);
                         waitpid(pid, &status, 0);
                     }
-
-                    all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars);
+					int tempClientFd = all_res[i]->getClientFd();
+					Request* reqPtr = RightRequest(tempClientFd, all_request);
+                    all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, *reqPtr);
                     all_res[i]->_cgi.setcgistatus(CGI_ERROR);
                     all_res[i]->sethasPendingCgi(false);
 

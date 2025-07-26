@@ -30,7 +30,6 @@ class Response
         std::string chunk;
         bool        hasMore;
         bool hasPendingCgi;
-        size_t remaining;
 
 
     public :
@@ -41,7 +40,7 @@ class Response
         
         void                deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req);
         void                servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req);
-        bool                generateAutoIndexOn();
+        bool                generateAutoIndexOn(Request	&req);
         void                getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
         std::string         generateListingDir();
         std::string         deleteResponseSuccess(const std::string& message);
@@ -57,7 +56,7 @@ class Response
         int                 prepareFileResponse(std::string filepath, std::string contentType, Request &req);
         size_t              getHeaderSent();
         void                setHeaderSent(size_t _aa);
-        void                responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars);
+        void                responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars, Request &req);
         ssize_t             getBytesSent();
         void                setBytesSent(ssize_t _bytessent);
         ssize_t             getBytesWritten();
@@ -65,16 +64,10 @@ class Response
         bool                getHasMore();
         void                setHasMore(bool _hasmore);
         std::string         getChunk();
-        bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars);
+        bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
-        size_t      getremaining(){
-            return remaining;
-        }
-        void    setremaining(size_t aa)
-        {
-            remaining = aa;
-        }
+
 };
 
 

@@ -13,12 +13,22 @@ Cgi::Cgi()
     std::ostringstream ss;
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
-    
+    checkConnection = None;    
 }
 
 Cgi::~Cgi()
 {
 
+}
+
+bool    Cgi::getCheckConnection()
+{
+    return checkConnection;
+}
+
+void    Cgi::setCheckConnection(int conn)
+{
+    checkConnection = conn;
 }
 
 std::string    Cgi::getoutfile()
@@ -198,7 +208,7 @@ int fileChecking(std::string path)
     return 0;
 }
 
-void Cgi::splitPathInfo(const Request &req)
+void Cgi::splitPathInfo(Request &req)
 {
     std::string fullPath = req.GetFullPath();
 
@@ -222,18 +232,18 @@ void Cgi::splitPathInfo(const Request &req)
         pathInfo = fullPath.substr(posLength);
 }
 
-void Cgi::handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPars)
+void Cgi::handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars)
 {
     splitPathInfo(req);
     int code = fileChecking(scriptFile);
     if (code == 403)
     {
-        responseErrorcgi(403, " Forbidden", ConfigPars);
+        responseErrorcgi(403, " Forbidden", ConfigPars, req);
         return ;
     }
     else if (code == 404)
     {
-        responseErrorcgi(404, " not found", ConfigPars);
+        responseErrorcgi(404, " not found", ConfigPars, req);
         return ;
     }
     int _status = executeCgiScript(req, ConfigPars);
@@ -241,7 +251,7 @@ void Cgi::handleCgiRequest(const Request &req, std::vector<ConfigNode> ConfigPar
     if (_status == 1)
     {
         parseOutput();
-        formatHttpResponse(outFile);
+        formatHttpResponse(outFile, req);
     }
 }
 
