@@ -390,7 +390,6 @@ bool Response::generateAutoIndexOn(Request &req)
     headers = "HTTP/1.1 200 OK\r\n";
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
     headers += "Content-Type: text/html\r\n";
-    std::cout <<  "hhh  == " << req.GetHeaderValue("connection") << "  nn  " << std::endl;
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
         headers += "Connection: keep-alive\r\n\r\n";
@@ -482,19 +481,20 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
     struct stat st;
 
 
-    _cgi.setcgiHeader("");
-    if (IsCgiRequest(uri.c_str()))
+    if (method == "GET")
     {
-        _cgi.handleCgiRequest(req, ConfigPars);
-        if (_cgi.getcgistatus() == CGI_RUNNING)
+        _cgi.setcgiHeader("");
+        if (IsCgiRequest(uri.c_str()))
         {
-            hasPendingCgi = true;
-            return;
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                hasPendingCgi = true;
+                return;
+            }
+            hasPendingCgi = false;
+            return ;
         }
-        hasPendingCgi = false;
-    }
-    else if (method == "GET")
-    {
         stat(uri.c_str(), &st);
         if (S_ISDIR(st.st_mode))
             servListingDiren(ConfigPars, req);
