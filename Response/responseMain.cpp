@@ -330,6 +330,15 @@ std::string Response::deleteResponseSuccess(const std::string& message)
     return html;
 }
 
+std::string Response::postResponseSuccess(const std::string& message)
+{
+    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
+    html += "<body><h1>";
+    html += message;
+    html += "</h1></body></html>";
+
+    return html;
+}
 
 std::string Response::generateListingDir()
 {
@@ -461,14 +470,10 @@ std::string Response::checkContentType()
         else
             return "Content-Type: text/plain\r\n";
     }
+    if (access(uri.c_str(), X_OK) != 0)
+        return "Content-Type: text/plain\r\n";
     else
-    {
-        if (access(uri.c_str(), X_OK) != 0)
-            return "Content-Type: text/plain\r\n";
-        else
-            return "Content-Type: application/octet-stream\r\n";
-    }
-    return "";
+        return "Content-Type: application/octet-stream\r\n";
 
 }
 
@@ -506,7 +511,38 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
     }
     else if (method == "POST")
     {
-        // POST here
+        _cgi.setcgiHeader("");
+        if (IsCgiRequest(uri.c_str()))
+        {
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                hasPendingCgi = true;
+                return;
+            }
+            hasPendingCgi = false;
+        }
+        else
+        {
+            staticFileBody = postResponseSuccess("file succesefuly uploaded!");
+            staticFilePos = 0;
+            usingStaticFile = true;
+            headers = "HTTP/1.1 201 Created\r\n";
+            headers += "Content-Type: text/plain\r\n";
+            headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
+            if (req.GetHeaderValue("connection") == "keep-alive")
+            {
+                headers += "Connection: keep-alive\r\n";
+                _cgi.setCheckConnection(keepAlive);
+            }
+            else
+            {
+                headers += "Connection: close\r\n";
+                _cgi.setCheckConnection(_close);
+            }
+            headers += "\r\n";
+            headerSent = 0;
+        }
     }
 }
 

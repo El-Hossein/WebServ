@@ -137,7 +137,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
     std::ostringstream inp;
     std::ostringstream out;
     inp << "/tmp/cgiInput_" << uniq;
-    out << "/tmp/cgiOutput_" << uniq;
+    out << "/tmp/cgiOutput_" << uniq; // replace with the place the file stored
     inpFile = inp.str();
     outFile = out.str();
     pid = fork();
