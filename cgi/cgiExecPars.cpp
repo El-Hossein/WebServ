@@ -52,9 +52,9 @@ void     Cgi::parseOutput()
     
 }
 
-char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
+char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    char **envp = new char*[9];
+    char **envp = new char*[12];
 
 
     // REQUEST_METHOD
@@ -73,7 +73,7 @@ char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars
     strcat(envp[2], req.GetFullPath().c_str());
     // std::cout << envp[2] << std::endl;
     //QUERY_STRING
-    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1];
+    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1]; // if its POST need to read from the file
     strcpy(envp[3], "QUERY_STRING=");
     strcat(envp[3], req.GetHeaderValue("query").c_str());
     // std::cout << envp[3] << std::endl;
@@ -97,8 +97,27 @@ char    **cgiEnvVariables(const Request &req, std::vector<ConfigNode> ConfigPars
     strcpy(envp[7], "PATH_INFO=");
     strcat(envp[7], _pathInfo.c_str());
     // std::cout << envp[7] << std::endl;
-    // need to add SERVER_NAME, SERVER_PORT, CONTENT_TYPE, CONTENT_LENGTH
-    envp[8] = NULL;
+    //CONTENT_TYPE
+    envp[8] = new char[strlen("CONTENT_TYPE=") + strlen(req.GetHeaderValue("content-type").c_str()) + 1];
+    strcpy(envp[8], "CONTENT_TYPE=");
+    strcat(envp[8], req.GetHeaderValue("content-type").c_str());
+    // std::cout << envp[8] << std::endl;
+    // //CONTENT_LENGTH
+    envp[9] = new char[strlen("CONTENT_LENGTH=") + strlen(req.GetHeaderValue("content-length").c_str()) + 1];
+    strcpy(envp[9], "CONTENT_LENGTH=");
+    strcat(envp[9], req.GetHeaderValue("content-length").c_str());
+    // // std::cout << envp[9] << std::endl;
+    // //SERVER_NAME
+    envp[10] = new char[strlen("SERVER_NAME=") + strlen(req.GetHeaderValue("host").c_str()) + 1];
+    strcpy(envp[10], "SERVER_NAME=");
+    strcat(envp[10], req.GetHeaderValue("host").c_str());
+    //std::cout << envp[10] << std::endl;
+    //SERVER_PORT
+    // envp[11] = new char[strlen("SERVER_PORT") + "HHHHEEERE" + 1];
+    // strcpy(envp[11], "SERVER_PORT=");
+    // strcat(envp[11], "HHHHEEEREEE");
+    //std::cout << envp[11] << std::endl;
+    envp[11] = NULL;
     return envp;
 }
 

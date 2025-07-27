@@ -31,16 +31,16 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath, Request &req)
     //need to check connection 
     if (cgiHeader.find("Connection") == std::string::npos)
     {
-        if (req.GetHeaderValue("connection") == "keep-alive")
-        {
-            httpResponse += "Connection: keep-alive\r\n\r\n";
-            checkConnection = keepAlive;
-        }
-        else
-        {
+        // if (req.GetHeaderValue("connection") == "keep-alive")
+        // {
+        //     httpResponse += "Connection: keep-alive\r\n\r\n";
+        //     checkConnection = keepAlive;
+        // }
+        // else
+        // {
             httpResponse += "Connection: close\r\n\r\n";
-            checkConnection = _close;
-        }
+            // checkConnection = _close;
+        // }
 
     }
     cgiHeader = httpResponse;
