@@ -67,6 +67,7 @@ class Response
         bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
+        std::string         postResponseSuccess(const std::string& message);
 
 };
 
