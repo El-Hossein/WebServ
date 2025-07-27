@@ -37,8 +37,25 @@ enum	_SubBodyStatus
 	WithNoBoundary
 };
 
+enum	_BoundaryStatus
+{
+	None,
+	GotBoundaryStart,
+	GotFile,
+	GotBody,
+	GotBoundaryEnd,
+	Finished
+};
+
 struct	BoundaryFlager
 {
 	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
 	size_t	CrlfCount = 0;
+};
+
+struct	_ServerDetails
+{
+	size_t		RealPort;
+	std::string	ServerHost;
+	std::string	ServerPort;
 };
