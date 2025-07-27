@@ -4,8 +4,8 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define MAX_HEADER_SIZE	50000
-#define BUFFER_SIZE		50000
+#define MAX_HEADER_SIZE	8192
+#define BUFFER_SIZE		100000
 
 enum	Method
 {
@@ -30,8 +30,9 @@ enum	ContentType
 class	Request
 {
 private:
-	std::string zbi;
+	_ServerDetails			ServerDetails;
 
+	std::string zbi;
 
 	ClientStatus			Client;
 	int						ClientFd;
@@ -55,7 +56,7 @@ private:
 	bool						RequestNotComplete;
 
 public:
-	Request(const int	&, ClientStatus, std::vector<ConfigNode>);
+	Request(const int	&, ClientStatus, std::vector<ConfigNode>, int &);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
 	bool								GetConnection() const;
@@ -80,6 +81,7 @@ public:
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
+	void	SetServerDetails();
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	ReadRequestHeader();
@@ -111,3 +113,5 @@ bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
 size_t			CrlfCounter(std::string	&str);
+void			CreateDirectory(std::string FilenamePath);
+void			FindFileName(std::string	&Buffer, std::string	&Filename);

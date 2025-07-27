@@ -109,7 +109,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			std::cerr << "Accept failed on server_fd " << server_fd << ": " << strerror(errno) << std::endl;
 		}
-		return new Request(-1, ReadHeader,ConfigPars);
+		int tmp(0);return new Request(-1, ReadHeader,ConfigPars, tmp);
 	}
 
 	char client_ip[INET_ADDRSTRLEN];
@@ -133,7 +133,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 	struct kevent event;
 	AddToKqueue(event, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
 	AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_DISABLE);
-	Request * new_request = new Request(client_fd, ReadHeader, ConfigPars);
+	Request * new_request = new Request(client_fd, ReadHeader, ConfigPars, server_port);
 	std::cout << "[" << client_fd << "]" << std::endl;
 	return new_request;
 }
