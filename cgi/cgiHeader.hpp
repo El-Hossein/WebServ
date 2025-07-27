@@ -13,13 +13,15 @@
 
 class Response;
 
-enum CgiStatus {
-            CGI_ERROR,
-            CGI_COMPLETED,
-            CGI_RUNNING
+enum CgiStatus
+{
+    CGI_ERROR,
+    CGI_COMPLETED,
+    CGI_RUNNING
 };
 
-enum Connection {
+enum Connection
+{
     _close,
     keepAlive,
     None
