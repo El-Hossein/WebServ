@@ -11,6 +11,9 @@ private:
 	Request	&obj;
 	_BoundarySettings					Boundary;
 	_SubBodyStatus						SubBodyStatus;
+	BoundaryFlager						Flager;
+	
+	_BoundaryStatus						BoundaryStatus;
 
 	bool								EndOfRequest;
 	bool								BodyFullyRead;
@@ -23,7 +26,7 @@ public:
 	Post(Request	&_obj);
 	~Post();
 
-	void	WriteToFile(std::string	&str);
+	void	WriteToFile(std::string	&Filename, std::string &Buffer);
 	void	GetSubBodies(std::string &Buffer);
 	void	ParseChunked(std::string);
 	void	ParseBoundary(std::string);

@@ -36,4 +36,4 @@ re: fclean all
 .PHONY: all clean fclean re
 
 test:
-	c++ -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
+	c++ -w -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
