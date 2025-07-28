@@ -1,11 +1,20 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _ConfigPars) :	ClientFd(fd),
-																								Client(ReadHeader),
-																								Servers(_ConfigPars),
-																								ContentLength(0),
-																								KeepAlive(false)
+Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _ConfigPars, int &_RealPort)
+						:	ClientFd(fd),
+							Client(ReadHeader),
+							DataType(FixedLength),
+							ContentType(Other),
+							Servers(_ConfigPars),
+							HeaderBuffer(""),
+							ContentLength(0),
+							TotalBytesRead(0),
+							KeepAlive(false),
+							RequestNotComplete(true),
+							zbi("")
 {
+	ServerDetails.IsPortExist = false;
+	ServerDetails.RealPort = _RealPort;
 }
 
 Request::~Request() {
@@ -16,7 +25,7 @@ int	Request::GetClientFd() const
 	return this->ClientFd;
 }
 
-int	Request::GetClientStatus() const
+int		Request::GetClientStatus() const
 {
 	return this->Client;
 }
@@ -24,6 +33,7 @@ void	Request::SetClientStatus(ClientStatus	Status)
 {
 	this->Client = Status;
 }
+
 std::string	Request::GetHeaderBuffer() const
 {
 	return this->HeaderBuffer;
@@ -45,7 +55,7 @@ std::string	Request::GetHeaderValue(std::string	key) const {
 		if (key == it->first)
 			return it->second;
 	}
-	throw "";
+	return "";
 }
 
 std::map<std::string, std::string>	Request::GetQueryParams() const
@@ -83,6 +93,31 @@ ConfigNode	&Request::GetRightServer()
 	return this->RightServer;
 }
 
+int			Request::GetDataType() const
+{
+	return this->DataType;
+}
+
+_BoundarySettings	Request::GetBoundarySettings() const
+{
+	return this->BoundaryAttri;
+}
+
+int			Request::GetContentType() const
+{
+	return this->ContentType;
+}
+
+size_t				Request::GetTotatlBytesRead() const
+{
+	return this->TotalBytesRead;
+}
+
+_ServerDetails	Request::GetServerDetails() const
+{
+	return this->ServerDetails;
+}
+
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -102,10 +137,44 @@ void	Request::SetContentLength(const size_t	Length)
 	this->ContentLength = Length;
 }
 
+void	Request::SetServerDetails()
+{
+	std::string	&Host = Headers["host"];
+
+	size_t		Pos = Host.find(":");
+	if (Pos == std::string::npos)
+		return ;
+	
+	ServerDetails.IsPortExist = true;
+	ServerDetails.ServerHost = Host.substr(0, Pos);
+	ServerDetails.ServerPort = Host.substr(Pos + 1);
+
+	// std::cout << "{" << ServerDetails.ServerHost << "}" << std::endl;
+	// std::cout << "{" << ServerDetails.ServerPort << "}\n\n" << std::endl;
+}
+
 /*	|#----------------------------------#|
 	|#			MEMBER FUNCTIONS    	#|
 	|#----------------------------------#|
 */
+
+void	Request::GetBoundaryFromHeader()
+{
+	std::string										Boundary;
+	std::map<std::string, std::string>::iterator	it = Headers.find("content-type");
+
+	size_t	pos = it->second.find("=");
+	if (pos == std::string::npos)
+		throw "400 Bad Request -ParseBoundary()";
+
+	Boundary = it->second.substr(pos + 1); // setting Boundary
+	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
+		throw "400 Bad Request -ParseBoundary() -Boundary Parsing.";
+
+	BoundaryAttri.Boundary = Boundary;
+	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
+	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--";
+}
 
 void	Request::HandleQuery()
 {
@@ -185,15 +254,14 @@ void	Request::SplitURI()
 
 	Headers["path"] = Path;
 	Headers["query"] = Query;
-
 }
 
-void	Request::ParseURI(std::string	&URI)
+void	Request::ParseURI()
 {
+	std::string URI = Headers["uri"];
 	if (URI.length() > 2048)
 		throw "414 Request-URI too long";
 
-	Headers["uri"] = URI;
 	SplitURI();
 	HandlePath();
 	HandleQuery();
@@ -217,7 +285,7 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 		
 	Headers["method"] = method;
 
-	ParseURI(URI);
+	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
 		throw ("505: Invalide request protocol.");
@@ -250,38 +318,69 @@ void	Request::ReadHeaders(std::string Header)
 	}
 }
 
-void	Request::CheckRequiredHeaders()
+void	Request::PostRequiredHeaders()
 {
-	int	flag = 0;
+	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
+		PrintError("Missing POST required headers"), throw "400 Bad request";
 
-	if (Headers.find("host") == Headers.end())
+	if (Headers.find("content-length") != Headers.end())
 	{
-		PrintError("No Host has been found!"), throw "400 Bad request";
+		if (!ValidContentLength(Headers["content-length"]))
+			PrintError("Invalide Content-Length"), throw "400: Bad Request";
+		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
+		this->DataType = FixedLength;
 	}
-	if (Headers.find("connection") != Headers.end())
+	
+	if (Headers.find("transfer-encoding") != Headers.end())
+		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw "501 Not implemented - PostRequestHeaders()";
+	
+	if (Headers.find("content-type") != Headers.end())
 	{
-		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
+		if (Headers["content-type"].find("multipart/form-data") != std::string::npos)
+		{
+			this->ContentType = Boundary;
+			GetBoundaryFromHeader();
+		}
 	}
 }
 
+void	Request::ParseHeaders()
+{
 
-void Request::ReadBodyChunk() {
-    int BytesRead = 0;
-    char buffer[MAX_HEADER_SIZE];
-
-    BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
-    if (BytesRead < 0) {
-        throw ("Error: Read failed.");
-    }
-
-    if (BytesRead == 0) {
-			SetClientStatus(EndBody);
+	if (Headers.find("host") == Headers.end())
+		PrintError("No Host has been found!"), throw "400 Bad request";
+	if (Headers.find("connection") != Headers.end())
+		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
+	if (Method == POST)
+	{
+		PostRequiredHeaders();
 	}
-    buffer[BytesRead] = '\0';
-    std::string StdBuffer(buffer, BytesRead);
-    BodyUnprocessedBuffer += StdBuffer; // Append to BodyUnprocessedBuffer
-	if (BodyUnprocessedBuffer.size() >= 800)
-		SetClientStatus(EndBody);
+	SetServerDetails(); // Init localhost + port
+	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
+	ParseURI();
+}
+
+void Request::ReadBodyChunk()
+{
+    int		BytesRead = 0;
+    char	buffer[BUFFER_SIZE];
+
+	std::memset(buffer, 0, BUFFER_SIZE);
+    BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
+    if (BytesRead < 0)
+        throw ("Error: Read failed.");
+    if (BytesRead == 0)
+	{
+		Client = EndReading;
+		return ;
+	}
+	TotalBytesRead += BytesRead;
+	BodyUnprocessedBuffer.assign(buffer, BytesRead);
+
+	if (TotalBytesRead == ContentLength)
+		Client = EndReading;
+
+	zbi += buffer;
 }
 
 void	Request::ReadRequestHeader()
@@ -289,51 +388,60 @@ void	Request::ReadRequestHeader()
 	int			BytesRead = 0;
 	char		buffer[MAX_HEADER_SIZE];
 
+	std::memset(buffer, 0, MAX_HEADER_SIZE);
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead < 0)
 		throw ("Error: Read return.");
 	if (BytesRead == 0)
-		SetClientStatus(EndBody);
+		Client = EndReading;
 
+	HeaderBuffer.append(buffer, BytesRead);
 
-	buffer[BytesRead] = '\0';
+	zbi += HeaderBuffer;
 
-	std::string	StdBuffer(buffer);
-	HeaderBuffer	+= StdBuffer;
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
-		throw ("400: Invalide request header.");
+		return ;
+	else
+		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer	= HeaderBuffer.substr(npos + 4);
+	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
+	if (HeaderBuffer.size() >= 8192) // 8kb
+		PrintError("Header too long."), throw "400 Bad Request";
+
+	if (BodyUnprocessedBuffer.size() == 2)
+		Client = EndReading;
+	TotalBytesRead += BodyUnprocessedBuffer.size() - 2; // (- 2) For CRLF
+
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
-	if (BodyUnprocessedBuffer.empty() != false)
-		SetClientStatus(EndBody);
-	else
-		SetClientStatus(ReadBody);
+	ParseHeaders();
 }
 
 void	Request::SetUpRequest()
 {
-	RightServer = ConfigNode::GetServer(Servers, "myserver.com");
-	if (GetClientStatus() ==  ReadHeader)
+	switch (Client)
 	{
-		ReadRequestHeader();
-		CheckRequiredHeaders();
-	}
-	else if (GetClientStatus() == ReadBody)
-		ReadBodyChunk();
-	// std::cout << Request::GetFullPath() << std::endl;
-
-	switch (Method)
-	{
-		case GET	:	{	Get		GetObj(*this);		return GetObj.CheckPath(GetFullPath()); }
-		case POST	:	{	Post	PostObj(*this);		return PostObj.HandlePost();	}
-		case DELETE	:	{	Delete	DeleteObj(*this);	return DeleteObj.DoDelete(GetFullPath());	}
+		case	ReadHeader	:	ReadRequestHeader();	break ;
+		case	ReadBody	:	ReadBodyChunk();		break ;
+		case	EndReading	:	break ;
 	}
 
-    // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "servernames", "NULL");
+	if (Client == EndReading)
+	{
+		if (RequestNotComplete == true)
+			PrintError("Something is missing."), throw "404 Bad Request";
 
-	// PrintHeaders(this->Headers);
+		// std::ofstream File; File.open("ZRawRequest.txt"), File << zbi ;
+	}
+	if (Method == POST)
+	{
+		static	Post	PostObj(*this);
+
+		PostObj.HandlePost();
+	}
 }
+
+// std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
+

@@ -1,88 +1,103 @@
-#ifndef REQUEST_HPP
-#define REQUEST_HPP
 #pragma once
 
-#include "Get.hpp"
 #include "Post.hpp"
-#include "Delete.hpp"
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-// #define    ReadHeader -1
-// #define    ReadBody 0
-// #define    EndBody 1
-
-#define BUFFER_SIZE 1024 // 1kb
-#define MAX_HEADER_SIZE 100//(8192 * 2) // 8kb
+#define MAX_HEADER_SIZE	8192
+#define BUFFER_SIZE		100000
 
 enum	Method
 {
-	GET,
-	POST,
-	DELETE
+	GET, POST, DELETE
 };
 
 enum	ClientStatus
 {
-	ReadHeader,
-	ReadBody,
-	EndBody
+	ReadHeader, ReadBody, EndReading
+};	
+
+enum	DataType
+{
+	Chunked, FixedLength
+};
+
+enum	ContentType
+{
+	Boundary, Binary, Raw, Other
 };
 
 class	Request
 {
 private:
+	_ServerDetails			ServerDetails;
+
+	std::string zbi;
+
 	ClientStatus			Client;
 	int						ClientFd;
 	std::vector<ConfigNode>	Servers;
 	ConfigNode				RightServer;
 
 	Method								Method;
+	DataType							DataType;
+	ContentType							ContentType;
 	std::map<std::string, std::string>	Headers;
 	std::map<std::string, std::string>	QueryParams;
 	std::string							FullSystemPath;
 	std::vector<std::string>			PathParts;
 
-	bool						KeepAlive;
-	std::string					BodyUnprocessedBuffer;
+	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
+	std::string					BodyUnprocessedBuffer;
+	size_t						TotalBytesRead;
 	size_t						ContentLength;
+	bool						KeepAlive;
+	bool						RequestNotComplete;
+
 public:
-	Request(const int	&, ClientStatus, std::vector<ConfigNode>);
+	Request(const int	&, ClientStatus, std::vector<ConfigNode>, int &);
 	~Request();
 	// ---------		GETTERS 	 	--------- //
-	std::map<std::string, std::string>	GetHeaders() const;
-	std::map<std::string, std::string>	GetQueryParams() const;
-	std::string							GetFullPath() const;
-	std::vector<std::string>			GetPathParts() const;
-	std::string							GetHeaderValue(std::string) const;
-	std::string							GetUnprocessedBuffer() const;
 	bool								GetConnection() const;
-	size_t								GetContentLength() const;
-	ConfigNode							&GetRightServer();
 	int									GetClientStatus() const;
 	int									GetClientFd() const;
+	int									GetDataType() const;
+	int									GetContentType() const;
+	size_t								GetContentLength() const;
+	size_t								GetTotatlBytesRead() const;
+	std::string							GetFullPath() const;
+	std::string							GetHeaderValue(std::string) const;
+	std::string							GetUnprocessedBuffer() const;
 	std::string							GetHeaderBuffer() const;
-
+	std::vector<std::string>			GetPathParts() const;
+	std::map<std::string, std::string>	GetHeaders() const;
+	std::map<std::string, std::string>	GetQueryParams() const;
+	ConfigNode							&GetRightServer();
+	_BoundarySettings					GetBoundarySettings() const;
+	_ServerDetails						GetServerDetails() const;
+	
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
-
+	void	SetServerDetails();
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
+	void	PostRequiredHeaders();
 
-	void	CheckRequiredHeaders();
+	void	ParseHeaders();
 
 	void	HandleQuery();
 	void	HandlePath();
 	void	SplitURI();
-	void	ParseURI(std::string	&URI);
+	void	ParseURI();
 	void	SetUpRequest();
 	void	ReadBodyChunk();
+	void	GetBoundaryFromHeader();
 };
 
 // ---------	HELPER FUNCTIONS 	--------- //
@@ -97,5 +112,6 @@ bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
-
-#endif
+size_t			CrlfCounter(std::string	&str);
+void			CreateDirectory(std::string FilenamePath);
+void			FindFileName(std::string	&Buffer, std::string	&Filename);

@@ -112,3 +112,52 @@ void	TrimSpaces(std::string& str)
 
 	str = str.substr(start, end - start);
 }
+
+void	CreateDirectory(std::string FilenamePath)
+{
+	struct stat	Tmp;
+	(void)FilenamePath;
+
+    if (stat("Uploads", &Tmp)) // return 0 if exists || if not create it
+	{
+		if (mkdir("Uploads", 0777)) // return 0 means success
+			PrintError("Could't open Directory"), throw "400 Bad Request";
+	}
+}
+
+void	FindFileName(std::string	&Buffer, std::string	&Filename)
+{
+	size_t	FilenamePos = 0, FilenameEndPos = 0;
+	
+	FilenamePos = Buffer.find("filename=\"", 0);
+	FilenameEndPos = Buffer.find("\"\r\n", FilenamePos + 10);
+
+	if (FilenamePos == std::string::npos || FilenameEndPos == std::string::npos)
+	{
+		PrintError("Could't find file");
+		throw "400 Bad Request";
+	}
+
+
+	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
+
+	Filename = "Uploads/" + Filename;
+	CreateDirectory("Uploads");
+
+	Buffer = Buffer.substr(FilenameEndPos + 1);
+}
+
+// --------------#	COUNTERS	 #-------------- //
+
+size_t	CrlfCounter(std::string	&str)
+{
+	std::string	CRLF("\n\r");
+	size_t Pos = 0, Count = 0;
+	
+	while ((Pos = str.find(CRLF, Pos))!= std::string::npos)
+	{
+		Pos += CRLF.length();
+		Count++;
+	}
+	return Count;
+}

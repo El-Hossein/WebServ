@@ -373,12 +373,13 @@ std::string Response::generateListingDir()
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, int index)
 {
-    ConfigNode a = ConfigNode::GetServer(ConfigPars, "myserver1.com");// need to handle
+    // ConfigNode a = ConfigNode::GetServer(ConfigPars, "myserver1.com");// need to handle
 
-    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
-    if (autoIndex.empty())
-        return "";
-    return autoIndex[index];
+    // std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
+    // if (autoIndex.empty())
+    //     return "";
+    // return autoIndex[index];
+	return "";
 }
 
 bool Response::generateAutoIndexOn(Request &req)

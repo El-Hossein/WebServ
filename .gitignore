@@ -1,9 +1,9 @@
 Request/*.txt
 Request/z.*
+*.txt
 obj/
 Webserv
 a.tldr
 test/
 .vscode/
-t.txt
 AllServer/GenerateJWT.php
