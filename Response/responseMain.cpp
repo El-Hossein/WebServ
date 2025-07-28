@@ -371,14 +371,13 @@ std::string Response::generateListingDir()
     return html;
 }
 
-std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, int index)
+std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
 {
-    // ConfigNode a = ConfigNode::GetServer(ConfigPars, "myserver1.com");// need to handle
+    ConfigNode a = ConfigNode::GetServer(ConfigPars, req.GetServerDetails());// need to handle
 
-    // std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
-    // if (autoIndex.empty())
-    //     return "";
-    // return autoIndex[index];
+    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
+    if (!autoIndex.empty())
+        return autoIndex[0];
 	return "";
 }
 
@@ -408,8 +407,8 @@ bool Response::generateAutoIndexOn(Request &req)
 
 void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req)
 {
-    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", 0);
-    index = getInfoConfig(ConfigPars, "index", "NULL", 0);
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", req);
+    index = getInfoConfig(ConfigPars, "index", "NULL", req);
 
     if (!index.empty())
     {
