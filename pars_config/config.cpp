@@ -138,13 +138,44 @@ void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, siz
     }
 }
 
-void CheckAllError(const std::vector<std::string>& KV, const std::string& key, ConfigNode& ConfNode, int max, int mult) {
+void checkAliasRoot(const std::string& key, ConfigNode& ConfNode)
+{
+    if (key == "alias")
+    {
+        std::vector<std::string> root = ConfNode.getValuesForKey(ConfNode, "root", "NULL");
+        if (!root.empty())
+            throw std::runtime_error("Error: Alias and Root cant be in the same location");
+        return;
+    }
+    if (key == "root")
+    {
+        std::vector<std::string> alias = ConfNode.getValuesForKey(ConfNode, "alias", "NULL");
+        if (!alias.empty())
+            throw std::runtime_error("Error: Alias and Root cant be in the same location");
+    }
+}
+
+void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigNode& ConfNode, int max, int mult) {
     int count = 0;
     (void)ConfNode;
     count = KV.size() - 1;
     if (key != KV[0]) return;
     
-    
+    if (key == "alias" || key == "root")
+        checkAliasRoot(key, ConfNode);
+    if (key == "allow_methods")
+    {
+        int CheckNono = 0;
+        int CheckOthers = 0;
+        for (std::vector<std::string>::iterator it = KV.begin(); it != KV.end(); ++it) {
+            if (*it == "GET" || *it == "POST" || *it == "DELETE")
+                CheckOthers = 1;
+            else if (*it == "NONE")
+                CheckNono = 1;
+        }
+        if (CheckNono == 1 && CheckOthers == 1)
+            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
+    }
     std::vector<std::string> helo = ConfNode.getValuesForKey(ConfNode, key, "NULL");
     if (!helo.empty())
     {
@@ -175,11 +206,13 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "allow_methods", ConfNode, 3, 1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
         CheckAllError(KV, "return", ConfNode, -1, 2);
-        CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
+        // CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
+        CheckAllError(KV, "alias", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
-        CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
+        // CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "upload_store", ConfNode, 1, 1);
+        CheckAllError(KV, "allow_cgi", ConfNode, 3, 1);
     }
 }
 
@@ -256,11 +289,13 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         LOCATION_VALID_KEYS.push_back("autoindex");
         LOCATION_VALID_KEYS.push_back("allow_methods");
         LOCATION_VALID_KEYS.push_back("return");
-        LOCATION_VALID_KEYS.push_back("php-cgi");
+        // LOCATION_VALID_KEYS.push_back("php-cgi");
         LOCATION_VALID_KEYS.push_back("root");
         LOCATION_VALID_KEYS.push_back("index");
-        LOCATION_VALID_KEYS.push_back("py-cgi");
+        // LOCATION_VALID_KEYS.push_back("py-cgi");
+        LOCATION_VALID_KEYS.push_back("allow_cgi");
         LOCATION_VALID_KEYS.push_back("upload_store");
+        LOCATION_VALID_KEYS.push_back("alias");
 
         initialized = true;
     }
