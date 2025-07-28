@@ -24,7 +24,7 @@ enum	DataType
 
 enum	ContentType
 {
-	Boundary, Binary, Raw, Other
+	_Boundary, Binary, Raw, Other
 };
 
 class	Request

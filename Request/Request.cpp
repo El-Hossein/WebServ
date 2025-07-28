@@ -343,7 +343,7 @@ void	Request::PostRequiredHeaders()
 	{
 		if (Headers["content-type"].find("multipart/form-data") != std::string::npos)
 		{
-			this->ContentType = Boundary;
+			this->ContentType = _Boundary;
 			GetBoundaryFromHeader();
 		}
 	}
