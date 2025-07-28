@@ -2,8 +2,9 @@
 #include "Request.hpp"
 
 Post::Post(Request	&_obj) :	obj(_obj),
-								BodyUnprocessedBuffer(_obj.GetUnprocessedBuffer()),
-								MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
+								UnprocessedBuffer(_obj.GetUnprocessedBuffer()),
+								Boundary(obj.GetBoundarySettings()),
+								// MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
 								EndOfRequest(false),
 								BodyFullyRead(false)
 {
@@ -22,47 +23,15 @@ Post::~Post() {
  * 
  */
 
-void	Post::PostRequiredHeaders()
-{
-	std::map<std::string, std::string>	Headers = obj.GetHeaders();
-	std::string							LowKey;
-
-	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
-		PrintError("Missing POST required headers"), throw "400 Bad request";
-
-	if (Headers.find("content-length") != Headers.end())
-	{
-		if (!ValidContentLength(Headers["content-length"]))
-			PrintError("Invalide Content-Length"), throw "400: Bad Request";
-		obj.SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
-		DataType = FixedLength;
-	}
-
-	(Headers.find("transfer-encoding") != Headers.end() && Headers["transfer-encoding"] == "chunked") ?
-		DataType = Chunked : throw "501 Not implemented - PostRequestHeaders()";
-
-	if (Headers.find("content-type") != Headers.end())
-	{
-		if (Headers["content-type"] == "application/x-www-form-urlencoded")
-				this->ContentType = UrlEncoded;
-		if (Headers["content-type"].find("multipart/form-data") != std::string::npos)
-			this->ContentType = MultipartFormData;
-		if (Headers["content-type"] == "application/json")
-			this->ContentType = ApplicationJson;
-	}
-}
-
 void	Post::IsBodyFullyRead()
 {
 	MaxAllowedBodySize = 1028 * 10; // tmp value = 10280 -> 10MegaBytes
-	
+
 	std::cout << "Content-Length:{" << obj.GetContentLength() << "}" << std::endl;
-	std::cout << "UnprocessedBuffer-Length:{" << BodyUnprocessedBuffer.size() << "}" << std::endl;
+	std::cout << "UnprocessedBuffer-Length:{" << UnprocessedBuffer.size() << "}" << std::endl;
 
-	// if (obj.GetContentLength() > this->MaxAllowedBodySize)
+	// if (obj.GetTotatlBytesRead() > this->MaxAllowedBodySize)
 	// 	throw "413 Request Entity Too Large";
-
-	BodyUnprocessedBuffer.size() == obj.GetContentLength() ? BodyFullyRead = true : BodyFullyRead = false;
 }
 
 /*	|#----------------------------------#|
@@ -70,162 +39,307 @@ void	Post::IsBodyFullyRead()
 	|#----------------------------------#|
 */
 
-void	Post::ParseUrlEncoded(std::istringstream	&stream)
-{
-	size_t				pos = 0;
-	std::string			key, value, tmp;
+// void	Post::ParseUrlEncoded(std::istringstream	&stream)
+// {
+// 	size_t				pos = 0;
+// 	std::string			key, value, tmp;
 
-	while (std::getline(stream, tmp, '&'))
-	{
-		pos = tmp.find("=");
-		if (pos == std::string::npos)
-		continue;
-		key = tmp.substr(0, pos);
-		value = tmp.substr(pos + 1);
-		if (key.empty() || value.empty())
-			continue;
-		std::cout << "Before:" << value << std::endl;
-		DecodeHexaToChar(value);
-		std::cout << "After:" << value << std::endl;
-		BodyParams[key] = value;
-	}
-}
+// 	while (std::getline(stream, tmp, '&'))
+// 	{
+// 		pos = tmp.find("=");
+// 		if (pos == std::string::npos)
+// 		continue;
+// 		key = tmp.substr(0, pos);
+// 		value = tmp.substr(pos + 1);
+// 		if (key.empty() || value.empty())
+// 			continue;
+// 		std::cout << "Before:" << value << std::endl;
+// 		DecodeHexaToChar(value);
+// 		std::cout << "After:" << value << std::endl;
+// 		BodyParams[key] = value;
+// 	}
+// }
 
 /*	|#----------------------------------#|
-	|#		ParseMultipartFormData    	#|
+	|#			ParseBoundary	    	#|
 	|#----------------------------------#|
 */
 
-void	Post::GetBoundaryFromHeader()
+
+
+void	Post::WriteToFile(std::string &Filename, std::string &Buffer)
 {
-	std::string										tmp;
-	std::map<std::string, std::string>				Headers = obj.GetHeaders();
-	std::map<std::string, std::string>::iterator	it = Headers.find("content-type");
-	
-	size_t	pos = it->second.find(";");
-	if (pos == std::string::npos)
-		throw "400 Bad Request -ParseMultipartFormData()";
+	std::ofstream OutFile;
 
-	tmp = it->second.substr(pos + 1);
-
-	pos = it->second.find("=");
-	if (pos == std::string::npos)
-		throw "400 Bad Request -ParseMultipartFormData()";
-
-	Boundary = it->second.substr(pos + 1); // setting Boundary
-	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		throw "400 Bad Request -ParseMultipartFormData() -Boundary Parsing.";
-
-	BoundaryStart = "\r\n--" + Boundary;
-	BoundaryEnd = "\r\n--" + Boundary + "--";
+	OutFile.open(Filename.c_str(), std::ios::binary); // std::ios::app => to append
+	if (!OutFile.is_open())
+		throw "500 Internal Server Error";
+	OutFile.write(Buffer.c_str(), Buffer.size());
 }
 
-void	Post::WriteToFile(std::string	&Buffer)
+void	Post::GetSubBodies(std::string &Buffer) // state machine
 {
-	size_t	FilenamePos = 0, FilenameEndPos = 0, BodyPos = 0;
-	std::ofstream		OutFile;
-	std::string			Filename, FilenamePath, BodyContent;
-	std::istringstream	stream(Buffer);
+	std::string	Filename, BodyContent;
+	size_t	start = 0, end = 0, BodyPos = 0, finish = 0;
 
-	//------------------	Find SubBodyContent	------------------//
-	BodyPos = Buffer.find("\r\n\r\n");
-	if (BodyPos == std::string::npos)
-		throw "400 Bad Request -WriteToFile()";
-	BodyContent = Buffer.substr(BodyPos + 4);
-	// std::cout << "BodyContent:{" << BodyContent << "}" << std::endl;
-
-	//------------------	Find FileName	------------------//
-	FilenamePos = Buffer.find("filename=\"");
-	if (FilenamePos != std::string::npos)
-	{
-		FilenameEndPos = Buffer.find("\"\r\n", FilenamePos + 10);
-		if (FilenameEndPos == std::string::npos)
-		throw "400 Bad Request -WriteToFile()";
-		
-		Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
-		std::cout << "Filename:{" << Filename << "}" << std::endl;
-		
-		FilenamePath = "Uploads/" + Filename;
-
-		OutFile.open(FilenamePath.c_str(), std::ios::app); // std::ios::app => to append
-		if (!OutFile.is_open())
-			throw "500 Internal Server Error";
-		OutFile << BodyContent;
-	}
-}
-
-void	Post::GetSubBodys(std::string &Buffer)
-{
-	Buffer = "\r\n" + Buffer;
-	std::string	tmp;
-	size_t start = 0, end = 0, RequestEnd = 0;
-	
-//------------------	Check if Request Ended	------------------//
-	if (Buffer.find(BoundaryEnd) != std::string::npos)
-		this->EndOfRequest = true;
 	while (true)
 	{
-		start = Buffer.find(BoundaryStart, end);
-		if (start == std::string::npos)		break;
+		if (BoundaryStatus == None)
+		{
+			start = Buffer.find(Boundary.BoundaryStart, 0);
+			if (start == std::string::npos)
+				PrintError("Boudary Error"), throw "400 Bad Request";
+			
+			// std::string Previous(Buffer, start);
+			// if (Previous.size() > 0 && !Filename.empty())
+			// 	WriteToFile(Filename, Previous);
 
-		end = Buffer.find(BoundaryStart, start + BoundaryStart.length());
-		if (end == std::string::npos)		break;
-
-		size_t	size = end - start;
-		tmp = Buffer.substr(start, size);
-
-		WriteToFile(tmp);
+			Buffer = Buffer.substr(start + Boundary.BoundaryStart.size());
+			BoundaryStatus = GotBoundaryStart;
+		}
+		if (BoundaryStatus == GotBoundaryStart)
+		{
+			FindFileName(Buffer, Filename);
+			BoundaryStatus = GotFile;
+		}
+		if (BoundaryStatus == GotFile)
+		{
+			BodyPos = Buffer.find("\r\n\r\n");
+			if (BodyPos == std::string::npos)
+				PrintError("No Body Found - No Double CRLF"), throw "400 Bad Request";
+			Buffer = Buffer.substr(BodyPos + 4);
+			BoundaryStatus = GotBody;
+		}
+		if (BoundaryStatus == GotBody)
+		{
+			end = Buffer.find(Boundary.BoundaryStart);
+			if (end != std::string::npos)
+			{
+				BodyContent = Buffer.substr(0, end);
+				// Buffer = Buffer.substr(end);
+				BoundaryStatus = GotBoundaryEnd;
+			}
+			
+			WriteToFile(Filename, BodyContent);
+		}
+		if (BoundaryStatus == GotBoundaryEnd)
+		{
+			// std::cout << "---->Filename:{" << Filename << "}\n" << std::endl;
+			// std::cout << "---->Its BodyContent:{" << BodyContent << "}\n" << std::endl;
+			// std::cout << "---->Its Buffer:{" << Buffer << "}\n" << std::endl;
+			// std::cout << "---->Its BoundaryEnd:{" << Boundary.BoundaryEnd<< "}\n" << std::endl;
+			if (Buffer.find(Boundary.BoundaryEnd, end) == end) // Check if Request Ended && found the BoundaryEnd
+			{
+				obj.SetClientStatus(EndReading);
+				BoundaryStatus = Finished;
+				std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+			}
+			BoundaryStatus = None;
+		}
 	}
 }
 
-void	Post::ParseMultipartFormData(std::istringstream	&BodyStream, std::string &str)
-{
+void	Post::ParseBoundary(std::string	Body)
+{	
+	GetSubBodies(Body);
 
-	GetBoundaryFromHeader();
-/*	 Loop on to read the full request from socket	*/
-	GetSubBodys(str);
-
-/*	 Check if the Request has been fully read	*/
-	if (EndOfRequest)	throw "200 Success";
-	else				PrintError("Invalide Boundary End"), throw "400 Bad request";
-}
-
-/*	|#----------------------------------#|
-	|#		ParseApplicationJson    	#|
-	|#----------------------------------#|
-*/
-
-void	Post::ParseApplicationJson(std::istringstream	&stream)
-{
-
-}
-
-void	Post::ParseBody()
-{
-	std::string			Body = obj.GetUnprocessedBuffer();
-	std::istringstream	stream(Body);
-
-	switch (this->ContentType)
+	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
-		case UrlEncoded			:	return ParseUrlEncoded(stream);
-		case MultipartFormData	:	return ParseMultipartFormData(stream, Body);
-		case ApplicationJson	:	return ParseApplicationJson(stream);
-		default					:	return throw "415 Unsupported Media Type";
+		obj.SetClientStatus(EndReading);
+		if (BoundaryStatus != Finished)
+			throw "400 Bad Request";
 	}
 }
 
 void	Post::HandlePost()
-    {
-        std::cout << "\n\t\t<# POST #>\t\t\n\n";
-        std::cout << obj.GetClientStatus() << std::endl;
+{
+	switch (obj.GetDataType()) // Chunked || FixedLength
+	{
+		case FixedLength	:	
+		{
+			if (obj.GetContentType() == ContentType::Boundary) // To not have a conflict with the (std::string Boundary)
+				return ParseBoundary(UnprocessedBuffer);
+			if (obj.GetContentType() == ContentType::Raw)
+				;//	Function deyal Raw
+			if (obj.GetContentType() == ContentType::Binary)
+				;//	Function deyal Binary
+			}
+		case Chunked		:
+		{
+			if (obj.GetContentType() == ContentType::Boundary) // To not have a conflict with the (std::string Boundary)
+				return ParseBoundary(UnprocessedBuffer);
+			if (obj.GetContentType() == ContentType::Raw)
+				;
+			if (obj.GetContentType() == ContentType::Binary)
+				;
+		}
+	}
+}
 
-        PostRequiredHeaders();
-		IsBodyFullyRead();
-        if (BodyFullyRead) // the Body has been entirely read
-        { 
-            ParseBody();
-            obj.SetClientStatus(EndBody);
-        }
-        else
-        	obj.SetClientStatus(ReadBody);
-    }
+
+
+
+
+
+
+
+// void	Post::WriteToFile(std::string	&Buffer, _SubBodyStatus &Status)
+// {
+// 	size_t				BodyPos = 0;
+// 	std::ofstream		OutFile;
+// 	std::string			BodyContent, Filename;
+// 	static	std::string	FilenamePath;
+// 	static	bool		IsFileExist = false;
+
+// 	if (Status == WithNoBoundary) // Pure Body
+// 	{
+// 		OutFile.open(FilenamePath.c_str(), std::ios::binary); // std::ios::app => to append
+// 		if (!OutFile.is_open())
+// 			throw "500 Internal Server Error";
+// 		OutFile << BodyContent;
+// 	}
+// 	if (Status != WithNoBoundary)
+// 	{
+// 		FindFileName(Buffer, Filename);
+
+// 		//------------------	Find SubBodyContent	------------------//
+// 		BodyPos = Buffer.find("\r\n\r\n");
+// 		if (BodyPos == std::string::npos)
+// 			throw "400 Bad Request -WriteToFile() - No double CRLF -";
+// 		BodyContent = Buffer.substr(BodyPos + 4);
+// 	}
+// 	else
+// 		BodyContent = Buffer;
+
+// 	if (Flager.BoolFile)
+// 	{
+// 		OutFile.open(FilenamePath.c_str(), std::ios::binary); // std::ios::app => to append
+// 		if (!OutFile.is_open())
+// 			throw "500 Internal Server Error";
+// 		OutFile << BodyContent;
+// 	}
+// 	// std::cout << "BodyContent:{" << BodyContent << "}" << std::endl;
+// }
+
+
+
+	// 	start = Buffer.find(Boundary.BoundaryStart, end);
+	// 	if (start != std::string::npos) // start Boundary kayn
+	// 	{
+	// 		Flager.BoolStart = true;
+
+	// 		end = Buffer.find(Boundary.BoundaryStart, start + Boundary.BoundaryStart.length());
+	// 		(end != std::string::npos)	?	Flager.BoolEnd = true : Flager.BoolEnd = false;
+	// 	}
+	// 	if (!(Flager.BoolStart && Flager.BoolEnd)) // ila makanoch bjouj
+	// 		break ;
+
+	// 	size_t size = end - start;
+
+	// 	SubBody = Buffer.substr(start, size);
+	// 	SubBodyStatus = WithBothBoundaries; // continue with the loop
+	// 	WriteToFile(SubBody, SubBodyStatus);
+	// }
+
+	// if (Flager.BoolStart && !Flager.BoolEnd)	SubBodyStatus = WithBoundaryStart;
+	// if (!Flager.BoolStart && !Flager.BoolEnd)	SubBodyStatus = WithNoBoundary;
+
+	// if (SubBodyStatus != WithBothBoundaries)
+	// {
+	// 	std::cout << "\n----->SubBody passed:{" << SubBody << "}" << std::endl;
+
+	// 	WriteToFile(SubBody, SubBodyStatus);
+	// }
+
+
+
+
+
+
+
+	// while (true)
+	// {
+	// 	start = Buffer.find(Boundary.BoundaryStart, end);
+	// 	if (start != std::string::npos) // start Boundary kayn
+	// 	{
+	// 		Flager.BoolStart = true;
+
+	// 		end = Buffer.find(Boundary.BoundaryStart, start + Boundary.BoundaryStart.length());
+	// 		(end != std::string::npos)	?	Flager.BoolEnd = true : Flager.BoolEnd = false;
+	// 	}
+
+	// 	if (Flager.BoolStart && Flager.BoolEnd)
+	// 	{
+	// 		size_t size = end - start;
+	// 		size += Boundary.BoundaryStart.length();
+	// 		SubBody = Buffer.substr(start, size);
+	// 		if (CrlfCounter(SubBody) != 5)
+	// 			throw "400 Bad Request";
+
+	// 		SubBodyStatus = WithBothBoundaries; // continue with the loop
+	// 	}
+	// 	else if (Flager.BoolStart && !Flager.BoolEnd) // SubBody = From Boundary start to end of buffer
+	// 	{
+	// 		SubBody	= Buffer.substr(start);
+	// 		SubBodyStatus = WithBoundaryStart;
+	// 	}
+	// 	else if (!Flager.BoolStart && !Flager.BoolEnd)
+	// 	{
+	// 		SubBody = Buffer;
+	// 		SubBodyStatus = WithNoBoundary;
+	// 		end		= 0;
+	// 	}
+		
+	// }
+
+
+
+
+
+
+
+
+
+
+// void	Post::WriteToFile(std::string	&Buffer)
+// {
+// 	size_t	FilenamePos = 0, FilenameEndPos = 0, BodyPos = 0;
+// 	std::ofstream		OutFile;
+// 	std::string			Filename, BodyContent;
+// 	std::istringstream	stream(Buffer);
+
+// 	//------------------	Find SubBodyContent	------------------//
+// 	BodyPos = Buffer.find("\r\n\r\n");
+// 	if (BodyPos == std::string::npos)
+// 		throw "400 Bad Request -WriteToFile()";
+// 	BodyContent = Buffer.substr(BodyPos + 4);
+// 	// std::cout << "BodyContent:{" << BodyContent << "}" << std::endl;
+
+
+// }
+
+// void	GetFileName(std::string	&FileName, std::string	&SubBody)
+// {
+// 	std::ofstream	OutFile;
+// 	std::string		FileNamePath;
+// 	size_t	FilenamePos = 0, FilenameEndPos = 0, BodyPos = 0;
+
+// 	FilenamePos = SubBody.find("filename=\"");
+// 	if (FilenamePos != std::string::npos) // ila kayn file
+// 	{
+// 		FilenameEndPos = SubBody.find("\"\r\n", FilenamePos + 10);
+// 		if (FilenameEndPos == std::string::npos)
+// 			throw "400 Bad Request -WriteToFile()";
+
+// 		FileName = SubBody.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
+
+// 		FileName = "Uploads/" + FileName;
+
+// 		// OutFile.open(FileNamePath.c_str(), std::ios::app); // std::ios::app => to append
+// 		// if (!OutFile.is_open())
+// 		// 	throw "500 Internal Server Error";
+// 		// OutFile << SubBody;
+	// }
+// 	else // ila makaynch file
+// 		throw "Filename Not Found.";
+// }

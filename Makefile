@@ -4,8 +4,8 @@ CC = c++
 
 FLAGS = -fsanitize=address -g #-Wall -Wextra -Werror -std=c++98
 
-SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp ./Request/Request.cpp \
-		./FunctionTools.cpp ./Request/Get.cpp ./Request/Post.cpp ./Request/Delete.cpp \
+SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp \
+		./FunctionTools.cpp ./Request/Request.cpp ./Request/Post.cpp \
 		./cgi/cgiMain.cpp ./cgi/cgiExecPars.cpp ./cgi/cgiResponse.cpp \
 		./Response/responseMain.cpp
 
@@ -36,4 +36,4 @@ re: fclean all
 .PHONY: all clean fclean re
 
 test:
-	c++ -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
+	c++ -w -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test

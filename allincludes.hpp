@@ -1,5 +1,4 @@
-#ifndef ALLINCLUDES_HPP
-#define ALLINCLUDES_HPP
+#pragma once
 
 #include <cstdio> 
 #include <cstddef>
@@ -13,7 +12,6 @@
 #include <map>
 #include <algorithm>
 #include <signal.h>
-
 #include <poll.h>
 #include <cstdlib>
 #include <fcntl.h>
@@ -23,8 +21,42 @@
 #include <arpa/inet.h>
 #include <sys/event.h>
 #include <sys/stat.h>
-
 #include <csignal>
 
+struct	_BoundarySettings
+{
+	std::string	Boundary;
+	std::string	BoundaryStart;
+	std::string	BoundaryEnd;
+};
 
-#endif
+enum	_SubBodyStatus
+{
+	WithBoundaryStart,
+	WithBothBoundaries,
+	WithNoBoundary
+};
+
+enum	_BoundaryStatus
+{
+	None,
+	GotBoundaryStart,
+	GotFile,
+	GotBody,
+	GotBoundaryEnd,
+	Finished
+};
+
+struct	BoundaryFlager
+{
+	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
+	size_t	CrlfCount = 0;
+};
+
+struct	_ServerDetails
+{
+	bool		IsPortExist;
+	size_t		RealPort;
+	std::string	ServerHost;
+	std::string	ServerPort;
+};
