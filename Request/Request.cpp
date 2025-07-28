@@ -140,17 +140,22 @@ void	Request::SetContentLength(const size_t	Length)
 void	Request::SetServerDetails()
 {
 	std::string	&Host = Headers["host"];
+	if (Host.empty())
+		PrintError("Host Error"), throw "400 Bad Request";
 
 	size_t		Pos = Host.find(":");
 	if (Pos == std::string::npos)
+	{
+		ServerDetails.ServerHost = Host;
 		return ;
-	
+	}
+
 	ServerDetails.IsPortExist = true;
 	ServerDetails.ServerHost = Host.substr(0, Pos);
 	ServerDetails.ServerPort = Host.substr(Pos + 1);
 
-	// std::cout << "{" << ServerDetails.ServerHost << "}" << std::endl;
-	// std::cout << "{" << ServerDetails.ServerPort << "}\n\n" << std::endl;
+	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
+		PrintError("Host Error"), throw "400 Bad Request";
 }
 
 /*	|#----------------------------------#|
