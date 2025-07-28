@@ -97,7 +97,6 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
 		}
 	}
 	std::cout << "------------------------------------------------------------------------------" << std::endl;
-	std::cout << "------------------------------------------------------------------------------" << std::endl;
 }
 
 
@@ -110,7 +109,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			std::cerr << "Accept failed on server_fd " << server_fd << ": " << strerror(errno) << std::endl;
 		}
-		return new Request(-1, ReadHeader,ConfigPars);
+		int tmp(0);return new Request(-1, ReadHeader,ConfigPars, tmp);
 	}
 
 	char client_ip[INET_ADDRSTRLEN];
@@ -134,7 +133,7 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 	struct kevent event;
 	AddToKqueue(event, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
 	AddToKqueue(event, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_DISABLE);
-	Request * new_request = new Request(client_fd, ReadHeader, ConfigPars);
+	Request * new_request = new Request(client_fd, ReadHeader, ConfigPars, server_port);
 	std::cout << "[" << client_fd << "]" << std::endl;
 	return new_request;
 }
@@ -204,42 +203,41 @@ Response * RightResponse(int client_fd, std::vector<Response*>& all_res)
 }
 
 void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all_req, std::vector<Response*>& all_res) {
-	// Find the corresponding Request object
-	Request* request = RightRequest(client_fd, all_req);
-	
-	Response* response = RightResponse(client_fd, all_res);
 
-	
-	// std::cout << request->GetClientFd() << std::endl;
-	if (!request) return; // Request requestect not found
-		if (event->filter == EVFILT_READ) {
-		try {
-			request->SetUpRequest();
-		}
-		catch (const char* e)
-		{
+	// Find the corresponding Request object
+	Request		*request = RightRequest(client_fd, all_req);
+	Response	*response = RightResponse(client_fd, all_res);
+
+	if (!request)
+		return; // Request requestect not found
+	if (event->filter == EVFILT_READ)
+	{
+		try { request->SetUpRequest(); }
+			catch (const char* e) { return; }
+		if (request->GetClientStatus() != EndReading)
 			return;
-		}
-		if (request->GetClientStatus() != EndBody)
-			return;
-		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-		std::map<std::string, std::string> all_header = request->GetHeaders();
-		for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
-			std::cout << it->first << ": " << it->second << std::endl;
-		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-		SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+
+		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
+		// std::map<std::string, std::string> all_header = request->GetHeaders();
+		// for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
+		// 	std::cout << it->first << ": " << it->second << std::endl;
+		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
+
+							// SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		// response->setHasMore(response->getNextChunk(100000));
 		// response->setBytesSent(0);
 		// std::cout << "response: " << response->getChunk().c_str() << std::endl;
-		std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-		if (response->gethasPendingCgi())
-			return;
-		else{
-			struct kevent ev;
-			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-			AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-		}
+		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
+							// if (response->gethasPendingCgi())
+							// 	return;
+							// else
+							// {
+							// 	struct kevent ev;
+							// 	AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+							// 	AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+							// }
 	}
 
 	if (event->filter == EVFILT_WRITE)
