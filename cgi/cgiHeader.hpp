@@ -24,7 +24,7 @@ enum Connection
 {
     _close,
     keepAlive,
-    None
+    _Empty
 };
 
 class Cgi
