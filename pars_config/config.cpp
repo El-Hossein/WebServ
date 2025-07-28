@@ -436,7 +436,7 @@ void ConfigNode::print() const {
 }
 
 
-ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, std::string ServerName)
+ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDetails ServerDetails)
 {
     std::vector<std::vector<std::string> > arr;
 
@@ -444,7 +444,7 @@ ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, std::string
     {
         for (std::map<std::string, std::vector<std::string> >::const_iterator it = ConfigPars[i].values.begin(); it != ConfigPars[i].values.end(); ++it)
         {
-            if(it->first == "server_names" && it->second[0] == ServerName )
+            if(it->first == "server_names" && it->second[0] == ServerDetails.ServerHost)
             {
                 return ConfigPars[i];
             }

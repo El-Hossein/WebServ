@@ -124,10 +124,10 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
 		{
-			std::cout << "---->Filename:{" << Filename << "}\n" << std::endl;
-			std::cout << "---->Its BodyContent:{" << BodyContent << "}\n" << std::endl;
-			std::cout << "---->Its Buffer:{" << Buffer << "}\n" << std::endl;
-			std::cout << "---->Its BoundaryEnd:{" << Boundary.BoundaryEnd<< "}\n" << std::endl;
+			// std::cout << "---->Filename:{" << Filename << "}\n" << std::endl;
+			// std::cout << "---->Its BodyContent:{" << BodyContent << "}\n" << std::endl;
+			// std::cout << "---->Its Buffer:{" << Buffer << "}\n" << std::endl;
+			// std::cout << "---->Its BoundaryEnd:{" << Boundary.BoundaryEnd<< "}\n" << std::endl;
 			if (Buffer.find(Boundary.BoundaryEnd, end) == end) // Check if Request Ended && found the BoundaryEnd
 			{
 				obj.SetClientStatus(EndReading);

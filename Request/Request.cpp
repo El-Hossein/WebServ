@@ -13,6 +13,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 							RequestNotComplete(true),
 							zbi("")
 {
+	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
 }
 
@@ -112,6 +113,11 @@ size_t				Request::GetTotatlBytesRead() const
 	return this->TotalBytesRead;
 }
 
+_ServerDetails	Request::GetServerDetails() const
+{
+	return this->ServerDetails;
+}
+
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -138,11 +144,13 @@ void	Request::SetServerDetails()
 	size_t		Pos = Host.find(":");
 	if (Pos == std::string::npos)
 		return ;
+	
+	ServerDetails.IsPortExist = true;
 	ServerDetails.ServerHost = Host.substr(0, Pos);
 	ServerDetails.ServerPort = Host.substr(Pos + 1);
 
-	std::cout << "{" << ServerDetails.ServerHost << "}" << std::endl;
-	std::cout << "{" << ServerDetails.ServerPort << "}\n\n" << std::endl;
+	// std::cout << "{" << ServerDetails.ServerHost << "}" << std::endl;
+	// std::cout << "{" << ServerDetails.ServerPort << "}\n\n" << std::endl;
 }
 
 /*	|#----------------------------------#|
@@ -248,12 +256,12 @@ void	Request::SplitURI()
 	Headers["query"] = Query;
 }
 
-void	Request::ParseURI(std::string	&URI)
+void	Request::ParseURI()
 {
+	std::string URI = Headers["uri"];
 	if (URI.length() > 2048)
 		throw "414 Request-URI too long";
 
-	Headers["uri"] = URI;
 	SplitURI();
 	HandlePath();
 	HandleQuery();
@@ -277,7 +285,7 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 		
 	Headers["method"] = method;
 
-	ParseURI(URI);
+	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
 		throw ("505: Invalide request protocol.");
@@ -336,8 +344,9 @@ void	Request::PostRequiredHeaders()
 	}
 }
 
-void	Request::CheckRequiredHeaders()
+void	Request::ParseHeaders()
 {
+
 	if (Headers.find("host") == Headers.end())
 		PrintError("No Host has been found!"), throw "400 Bad request";
 	if (Headers.find("connection") != Headers.end())
@@ -346,6 +355,9 @@ void	Request::CheckRequiredHeaders()
 	{
 		PostRequiredHeaders();
 	}
+	SetServerDetails(); // Init localhost + port
+	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
+	ParseURI();
 }
 
 void Request::ReadBodyChunk()
@@ -404,13 +416,11 @@ void	Request::ReadRequestHeader()
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
-	CheckRequiredHeaders();
-	SetServerDetails();
+	ParseHeaders();
 }
 
 void	Request::SetUpRequest()
 {
-	RightServer = ConfigNode::GetServer(Servers, "myserver.com"); // send {ServerHost, ServerPort, RealPort}
 	switch (Client)
 	{
 		case	ReadHeader	:	ReadRequestHeader();	break ;
@@ -423,7 +433,7 @@ void	Request::SetUpRequest()
 		if (RequestNotComplete == true)
 			PrintError("Something is missing."), throw "404 Bad Request";
 
-		std::ofstream File; File.open("ZRawRequest.txt"), File << zbi ;
+		// std::ofstream File; File.open("ZRawRequest.txt"), File << zbi ;
 	}
 	if (Method == POST)
 	{
