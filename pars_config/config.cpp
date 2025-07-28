@@ -37,7 +37,7 @@ std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, const std::string
         return ConfNode.children[index].getName();
 }
 
-std::vector<std::string> ConfigNode::getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
+std::vector<std::string> ConfigNode::   getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     std::vector<std::string> emptyResult;
     std::vector<std::string> arr ;
@@ -435,20 +435,36 @@ void ConfigNode::print() const {
     }
 }
 
+ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string ReqPortHost, std::string PortOrHostInConfig, std::string port)
+{
+    for (size_t i = 0; i < ConfigPars.size(); i++)
+    {
+        std::vector<std::string> ValuesOfPortOrHost = ConfigNode::getValuesForKey(ConfigPars[i], PortOrHostInConfig, "NULL");
+        if (!ValuesOfPortOrHost.empty())
+        {
+            for (std::vector<std::string>::iterator it = ValuesOfPortOrHost.begin(); it != ValuesOfPortOrHost.end(); ++it)
+            {
+                if (*it == ReqPortHost)
+                    return ConfigPars[i];
+            }
+        }
+    }
+    GetTheServer(ConfigPars, port, "listen", port);
+    return ConfigPars[0];
+}
 
 ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDetails ServerDetails)
 {
     std::vector<std::vector<std::string> > arr;
-
-    for (size_t i = 0; i < ConfigPars.size(); i++)
-    {
-        for (std::map<std::string, std::vector<std::string> >::const_iterator it = ConfigPars[i].values.begin(); it != ConfigPars[i].values.end(); ++it)
-        {
-            if(it->first == "server_names" && it->second[0] == ServerDetails.ServerHost)
-            {
-                return ConfigPars[i];
-            }
-        }
-    }
-    return ConfigPars[0];
+    std::string port;
+    std::string host;
+    host = ServerDetails.ServerHost.substr(0, ServerDetails.ServerHost.find(":"));
+    if (ServerDetails.IsPortExist == true)
+        port = ServerDetails.ServerHost.substr(ServerDetails.ServerHost.find(":") + 1);
+    else 
+        port = std::to_string(ServerDetails.RealPort);
+    std::cout << "Host: " << host << std::endl;
+    std::cout << "port: " << port << std::endl;
+    return  GetTheServer(ConfigPars, host, "server_names", port);
+    
 }
