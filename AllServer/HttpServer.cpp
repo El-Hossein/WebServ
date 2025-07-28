@@ -273,8 +273,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
 			if (response->_cgi.getCheckConnection() == _close)
 			{
-				std::cout << "daaaaz" << std::endl;
-				response->_cgi.setCheckConnection(None);
+				response->_cgi.setCheckConnection(_Empty);
 				remove_client(client_fd);
 				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
 				{

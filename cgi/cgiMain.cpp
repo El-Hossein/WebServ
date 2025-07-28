@@ -13,7 +13,7 @@ Cgi::Cgi()
     std::ostringstream ss;
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
-    checkConnection = None;    
+    checkConnection = _Empty;    
 }
 
 Cgi::~Cgi()
