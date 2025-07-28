@@ -8,6 +8,10 @@ Post::Post(Request	&_obj) :	obj(_obj),
 								EndOfRequest(false),
 								BodyFullyRead(false)
 {
+	Flager.BoolStart = false;
+	Flager.BoolEnd = false;
+	Flager.BoolFile = false;
+	Flager.CrlfCount = 0;
 }
 
 Post::~Post() {
@@ -157,20 +161,20 @@ void	Post::HandlePost()
 	{
 		case FixedLength	:	
 		{
-			if (obj.GetContentType() == ContentType::Boundary) // To not have a conflict with the (std::string Boundary)
+			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
 				return ParseBoundary(UnprocessedBuffer);
-			if (obj.GetContentType() == ContentType::Raw)
+			if (obj.GetContentType() == Raw)
 				;//	Function deyal Raw
-			if (obj.GetContentType() == ContentType::Binary)
+			if (obj.GetContentType() == Binary)
 				;//	Function deyal Binary
 			}
 		case Chunked		:
 		{
-			if (obj.GetContentType() == ContentType::Boundary) // To not have a conflict with the (std::string Boundary)
+			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
 				return ParseBoundary(UnprocessedBuffer);
-			if (obj.GetContentType() == ContentType::Raw)
+			if (obj.GetContentType() == Raw)
 				;
-			if (obj.GetContentType() == ContentType::Binary)
+			if (obj.GetContentType() == Binary)
 				;
 		}
 	}
