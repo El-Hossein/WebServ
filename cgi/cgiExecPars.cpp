@@ -73,7 +73,7 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcat(envp[2], req.GetFullPath().c_str());
     // std::cout << envp[2] << std::endl;
     //QUERY_STRING
-    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1]; // if its POST need to read from the file
+    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1];
     strcpy(envp[3], "QUERY_STRING=");
     strcat(envp[3], req.GetHeaderValue("query").c_str());
     // std::cout << envp[3] << std::endl;
