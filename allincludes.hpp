@@ -55,6 +55,7 @@ struct	BoundaryFlager
 
 struct	_ServerDetails
 {
+	bool		IsPortExist;
 	size_t		RealPort;
 	std::string	ServerHost;
 	std::string	ServerPort;

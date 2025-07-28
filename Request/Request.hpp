@@ -75,7 +75,7 @@ public:
 	std::map<std::string, std::string>	GetQueryParams() const;
 	ConfigNode							&GetRightServer();
 	_BoundarySettings					GetBoundarySettings() const;
-
+	_ServerDetails						GetServerDetails() const;
 	
 	// ---------		SETTERS 	 	--------- //
 	void	SetHeaderValue(std::string, std::string);
@@ -89,12 +89,12 @@ public:
 	void	ReadHeaders(std::string);
 	void	PostRequiredHeaders();
 
-	void	CheckRequiredHeaders();
+	void	ParseHeaders();
 
 	void	HandleQuery();
 	void	HandlePath();
 	void	SplitURI();
-	void	ParseURI(std::string	&URI);
+	void	ParseURI();
 	void	SetUpRequest();
 	void	ReadBodyChunk();
 	void	GetBoundaryFromHeader();
