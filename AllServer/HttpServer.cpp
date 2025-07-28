@@ -223,21 +223,21 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		// 	std::cout << it->first << ": " << it->second << std::endl;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 
-							// SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+							SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
 
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		// response->setHasMore(response->getNextChunk(100000));
 		// response->setBytesSent(0);
 		// std::cout << "response: " << response->getChunk().c_str() << std::endl;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-							// if (response->gethasPendingCgi())
-							// 	return;
-							// else
-							// {
-							// 	struct kevent ev;
-							// 	AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-							// 	AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-							// }
+							if (response->gethasPendingCgi())
+								return;
+							else
+							{
+								struct kevent ev;
+								AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+								AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+							}
 	}
 
 	if (event->filter == EVFILT_WRITE)
@@ -271,7 +271,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-			if (response->_cgi.getCheckConnection() == _close)
+			if (true)
 			{
 				response->_cgi.setCheckConnection(_Empty);
 				remove_client(client_fd);

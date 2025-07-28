@@ -72,4 +72,4 @@ class Response
 };
 
 
-std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, int index);
+std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
