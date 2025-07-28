@@ -449,8 +449,9 @@ ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string ReqPortH
             }
         }
     }
-    GetTheServer(ConfigPars, port, "listen", port);
-    return ConfigPars[0];
+	if (PortOrHostInConfig == "listen")
+    	return ConfigPars[0];		
+    return GetTheServer(ConfigPars, port, "listen", port);
 }
 
 ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDetails ServerDetails)
@@ -460,11 +461,11 @@ ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDeta
     std::string host;
     host = ServerDetails.ServerHost.substr(0, ServerDetails.ServerHost.find(":"));
     if (ServerDetails.IsPortExist == true)
-        port = ServerDetails.ServerHost.substr(ServerDetails.ServerHost.find(":") + 1);
+        port = ServerDetails.ServerPort.substr(ServerDetails.ServerPort.find(":") + 1);
     else 
         port = std::to_string(ServerDetails.RealPort);
-    std::cout << "Host: " << host << std::endl;
-    std::cout << "port: " << port << std::endl;
+    // std::cout << "Host: " << host << std::endl;
+    // std::cout << "port: " << port << std::endl;
     return  GetTheServer(ConfigPars, host, "server_names", port);
     
 }

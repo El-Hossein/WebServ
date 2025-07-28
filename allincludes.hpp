@@ -49,8 +49,8 @@ enum	_BoundaryStatus
 
 struct	BoundaryFlager
 {
-	bool	BoolStart = false, BoolEnd = false, BoolFile = false;
-	size_t	CrlfCount = 0;
+	bool	BoolStart, BoolEnd, BoolFile;
+	size_t	CrlfCount;
 };
 
 struct	_ServerDetails
