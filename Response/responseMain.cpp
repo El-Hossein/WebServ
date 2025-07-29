@@ -398,11 +398,9 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
                 _cgi.sethasPendingCgi(true);
-                // hasPendingCgi = true;
                 return;
             }
             _cgi.sethasPendingCgi(false);
-            // hasPendingCgi = false;
             return ;
         }
         else if (checkCode == -1)
@@ -421,43 +419,47 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
             
         }
     }
-    // else if (method == "POST")
-    // {
-    //     if (checkLocation(req, "POST", "allow_methods", ConfigPars) == -1)
-    //         return ;
-    //     _cgi.setcgiHeader("");
-    //     if (IsCgiRequest(uri.c_str()))
-    //     {
-    //         _cgi.handleCgiRequest(req, ConfigPars);
-    //         if (_cgi.getcgistatus() == CGI_RUNNING)
-    //         {
-    //             hasPendingCgi = true;
-    //             return;
-    //         }
-    //         hasPendingCgi = false;
-    //     }
-    //     else
-    //     {
-    //         staticFileBody = postResponseSuccess("file succesefuly uploaded!");
-    //         staticFilePos = 0;
-    //         usingStaticFile = true;
-    //         headers = "HTTP/1.1 201 Created\r\n";
-    //         headers += "Content-Type: text/plain\r\n";
-    //         headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
-    //         if (req.GetHeaderValue("connection") == "keep-alive")
-    //         {
-    //             headers += "Connection: keep-alive\r\n";
-    //             _cgi.setCheckConnection(keepAlive);
-    //         }
-    //         else
-    //         {
-    //             headers += "Connection: close\r\n";
-    //             _cgi.setCheckConnection(_close);
-    //         }
-    //         headers += "\r\n";
-    //         headerSent = 0;
-    //     }
-    // }
+    else if (method == "POST")
+    {
+        if (checkLocation(req, "POST", "allow_methods", ConfigPars) == -1)
+            return ;
+        _cgi.setcgiHeader("");
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
+        {
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                _cgi.sethasPendingCgi(true);
+                return;
+            }
+            _cgi.sethasPendingCgi(false);
+            return ;
+        }
+        else if (checkCode == -1)
+            return ;
+        else
+        {
+            staticFileBody = postResponseSuccess("file succesefuly uploaded!");
+            staticFilePos = 0;
+            usingStaticFile = true;
+            headers = "HTTP/1.1 201 Created\r\n";
+            headers += "Content-Type: text/plain\r\n";
+            headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
+            if (req.GetHeaderValue("connection") == "keep-alive")
+            {
+                headers += "Connection: keep-alive\r\n";
+                _cgi.setCheckConnection(keepAlive);
+            }
+            else
+            {
+                headers += "Connection: close\r\n";
+                _cgi.setCheckConnection(_close);
+            }
+            headers += "\r\n";
+            headerSent = 0;
+        }
+    }
 }
 
 void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
@@ -475,16 +477,22 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
         if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
             return ;
         _cgi.setcgiHeader("");
-        if (_cgi.IsCgiRequest(uri.c_str(), req, ConfigPars))
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
         {
             _cgi.handleCgiRequest(req, ConfigPars);
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
                 _cgi.sethasPendingCgi(true);
+                // hasPendingCgi = true;
                 return;
             }
             _cgi.sethasPendingCgi(false);
+            // hasPendingCgi = false;
+            return ;
         }
+        else if (checkCode == -1)
+            return ;
         deleteResponse(ConfigPars, req);
     }
     else
