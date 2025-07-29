@@ -230,7 +230,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 		// response->setBytesSent(0);
 		// std::cout << "response: " << response->getChunk().c_str() << std::endl;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-							if (response->gethasPendingCgi())
+							if (response->_cgi.gethasPendingCgi())
 								return;
 							else
 							{
@@ -322,7 +322,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 
 				// Match this PID with the correct Response object
 				for (size_t j = 0; j < all_res.size(); ++j) {
-					if (all_res[j]->gethasPendingCgi() &&
+					if (all_res[j]->_cgi.gethasPendingCgi() &&
 						all_res[j]->_cgi.getpid_1() == exitedPid) {
 						int tempClientFd = all_res[j]->getClientFd();
 						Request* _reqPtr = RightRequest(tempClientFd, all_request);
@@ -370,7 +370,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
         // Handle CGI processes
         for (size_t i = 0; i < all_res.size(); ++i)
         {
-            if (all_res[i]->gethasPendingCgi())
+            if (all_res[i]->_cgi.gethasPendingCgi())
             {
                 // Check for timeout
                 time_t currentTime = time(NULL);
@@ -398,7 +398,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 					Request* reqPtr = RightRequest(tempClientFd, all_request);
                     all_res[i]->_cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, *reqPtr);
                     all_res[i]->_cgi.setcgistatus(CGI_ERROR);
-                    all_res[i]->sethasPendingCgi(false);
+                    all_res[i]->_cgi.sethasPendingCgi(false);
 
                     struct kevent ev;
                     int client_fd = all_res[i]->getClientFd();

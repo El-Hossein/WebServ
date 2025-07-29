@@ -90,7 +90,7 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
         // i need to read error pages provided by config file
         case 403: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
         case 404: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
+        case 500: body = readFileToStringcgi("/Users/i61mail/Desktp/WebServ/Response/errorPages/500.html"); break;
         case 501: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
     }
     if (body.empty())
