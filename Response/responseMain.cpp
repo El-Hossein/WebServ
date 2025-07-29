@@ -373,12 +373,19 @@ std::string Response::generateListingDir()
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
 {
-    ConfigNode a = ConfigNode::GetServer(ConfigPars, req.GetServerDetails());// need to handle
+    ConfigNode a = req.GetRightServer();
 
-    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
-    if (!autoIndex.empty())
-        return autoIndex[0];
+    std::vector<std::string> temp = a.getValuesForKey(a, what, location);
+    if (!temp.empty())
+        return temp[0];
 	return "";
+}
+
+std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+{
+    ConfigNode a = req.GetRightServer();
+
+    return a.getValuesForKey(a, what, location);
 }
 
 bool Response::generateAutoIndexOn(Request &req)
@@ -407,8 +414,9 @@ bool Response::generateAutoIndexOn(Request &req)
 
 void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req)
 {
-    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", req);
-    index = getInfoConfig(ConfigPars, "index", "NULL", req);
+	std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path")); // ngulih ystori hada f class 3ndo
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", loc, req);
+    index = getInfoConfig(ConfigPars, "index", loc, req);
 
     if (!index.empty())
     {
@@ -476,6 +484,19 @@ std::string Response::checkContentType()
 
 }
 
+
+int Response::checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
+{
+    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::vector<std::string> allowed_methods = getInfoConfigMultiple(ConfigPars, directive, loc, req);
+    if (std::find(allowed_methods.begin(), allowed_methods.end(), meth) == allowed_methods.end())
+    {
+        responseError(405, " Method Not Allowed", ConfigPars, req);
+        return -1;
+    }
+    return 0;
+}
+
 void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
@@ -483,6 +504,8 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 
     if (method == "GET")
     {
+        if (checkLocation(req, "GET", "allow_methods", ConfigPars) == -1)
+            return ;
         _cgi.setcgiHeader("");
         if (IsCgiRequest(uri.c_str()))
         {
@@ -511,9 +534,12 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
     }
     else if (method == "POST")
     {
+        if (checkLocation(req, "POST", "allow_methods", ConfigPars) == -1)
+            return ;
         _cgi.setcgiHeader("");
         if (IsCgiRequest(uri.c_str()))
         {
+            //i need to check if cgi is allowed
             _cgi.handleCgiRequest(req, ConfigPars);
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
@@ -632,7 +658,8 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
     }
     else if (method == "DELETE")
     {
-        // if method not allowed return 405 Method Not Allowed
+        if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
+            return ;
         _cgi.setcgiHeader("");
         if (IsCgiRequest(uri.c_str()))
         {
