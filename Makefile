@@ -7,7 +7,7 @@ FLAGS = -fsanitize=address -g3 #-Wall -Wextra -Werror -std=c++98
 SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp \
 		./FunctionTools.cpp ./Request/Request.cpp ./Request/Post.cpp \
 		./cgi/cgiMain.cpp ./cgi/cgiExecPars.cpp ./cgi/cgiResponse.cpp \
-		./Response/responseMain.cpp
+		./Response/responseMain.cpp ./Response/response.cpp
 
 OBJ_DIR = obj
 
