@@ -5,7 +5,7 @@
 #include "../pars_config/config.hpp"
 
 #define MAX_HEADER_SIZE	8192
-#define BUFFER_SIZE		100000
+#define BUFFER_SIZE		80000
 
 enum	Method
 {
@@ -114,4 +114,5 @@ bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
 size_t			CrlfCounter(std::string	&str);
 void			CreateDirectory(std::string FilenamePath);
-void			FindFileName(std::string	&Buffer, std::string	&Filename);
+int				FindFileName(std::string	&Buffer, std::string	&Filename);
+void			PrintCrlfString(std::string Buffer);
