@@ -29,7 +29,7 @@ clean:
 	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -rf $(NAME) test
+	rm -rf $(NAME) test Uploads
 
 re: fclean all
 

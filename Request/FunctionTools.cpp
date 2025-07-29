@@ -1,6 +1,24 @@
 #include "Request.hpp"
 
+void	PrintCrlfString(std::string Buffer)
+{
+	std::cout << "|";
+
+	for (size_t i = 0; i < Buffer.size(); i++)
+	{
+		if (Buffer[i] == '\r')
+			std::cout << "R";
+		else if (Buffer[i] == '\n')
+			std::cout << "N";
+		else
+			std::cout << Buffer[i];
+	}
+
+	std::cout << "|\n";
+}
+	
 // --------------#	URI TOOLS #-------------- //
+
 
 bool	IsHexa(char c)
 {
@@ -125,7 +143,7 @@ void	CreateDirectory(std::string FilenamePath)
 	}
 }
 
-void	FindFileName(std::string	&Buffer, std::string	&Filename)
+int	FindFileName(std::string	&Buffer, std::string	&Filename)
 {
 	size_t	FilenamePos = 0, FilenameEndPos = 0;
 	
@@ -134,17 +152,22 @@ void	FindFileName(std::string	&Buffer, std::string	&Filename)
 
 	if (FilenamePos == std::string::npos || FilenameEndPos == std::string::npos)
 	{
-		PrintError("Could't find file");
+		PrintError("Could't find file"); PrintCrlfString(Buffer);
 		throw "400 Bad Request";
 	}
 
-
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 
-	Filename = "Uploads/" + Filename;
-	CreateDirectory("Uploads");
+	Filename = "/Users/zderfouf/goinfre/UploadFile/" + Filename;
+	// CreateDirectory("Uploads");
 
-	Buffer = Buffer.substr(FilenameEndPos + 1);
+	return FilenameEndPos;
+	// Buffer = Buffer.substr(FilenameEndPos + 3);
+
+	// if (Buffer.find("\r\n\r\n") == std::string::npos)
+	// 	std::cout << "Didn't Found the CRLF Before" << std::endl;
+	// else
+	// 	std::cout << "Found the CRLF Before" << std::endl;
 }
 
 // --------------#	COUNTERS	 #-------------- //

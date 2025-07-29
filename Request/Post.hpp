@@ -20,6 +20,7 @@ private:
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
+	std::string							Filename;
 
 	size_t			MaxAllowedBodySize;
 public:
