@@ -13,7 +13,7 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
-    hasPendingCgi = false;
+    // hasPendingCgi = false;
 }
 
 Response::~Response(){
@@ -21,10 +21,10 @@ Response::~Response(){
 }
 
 
-bool    Response::gethasPendingCgi()
-{
-    return hasPendingCgi;
-}
+// bool    Response::gethasPendingCgi()
+// {
+//     return hasPendingCgi;
+// }
 
 std::string Response::getChunk()
 {
@@ -41,10 +41,10 @@ void    Response::setHasMore(bool _hasmore)
     hasMore = _hasmore;
 }
 
-void    Response::sethasPendingCgi(bool pendingcgi)
-{
-    hasPendingCgi = pendingcgi;
-}
+// void    Response::sethasPendingCgi(bool pendingcgi)
+// {
+//     hasPendingCgi = pendingcgi;
+// }
 
 
 ssize_t  Response::getBytesSent()
@@ -201,8 +201,6 @@ bool Response::generateAutoIndexOn(Request &req)
     headerSent = 0;
     return true;
 }
-
-
 
 std::string Response::checkContentType(int index)
 {
@@ -376,19 +374,6 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             generateAutoIndexOn(req);
         else
             responseError(403, " Forbidden", ConfigPars, req);
-
-        // int code = prepareFileResponse(htmlFound, checkContentType(1), req);
-        // if (code == 0)
-        //     return ;
-        // else if (code == 403)
-        // {
-        //     responseError(403, " Forbidden", ConfigPars, req);
-        //     return;
-        // }
-        // if (autoIndexOn == "on" && code == 404)
-        //     generateAutoIndexOn(req);
-        // else
-        //     responseError(403, " Forbidden", ConfigPars, req);
     }
     else if (autoIndexOn == "on")
         generateAutoIndexOn(req);
@@ -406,17 +391,22 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
         if (checkLocation(req, "GET", "allow_methods", ConfigPars) == -1)
             return ;
         _cgi.setcgiHeader("");
-        if (IsCgiRequest(uri.c_str()))
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
         {
             _cgi.handleCgiRequest(req, ConfigPars);
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
-                hasPendingCgi = true;
+                _cgi.sethasPendingCgi(true);
+                // hasPendingCgi = true;
                 return;
             }
-            hasPendingCgi = false;
+            _cgi.sethasPendingCgi(false);
+            // hasPendingCgi = false;
             return ;
         }
+        else if (checkCode == -1)
+            return ;
         stat(uri.c_str(), &st);
         if (S_ISDIR(st.st_mode))
             servListingDiren(ConfigPars, req);
@@ -485,15 +475,15 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
         if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
             return ;
         _cgi.setcgiHeader("");
-        if (IsCgiRequest(uri.c_str()))
+        if (_cgi.IsCgiRequest(uri.c_str(), req, ConfigPars))
         {
             _cgi.handleCgiRequest(req, ConfigPars);
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
-                hasPendingCgi = true;
+                _cgi.sethasPendingCgi(true);
                 return;
             }
-            hasPendingCgi = false;
+            _cgi.sethasPendingCgi(false);
         }
         deleteResponse(ConfigPars, req);
     }

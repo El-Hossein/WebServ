@@ -29,7 +29,7 @@ class Response
         ssize_t  bytesWritten;
         std::string chunk;
         bool        hasMore;
-        bool hasPendingCgi;
+        // bool hasPendingCgi;
 
 
     public :
@@ -65,8 +65,8 @@ class Response
         void                setHasMore(bool _hasmore);
         std::string         getChunk();
         bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req);
-        bool                gethasPendingCgi();
-        void                sethasPendingCgi(bool pendingcgi);
+        // bool                gethasPendingCgi();
+        // void                sethasPendingCgi(bool pendingcgi);
         std::string         postResponseSuccess(const std::string& message);
         int                 checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
 
