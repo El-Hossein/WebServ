@@ -48,7 +48,7 @@ class Response
         std::string         getUri();
         std::string         getFinalResponse();
         void                setFinalResponse(std::string _finalResponse);
-        std::string         checkContentType();
+        std::string         checkContentType(int index);
         void                moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars);
         int                 getClientFd();
         void                setClientFd(int _clientFd);
