@@ -178,7 +178,7 @@ void	Request::GetBoundaryFromHeader()
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
-	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--";
+	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--\r\n";
 }
 
 void	Request::HandleQuery()
@@ -372,6 +372,8 @@ void Request::ReadBodyChunk()
 
 	std::memset(buffer, 0, BUFFER_SIZE);
     BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
+	std::cout << "[" <<  BytesRead << "]" << std::endl;
+	exit(666);
     if (BytesRead < 0)
         throw ("Error: Read failed.");
     if (BytesRead == 0)
@@ -403,7 +405,7 @@ void	Request::ReadRequestHeader()
 	HeaderBuffer.append(buffer, BytesRead);
 
 	zbi += HeaderBuffer;
-
+	std::cout << "{"<< HeaderBuffer<< "}\n";
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
 		return ;
