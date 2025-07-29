@@ -212,7 +212,7 @@ bool Response::getNextChunk(size_t chunkSize)
 
 bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req) 
 {
-    if (!hasPendingCgi)
+    if (!_cgi.gethasPendingCgi())
         return false;
 
     int status;
@@ -256,7 +256,7 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req)
         if (!_cgi.getoutfile().empty())   
             unlink(_cgi.getoutfile().c_str());
 
-        hasPendingCgi = false;
+        _cgi.sethasPendingCgi(false);
         return true;
     }
     else if (result == -1)
@@ -267,7 +267,7 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req)
         
         _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
         _cgi.setcgistatus(CGI_ERROR);
-        hasPendingCgi = false;
+        _cgi.sethasPendingCgi(false);
         
         if (!_cgi.getinfile().empty())
             unlink(_cgi.getinfile().c_str());
