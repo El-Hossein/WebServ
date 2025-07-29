@@ -372,8 +372,6 @@ void Request::ReadBodyChunk()
 
 	std::memset(buffer, 0, BUFFER_SIZE);
     BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
-	std::cout << "[" <<  BytesRead << "]" << std::endl;
-	exit(666);
     if (BytesRead < 0)
         throw ("Error: Read failed.");
     if (BytesRead == 0)
@@ -386,8 +384,6 @@ void Request::ReadBodyChunk()
 
 	if (TotalBytesRead == ContentLength)
 		Client = EndReading;
-
-	zbi += buffer;
 }
 
 void	Request::ReadRequestHeader()
@@ -404,7 +400,6 @@ void	Request::ReadRequestHeader()
 
 	HeaderBuffer.append(buffer, BytesRead);
 
-	zbi += HeaderBuffer;
 	std::cout << "{"<< HeaderBuffer<< "}\n";
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
@@ -435,12 +430,12 @@ void	Request::SetUpRequest()
 		case	EndReading	:	break ;
 	}
 
+	// std::cout << "Before Post:" << TotalBytesRead << "--" << ContentLength << std::endl;
+
 	if (Client == EndReading)
 	{
 		if (RequestNotComplete == true)
 			PrintError("Something is missing."), throw "404 Bad Request";
-
-		// std::ofstream File; File.open("ZRawRequest.txt"), File << zbi ;
 	}
 	if (Method == POST)
 	{

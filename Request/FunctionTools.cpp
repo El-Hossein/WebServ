@@ -143,33 +143,6 @@ void	CreateDirectory(std::string FilenamePath)
 	}
 }
 
-int	FindFileName(std::string	&Buffer, std::string	&Filename)
-{
-	size_t	FilenamePos = 0, FilenameEndPos = 0;
-	
-	FilenamePos = Buffer.find("filename=\"", 0);
-	FilenameEndPos = Buffer.find("\"\r\n", FilenamePos + 10);
-
-	if (FilenamePos == std::string::npos || FilenameEndPos == std::string::npos)
-	{
-		PrintError("Could't find file"); PrintCrlfString(Buffer);
-		throw "400 Bad Request";
-	}
-
-	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
-
-	Filename = "/Users/zderfouf/goinfre/UploadFile/" + Filename;
-	// CreateDirectory("Uploads");
-
-	return FilenameEndPos;
-	// Buffer = Buffer.substr(FilenameEndPos + 3);
-
-	// if (Buffer.find("\r\n\r\n") == std::string::npos)
-	// 	std::cout << "Didn't Found the CRLF Before" << std::endl;
-	// else
-	// 	std::cout << "Found the CRLF Before" << std::endl;
-}
-
 // --------------#	COUNTERS	 #-------------- //
 
 size_t	CrlfCounter(std::string	&str)

@@ -1,5 +1,6 @@
 Request/*.txt
 Request/z.*
+*.tldr
 *.txt
 obj/
 Webserv
