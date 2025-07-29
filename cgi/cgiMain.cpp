@@ -211,6 +211,7 @@ int fileChecking(std::string path)
 void Cgi::splitPathInfo(Request &req)
 {
     std::string fullPath = req.GetFullPath();
+    memoExt = "";
 
     size_t quotationPos = fullPath.find('?');
     if (quotationPos != std::string::npos)
@@ -221,15 +222,43 @@ void Cgi::splitPathInfo(Request &req)
     size_t phpPos = fullPath.find(".php");
     size_t pyPos = fullPath.find(".py");
     if (cgiPos != std::string::npos && cgiPos < phpPos && cgiPos < pyPos)
+    {
+        memoExt = "cgi";
         posLength = cgiPos + 4;
+    }
     else if (phpPos != std::string::npos && phpPos < cgiPos && phpPos < pyPos)
+    {
+        memoExt = "php";
         posLength = phpPos + 4;
+    }
     else if (pyPos != std::string::npos && pyPos < cgiPos && pyPos < phpPos)
+    {
+        memoExt = "py";
         posLength = pyPos + 3;
+    }
 
     scriptFile = fullPath.substr(0, posLength);
     if (posLength < fullPath.length())
         pathInfo = fullPath.substr(posLength);
+}
+
+std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+{
+    ConfigNode a = req.GetRightServer();
+
+    return a.getValuesForKey(a, what, location);
+}
+
+int Cgi::checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
+{
+    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::vector<std::string> allowed_cgi = getInfoConfigMultipleCgi(ConfigPars, directive, loc, req);
+    if (std::find(allowed_cgi.begin(), allowed_cgi.end(), meth) == allowed_cgi.end())
+    {
+        responseErrorcgi(403, " Forbidden", ConfigPars, req);
+        return -1;
+    }
+    return 0;
 }
 
 void Cgi::handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars)
@@ -245,6 +274,12 @@ void Cgi::handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars)
     {
         responseErrorcgi(404, " not found", ConfigPars, req);
         return ;
+    }
+    if (!memoExt.empty())
+    {
+        if (checkLocationCgi(req, memoExt, "allow_cgi", ConfigPars) == -1)
+            return ;
+        memoExt = "";
     }
     int _status = executeCgiScript(req, ConfigPars);
     pid_1 = pid;

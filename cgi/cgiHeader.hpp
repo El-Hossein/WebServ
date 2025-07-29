@@ -57,6 +57,7 @@ class Cgi
         time_t startTime;
         std::string uniq;
         int checkConnection;
+        std::string memoExt;
 
 
     public :
@@ -101,6 +102,7 @@ class Cgi
         std::string    getinfile();
         bool                getCheckConnection();
         void                setCheckConnection(int conn);
+        int                 checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
         
         
 

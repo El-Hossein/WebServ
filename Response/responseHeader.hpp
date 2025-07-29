@@ -68,8 +68,10 @@ class Response
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
         std::string         postResponseSuccess(const std::string& message);
+        int                 checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
 
 };
 
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
