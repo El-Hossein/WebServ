@@ -253,7 +253,9 @@ void Cgi::splitPathInfo(Request &req)
         pathInfo = fullPath.substr(posLength);
 }
 
-std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+
+
+std::vector<std::string> Cgi::getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
 
@@ -263,6 +265,7 @@ std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> Config
 int Cgi::checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
 {
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::cout << loc << std::endl;
     std::vector<std::string> allowed_cgi = getInfoConfigMultipleCgi(ConfigPars, directive, loc, req);
     if (std::find(allowed_cgi.begin(), allowed_cgi.end(), meth) == allowed_cgi.end())
     {
@@ -414,6 +417,8 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
                 hasPendingCgi = false;
                 return -1;
             }
+            else if (checkCode == 0)
+                return 0;
         }
         else if (autoIndexOn == "on")
             generateAutoIndexOnCgi(req);

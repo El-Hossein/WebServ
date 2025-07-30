@@ -24,7 +24,7 @@ std::string handWritingError(const std::string& message, int statusCode)
 std::string readFileToString(const std::string& path)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
-    if (!file)  // if cant open need to give the ones are saved
+    if (!file)
         return "";
     std::ostringstream contents;
     contents << file.rdbuf();
@@ -35,19 +35,22 @@ std::string readFileToString(const std::string& path)
 void     Response::responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars, Request &req)
 {
     std::string body;
-    (void)ConfigPars;
 
-    switch (statusCode)
-    {
-        //need to read the ones provided in config file
-        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
-        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
-        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
-        case 400: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/400.html"); break;
-        case 413: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/413.html"); break;
-        case 414: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/414.html"); break;
-    }
+    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::string root = getInfoConfig(ConfigPars, "root", loc, req);
+    std::vector<std::string> error_page = getInfoConfigMultiple(ConfigPars, "error_page", loc, req);
+    for (size_t i = 0; i + 1 < error_page.size(); i += 2)
+	{
+		if (std::atoi(error_page[i].c_str()) == statusCode)
+		{
+			std::string errorPath = root;
+			if (!root.empty() && root.back() != '/')
+				errorPath += "/";
+			errorPath += error_page[i + 1];
+			body = readFileToString(errorPath);
+			break;
+		}
+	}
 
     if (body.empty())
         body = handWritingError(message, statusCode);
@@ -66,6 +69,9 @@ void     Response::responseError(int statusCode, const std::string& message, std
         case 400: headers += " Bad Request"; break;
         case 413: headers += " Content Too Large"; break;
         case 414: headers += " URI Too Long"; break;
+        case 505: headers += " HTTP Version Not Supported"; break;
+        case 504: headers += " Gateway Timeout"; break;
+        case 405: headers += " Method Not Allowed"; break;
     }
     headers += "\r\n";
     headers += "Content-Type: text/html\r\n";

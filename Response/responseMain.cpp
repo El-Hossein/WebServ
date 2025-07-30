@@ -13,18 +13,11 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
-    // hasPendingCgi = false;
 }
 
 Response::~Response(){
 
 }
-
-
-// bool    Response::gethasPendingCgi()
-// {
-//     return hasPendingCgi;
-// }
 
 std::string Response::getChunk()
 {
@@ -40,12 +33,6 @@ void    Response::setHasMore(bool _hasmore)
 {
     hasMore = _hasmore;
 }
-
-// void    Response::sethasPendingCgi(bool pendingcgi)
-// {
-//     hasPendingCgi = pendingcgi;
-// }
-
 
 ssize_t  Response::getBytesSent()
 {
