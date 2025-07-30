@@ -394,7 +394,7 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
                     responseErrorcgi(403, " Forbidden", ConfigPars, req);
                 return -1;
             }
-            if (access(htmlFound.c_str(), R_OK | X_OK) != 0)
+            if (access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
                    generateAutoIndexOnCgi(req);
@@ -434,8 +434,6 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
 
 int Cgi::IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars)
 {
-    // std::string uriString(uri);
-
     size_t index = uri.find("/cgiScripts/");
     if (index == std::string::npos)
     {
