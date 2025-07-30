@@ -13,6 +13,7 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
+    _cgi.sethasPendingCgi(false);
 }
 
 Response::~Response(){
