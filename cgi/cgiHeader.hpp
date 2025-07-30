@@ -112,7 +112,7 @@ class Cgi
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
         std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
-        std::string getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+        std::string             getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         
         
 
