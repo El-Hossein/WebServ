@@ -111,9 +111,12 @@ class Cgi
         std::string         generateListingDirCgi(Request &req);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
+        std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+        std::string getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         
         
 
 };
 
 std::string intToString(int n);
+std::string readFileToStringCgi(const std::string& path);
