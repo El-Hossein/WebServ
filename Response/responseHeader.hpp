@@ -29,7 +29,7 @@ class Response
         ssize_t  bytesWritten;
         std::string chunk;
         bool        hasMore;
-        bool hasPendingCgi;
+        // bool hasPendingCgi;
 
 
     public :
@@ -48,7 +48,7 @@ class Response
         std::string         getUri();
         std::string         getFinalResponse();
         void                setFinalResponse(std::string _finalResponse);
-        std::string         checkContentType();
+        std::string         checkContentType(int index);
         void                moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars);
         int                 getClientFd();
         void                setClientFd(int _clientFd);
@@ -65,11 +65,14 @@ class Response
         void                setHasMore(bool _hasmore);
         std::string         getChunk();
         bool                checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req);
-        bool                gethasPendingCgi();
-        void                sethasPendingCgi(bool pendingcgi);
+        // bool                gethasPendingCgi();
+        // void                sethasPendingCgi(bool pendingcgi);
         std::string         postResponseSuccess(const std::string& message);
+        int                 checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
+        int                 prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars);
 
 };
 
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
