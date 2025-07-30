@@ -368,6 +368,58 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
         responseError(403, " Forbidden", ConfigPars, req);
 }
 
+
+int Response::prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars)
+{
+    int statusCode = std::atoi(redirect[0].c_str());
+    std::string redirectUrl = redirect[1];
+    if (statusCode != 301 && statusCode != 302 && statusCode != 303 && statusCode != 302 && statusCode != 307 && statusCode != 308)
+    {
+        responseError(500, "Invalid redirect status code", ConfigPars, req);
+        return -1;
+    }
+
+    if (redirectUrl.empty())
+    {
+        responseError(500, "Invalid redirect URL", ConfigPars, req);
+        return -1;
+    }
+    staticFileBody.clear();
+    staticFilePos = 0;
+    usingStaticFile = true;
+    filePos = 0;
+
+    headers = "HTTP/1.1 " + intToString(statusCode);
+    switch (statusCode)
+    {
+        case 301: headers += " Moved Permanently"; break;
+        case 302: headers += " Found"; break;
+        case 303: headers += " See Other"; break;
+        case 304: headers += " Not Modified"; break;
+        case 307: headers += " Temporary Redirect"; break;
+        case 308: headers += " Permanent Redirect"; break;
+    }
+    headers += "\r\n";
+    headers += "Location: " + redirectUrl + "\r\n";
+    headers += "Content-Length: 0\r\n";
+    
+    if (req.GetHeaderValue("connection") == "keep-alive")
+    {
+        headers += "Connection: keep-alive\r\n";
+        _cgi.setCheckConnection(keepAlive);
+    }
+    else
+    {
+        headers += "Connection: close\r\n";
+        _cgi.setCheckConnection(_close);
+    }
+
+    headers += "\r\n";
+    headerSent = 0;
+
+    return 0;
+}
+
 void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     struct stat st;
@@ -377,6 +429,10 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
     {
         if (checkLocation(req, "GET", "allow_methods", ConfigPars) == -1)
             return ;
+        std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+        std::vector<std::string> redirect = getInfoConfigMultiple(ConfigPars, "return", loc, req);
+        if (redirect.size() != 0)
+            prepareRedirectResponse(redirect, req, ConfigPars);
         _cgi.setcgiHeader("");
         int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
         if (checkCode == 1)

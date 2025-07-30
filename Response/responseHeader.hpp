@@ -69,6 +69,7 @@ class Response
         // void                sethasPendingCgi(bool pendingcgi);
         std::string         postResponseSuccess(const std::string& message);
         int                 checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
+        int                 prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars);
 
 };
 
