@@ -14,7 +14,6 @@ Cgi::Cgi()
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
     checkConnection = _Empty;
-    hasPendingCgi = false;
 }
 
 Cgi::~Cgi()
@@ -265,7 +264,6 @@ std::vector<std::string> Cgi::getInfoConfigMultipleCgi(std::vector<ConfigNode> C
 int Cgi::checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
 {
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::cout << loc << std::endl;
     std::vector<std::string> allowed_cgi = getInfoConfigMultipleCgi(ConfigPars, directive, loc, req);
     if (std::find(allowed_cgi.begin(), allowed_cgi.end(), meth) == allowed_cgi.end())
     {
