@@ -13,17 +13,10 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
-    hasPendingCgi = false;
 }
 
 Response::~Response(){
 
-}
-
-
-bool    Response::gethasPendingCgi()
-{
-    return hasPendingCgi;
 }
 
 std::string Response::getChunk()
@@ -40,12 +33,6 @@ void    Response::setHasMore(bool _hasmore)
 {
     hasMore = _hasmore;
 }
-
-void    Response::sethasPendingCgi(bool pendingcgi)
-{
-    hasPendingCgi = pendingcgi;
-}
-
 
 ssize_t  Response::getBytesSent()
 {
@@ -87,216 +74,6 @@ int Response::getClientFd()
 void    Response::setClientFd(int _clientFd)
 {
     clientFd = _clientFd;
-}
-
-std::string readFileToString(const std::string& path)
-{
-    std::ifstream file(path.c_str(), std::ios::binary);
-    if (!file)  // if cant open need to give the ones are saved
-        return "";
-    std::ostringstream contents;
-    contents << file.rdbuf();
-    file.close();
-    return contents.str();
-}
-
-std::string handWritingError(const std::string& message, int statusCode)
-{
-    std::string _code = intToString(statusCode);
-
-    std::string html = "<!DOCTYPE html><html lang=\"en\">";
-    html += "<head><meta charset=\"UTF-8\">";
-    html += "<title>Error ";
-    html += _code + "</title>";
-    html += "<style>";
-    html += "body { background-color: #f8f9fa; font-family: Arial, sans-serif; text-align: center; padding-top: 100px; }";
-    html += "h1 { font-size: 48px; color: #dc3545; }";
-    html += "p { font-size: 20px; color: #6c757d; }";
-    html += "</style></head>";
-    html += "<body>";
-    html += "<h1>Error " + _code + "</h1>";
-    html += "<p>" + message + "</p>";
-    html += "</body></html>";
-
-    return html;
-}
-
-void     Response::responseError(int statusCode, const std::string& message, std::vector<ConfigNode> ConfigPars, Request &req)
-{
-    std::string body;
-    (void)ConfigPars;
-
-    switch (statusCode)
-    {
-        //need to read the ones provided in config file
-        case 403: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
-        case 404: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
-        case 501: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
-        case 400: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/400.html"); break;
-        case 413: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/413.html"); break;
-        case 414: body = readFileToString("/Users/i61mail/Desktop/WebServ/Response/errorPages/414.html"); break;
-    }
-
-    if (body.empty())
-        body = handWritingError(message, statusCode);
-
-    staticFileBody = body;
-    staticFilePos = 0;
-    usingStaticFile = true;
-
-    headers = "HTTP/1.1 " + intToString(statusCode);
-    switch (statusCode)
-    {
-        case 403: headers += " Forbidden"; break;
-        case 404: headers += " Not Found"; break;
-        case 500: headers += " Internal Server Error"; break;
-        case 501: headers += " Method not implemented"; break;
-        case 400: headers += " Bad Request"; break;
-        case 413: headers += " Content Too Large"; break;
-        case 414: headers += " URI Too Long"; break;
-    }
-    headers += "\r\n";
-    headers += "Content-Type: text/html\r\n";
-    headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
-    if (req.GetHeaderValue("connection") == "keep-alive")
-    {
-        headers += "Connection: keep-alive\r\n\r\n";
-        _cgi.setCheckConnection(keepAlive);
-    }
-    else
-    {
-        headers += "Connection: close\r\n\r\n";
-        _cgi.setCheckConnection(_close);
-    }
-
-    headerSent = 0;
-}
-
-bool Response::getNextChunk(size_t chunkSize)
-{
-    chunk.clear();
-
-    // static file headers
-    if (headerSent < headers.size())
-    {
-        size_t left = headers.size() - headerSent;
-        size_t sendNow = std::min(chunkSize, left);
-        chunk = headers.substr(headerSent, sendNow);
-        headerSent += sendNow;
-        return true;
-    }
-
-    // cgi headers
-    if (_cgi.getCgiHeaderSent() < _cgi.getCgiHeader().size())
-    {
-        size_t left = _cgi.getCgiHeader().size() - _cgi.getCgiHeaderSent();
-        size_t sendNow = std::min(chunkSize, left);
-        chunk = _cgi.getCgiHeader().substr(_cgi.getCgiHeaderSent(), sendNow);
-        _cgi.setCgiHeaderSent(_cgi.getCgiHeaderSent() + sendNow);
-        return true;
-    }
-
-    // error cgi
-    if (_cgi.getUsingStatCgiFile())
-    {
-        if (_cgi.getStatCgiFilePos() < _cgi.getStatCgiFileBody().size())
-        {
-            size_t left = _cgi.getStatCgiFileBody().size() - _cgi.getStatCgiFilePos();
-            size_t sendNow = std::min(chunkSize, left);
-            chunk = _cgi.getStatCgiFileBody().substr(_cgi.getStatCgiFilePos(), sendNow);
-            staticFilePos += sendNow;
-            _cgi.setStatCgiFilePos(_cgi.getStatCgiFilePos() + sendNow);
-            return _cgi.getStatCgiFilePos() < _cgi.getStatCgiFileBody().size();
-        }
-        else
-        {
-            _cgi.setUsingStatCgiFile(false);
-            // return false;
-        }
-    }
-    
-
-    //error static file
-    if (usingStaticFile)
-    {
-        if (staticFilePos < staticFileBody.size())
-        {
-            size_t left = staticFileBody.size() - staticFilePos;
-            size_t sendNow = std::min(chunkSize, left);
-            chunk = staticFileBody.substr(staticFilePos, sendNow);
-            staticFilePos += sendNow;
-            return staticFilePos < staticFileBody.size();
-        }
-        else
-        {
-            usingStaticFile = false;
-            // return false;
-        }
-    }
-
-    // body cgi
-    if (_cgi.getUsingCgi())
-    {
-        std::ifstream& f = _cgi.getFile();
-
-        if (_cgi.getFilePos() == 0)
-        {
-            std::string line;
-            while (std::getline(f, line))
-            {
-                if (!line.empty() && line[line.size() - 1] == '\r')
-                    line.erase(line.size() - 1);
-                if (line.empty()) 
-                    break;
-            }
-            _cgi.setFilePos(f.tellg());
-        }
-
-        f.seekg(_cgi.getFilePos());
-
-        char *buffer = new char[chunkSize];
-        f.read(buffer, chunkSize);
-        int bytesRead = f.gcount();
-
-        if (bytesRead > 0)
-        {
-            chunk.assign(buffer, bytesRead);
-            _cgi.setFilePos(_cgi.getFilePos() + bytesRead);
-
-            delete [] buffer;
-            if (_cgi.getFilePos() >= _cgi.getFileSize())
-                f.close();
-
-            return true;
-        }
-        delete [] buffer;
-        f.close();
-    }
-
-    // body static file
-    if (file.is_open())
-    {
-
-        char *buffer = new char[chunkSize];
-        file.read(buffer, chunkSize);
-        int bytesRead = file.gcount();
-
-        if (bytesRead > 0)
-        {
-            chunk.assign(buffer, bytesRead);
-            filePos += bytesRead;
-            delete [] buffer;
-            if (filePos >= fileSize)
-                file.close();
-
-            return true;
-        }
-
-        delete [] buffer;
-        file.close();
-    }
-    return false;
 }
 
 std::string Response::getMethod()
@@ -373,12 +150,19 @@ std::string Response::generateListingDir()
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
 {
-    ConfigNode a = ConfigNode::GetServer(ConfigPars, req.GetServerDetails());// need to handle
+    ConfigNode a = req.GetRightServer();
 
-    std::vector<std::string> autoIndex = a.getValuesForKey(a, what, location);
-    if (!autoIndex.empty())
-        return autoIndex[0];
+    std::vector<std::string> temp = a.getValuesForKey(a, what, location);
+    if (!temp.empty())
+        return temp[0];
 	return "";
+}
+
+std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+{
+    ConfigNode a = req.GetRightServer();
+
+    return a.getValuesForKey(a, what, location);
 }
 
 bool Response::generateAutoIndexOn(Request &req)
@@ -405,43 +189,17 @@ bool Response::generateAutoIndexOn(Request &req)
     return true;
 }
 
-void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req)
+std::string Response::checkContentType(int index)
 {
-    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", "NULL", req);
-    index = getInfoConfig(ConfigPars, "index", "NULL", req);
-
-    if (!index.empty())
-    {
-        htmlFound = uri;
-        if (uri.back() != '/')
-            htmlFound += "/";
-        htmlFound += index;
-        int code = prepareFileResponse(htmlFound, "Content-Type: text/html\r\n", req);
-        if (code == 0)
-            return ;
-        else if (code == 403)
-        {
-            responseError(403, " Forbidden", ConfigPars, req);
-            return;
-        }
-        if (autoIndexOn == "on" && code == 404)
-            generateAutoIndexOn(req);
-        else
-            responseError(403, " Forbidden", ConfigPars, req);
-    }
-    else if (autoIndexOn == "on")
-        generateAutoIndexOn(req);
+    std::string exte;
+    if (index == 1)
+        exte = htmlFound;
     else
-        responseError(403, " Forbidden", ConfigPars, req);
-}
-
-
-std::string Response::checkContentType()
-{
-    size_t dotPos = uri.find(".");
+        exte = uri;
+    size_t dotPos = exte.find(".");
     if (dotPos != std::string::npos)
     {
-        std::string extension = uri.substr(dotPos);
+        std::string extension = exte.substr(dotPos);
         if (extension.compare(".png") == 0)
             return "Content-Type: image/png\r\n";
         else if (extension.compare(".jpeg") == 0)
@@ -469,82 +227,26 @@ std::string Response::checkContentType()
         else
             return "Content-Type: text/plain\r\n";
     }
-    if (access(uri.c_str(), X_OK) != 0)
+    if (access(exte.c_str(), X_OK) != 0)
         return "Content-Type: text/plain\r\n";
     else
         return "Content-Type: application/octet-stream\r\n";
 
 }
 
-void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
+
+int Response::checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
 {
-    struct stat st;
-
-
-    if (method == "GET")
+    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::vector<std::string> allowed_methods = getInfoConfigMultiple(ConfigPars, directive, loc, req);
+    if (std::find(allowed_methods.begin(), allowed_methods.end(), meth) == allowed_methods.end())
     {
-        _cgi.setcgiHeader("");
-        if (IsCgiRequest(uri.c_str()))
-        {
-            _cgi.handleCgiRequest(req, ConfigPars);
-            if (_cgi.getcgistatus() == CGI_RUNNING)
-            {
-                hasPendingCgi = true;
-                return;
-            }
-            hasPendingCgi = false;
-            return ;
-        }
-        stat(uri.c_str(), &st);
-        if (S_ISDIR(st.st_mode))
-            servListingDiren(ConfigPars, req);
-        else
-        {
-            int code = prepareFileResponse(uri.c_str(), checkContentType(), req);
-            switch (code)
-            {
-                case 404: responseError(404, " Not Found", ConfigPars, req); return;
-                case 403: responseError(403, " Forbidden", ConfigPars, req); return;
-            }
-            
-        }
+        responseError(405, " Method Not Allowed", ConfigPars, req);
+        return -1;
     }
-    else if (method == "POST")
-    {
-        _cgi.setcgiHeader("");
-        if (IsCgiRequest(uri.c_str()))
-        {
-            _cgi.handleCgiRequest(req, ConfigPars);
-            if (_cgi.getcgistatus() == CGI_RUNNING)
-            {
-                hasPendingCgi = true;
-                return;
-            }
-            hasPendingCgi = false;
-        }
-        else
-        {
-            staticFileBody = postResponseSuccess("file succesefuly uploaded!");
-            staticFilePos = 0;
-            usingStaticFile = true;
-            headers = "HTTP/1.1 201 Created\r\n";
-            headers += "Content-Type: text/plain\r\n";
-            headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
-            if (req.GetHeaderValue("connection") == "keep-alive")
-            {
-                headers += "Connection: keep-alive\r\n";
-                _cgi.setCheckConnection(keepAlive);
-            }
-            else
-            {
-                headers += "Connection: close\r\n";
-                _cgi.setCheckConnection(_close);
-            }
-            headers += "\r\n";
-            headerSent = 0;
-        }
-    }
+    return 0;
 }
+
 
 void Response::deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req)
 {
@@ -560,7 +262,7 @@ void Response::deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req)
         staticFilePos = 0;
         usingStaticFile = true;
         headers = "HTTP/1.1 200 OK\r\n";
-        headers += checkContentType();
+        headers += checkContentType(0);
         headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
         if (req.GetHeaderValue("connection") == "keep-alive")
         {
@@ -621,29 +323,222 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     return 0;
 }
 
+void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req)
+{
+	std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path")); // ngulih ystori hada f class 3ndo
+    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", loc, req);
+    index = getInfoConfig(ConfigPars, "index", loc, req);
+
+    if (!index.empty())
+    {
+        htmlFound = uri;
+        if (uri.back() != '/')
+            htmlFound += "/";
+        htmlFound += index;
+
+        struct stat st;
+        if (stat(htmlFound.c_str(), &st) == 0)
+        {
+            if (S_ISDIR(st.st_mode))
+            {
+                if (autoIndexOn == "on")
+                    generateAutoIndexOn(req);
+                else
+                    responseError(403, " Forbidden", ConfigPars, req);
+                return ;
+            }
+            if (access(htmlFound.c_str(), R_OK) != 0)
+            {
+                if (autoIndexOn == "on")
+                    generateAutoIndexOn(req);
+                else
+                    responseError(403, " Forbidden", ConfigPars, req);
+                return ;
+            }
+            prepareFileResponse(htmlFound, checkContentType(1), req);
+        }
+        else if (autoIndexOn == "on")
+            generateAutoIndexOn(req);
+        else
+            responseError(403, " Forbidden", ConfigPars, req);
+    }
+    else if (autoIndexOn == "on")
+        generateAutoIndexOn(req);
+    else
+        responseError(403, " Forbidden", ConfigPars, req);
+}
+
+
+int Response::prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars)
+{
+    int statusCode = std::atoi(redirect[0].c_str());
+    std::string redirectUrl = redirect[1];
+    if (statusCode != 301 && statusCode != 302 && statusCode != 303 && statusCode != 302 && statusCode != 307 && statusCode != 308)
+    {
+        responseError(500, "Invalid redirect status code", ConfigPars, req);
+        return -1;
+    }
+
+    if (redirectUrl.empty())
+    {
+        responseError(500, "Invalid redirect URL", ConfigPars, req);
+        return -1;
+    }
+    staticFileBody.clear();
+    staticFilePos = 0;
+    usingStaticFile = true;
+    filePos = 0;
+
+    headers = "HTTP/1.1 " + intToString(statusCode);
+    switch (statusCode)
+    {
+        case 301: headers += " Moved Permanently"; break;
+        case 302: headers += " Found"; break;
+        case 303: headers += " See Other"; break;
+        case 304: headers += " Not Modified"; break;
+        case 307: headers += " Temporary Redirect"; break;
+        case 308: headers += " Permanent Redirect"; break;
+    }
+    headers += "\r\n";
+    headers += "Location: " + redirectUrl + "\r\n";
+    headers += "Content-Length: 0\r\n";
+    
+    if (req.GetHeaderValue("connection") == "keep-alive")
+    {
+        headers += "Connection: keep-alive\r\n";
+        _cgi.setCheckConnection(keepAlive);
+    }
+    else
+    {
+        headers += "Connection: close\r\n";
+        _cgi.setCheckConnection(_close);
+    }
+
+    headers += "\r\n";
+    headerSent = 0;
+
+    return 0;
+}
+
+void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
+{
+    struct stat st;
+
+
+    if (method == "GET")
+    {
+        if (checkLocation(req, "GET", "allow_methods", ConfigPars) == -1)
+            return ;
+        std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+        std::vector<std::string> redirect = getInfoConfigMultiple(ConfigPars, "return", loc, req);
+        if (redirect.size() != 0)
+        {
+            prepareRedirectResponse(redirect, req, ConfigPars);
+            return ;
+        }
+        _cgi.setcgiHeader("");
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
+        {
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                _cgi.sethasPendingCgi(true);
+                return;
+            }
+            _cgi.sethasPendingCgi(false);
+            return ;
+        }
+        else if (checkCode == -1)
+            return ;
+        stat(uri.c_str(), &st);
+        if (S_ISDIR(st.st_mode))
+            servListingDiren(ConfigPars, req);
+        else
+        {
+            int code = prepareFileResponse(uri.c_str(), checkContentType(0), req);
+            switch (code)
+            {
+                case 404: responseError(404, " Not Found", ConfigPars, req); return;
+                case 403: responseError(403, " Forbidden", ConfigPars, req); return;
+            }
+            
+        }
+    }
+    else if (method == "POST")
+    {
+        if (checkLocation(req, "POST", "allow_methods", ConfigPars) == -1)
+            return ;
+        _cgi.setcgiHeader("");
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
+        {
+            _cgi.handleCgiRequest(req, ConfigPars);
+            if (_cgi.getcgistatus() == CGI_RUNNING)
+            {
+                _cgi.sethasPendingCgi(true);
+                return;
+            }
+            _cgi.sethasPendingCgi(false);
+            return ;
+        }
+        else if (checkCode == -1)
+            return ;
+        else
+        {
+            staticFileBody = postResponseSuccess("file succesefuly uploaded!");
+            staticFilePos = 0;
+            usingStaticFile = true;
+            headers = "HTTP/1.1 201 Created\r\n";
+            headers += "Content-Type: text/plain\r\n";
+            headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
+            if (req.GetHeaderValue("connection") == "keep-alive")
+            {
+                headers += "Connection: keep-alive\r\n";
+                _cgi.setCheckConnection(keepAlive);
+            }
+            else
+            {
+                headers += "Connection: close\r\n";
+                _cgi.setCheckConnection(_close);
+            }
+            headers += "\r\n";
+            headerSent = 0;
+        }
+    }
+}
+
 void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
 {
     uri = req.GetFullPath();
     method = req.GetHeaderValue("method");
     pathRequested = req.GetHeaderValue("path");
+
     if (method == "GET" || method == "POST")
     {
         getResponse(req, ConfigPars);
     }
     else if (method == "DELETE")
     {
-        // if method not allowed return 405 Method Not Allowed
+        if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
+            return ;
         _cgi.setcgiHeader("");
-        if (IsCgiRequest(uri.c_str()))
+        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+        if (checkCode == 1)
         {
             _cgi.handleCgiRequest(req, ConfigPars);
             if (_cgi.getcgistatus() == CGI_RUNNING)
             {
-                hasPendingCgi = true;
+                _cgi.sethasPendingCgi(true);
+                // hasPendingCgi = true;
                 return;
             }
-            hasPendingCgi = false;
+            _cgi.sethasPendingCgi(false);
+            // hasPendingCgi = false;
+            return ;
         }
+        else if (checkCode == -1)
+            return ;
         deleteResponse(ConfigPars, req);
     }
     else
@@ -652,72 +547,3 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
     }
 }
 
-bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req) 
-{
-    if (!hasPendingCgi)
-        return false;
-
-    int status;
-    pid_t childPid = _cgi.getpid_1();
-    int result = waitpid(childPid, &status, WNOHANG);
-
-    if (result > 0) // Process finished
-    {
-        struct kevent kev;
-        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
-        
-        if (WIFEXITED(status))
-        {
-            int exitCode = WEXITSTATUS(status);
-            if (exitCode == 0)
-            {
-                _cgi.parseOutput();
-                _cgi.formatHttpResponse(_cgi.getoutfile(), req);
-                _cgi.setcgistatus(CGI_COMPLETED);
-            }
-            else
-            {
-                _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
-                _cgi.setcgistatus(CGI_ERROR);
-            }
-        }
-        else if (WIFSIGNALED(status))
-        {
-            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
-            _cgi.setcgistatus(CGI_ERROR);
-        }
-        else
-        {
-            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
-            _cgi.setcgistatus(CGI_ERROR);
-        }
-
-        if (!_cgi.getinfile().empty())
-            unlink(_cgi.getinfile().c_str());
-        if (!_cgi.getoutfile().empty())   
-            unlink(_cgi.getoutfile().c_str());
-
-        hasPendingCgi = false;
-        return true;
-    }
-    else if (result == -1)
-    {
-        struct kevent kev;
-        EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
-        
-        _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
-        _cgi.setcgistatus(CGI_ERROR);
-        hasPendingCgi = false;
-        
-        if (!_cgi.getinfile().empty())
-            unlink(_cgi.getinfile().c_str());
-        if (!_cgi.getoutfile().empty())   
-            unlink(_cgi.getoutfile().c_str());
-        
-        return true;
-    }
-
-    return false;
-}
