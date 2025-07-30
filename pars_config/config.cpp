@@ -235,17 +235,15 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "root", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, -1, 2);
+        CheckAllError(KV, "return", ConfNode, 2, 2);
     }
     else {
         CheckAllError(KV, "allow_methods", ConfNode, 3, 1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, -1, 2);
-        // CheckAllError(KV, "php-cgi", ConfNode, 1, 1);
+        CheckAllError(KV, "return", ConfNode, 2, 2);
         CheckAllError(KV, "root", ConfNode, 1, 1);
         CheckAllError(KV, "alias", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
-        // CheckAllError(KV, "py-cgi", ConfNode, 1, 1);
         CheckAllError(KV, "upload_store", ConfNode, 1, 1);
         CheckAllError(KV, "allow_cgi", ConfNode, 3, 1);
     }
@@ -324,10 +322,8 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         LOCATION_VALID_KEYS.push_back("autoindex");
         LOCATION_VALID_KEYS.push_back("allow_methods");
         LOCATION_VALID_KEYS.push_back("return");
-        // LOCATION_VALID_KEYS.push_back("php-cgi");
         LOCATION_VALID_KEYS.push_back("root");
         LOCATION_VALID_KEYS.push_back("index");
-        // LOCATION_VALID_KEYS.push_back("py-cgi");
         LOCATION_VALID_KEYS.push_back("allow_cgi");
         LOCATION_VALID_KEYS.push_back("upload_store");
         LOCATION_VALID_KEYS.push_back("alias");
@@ -545,6 +541,32 @@ bool startsWith(const std::string& path, const std::string& prefix)
     return path.compare(0, prefix.length(), prefix) == 0;
 }
 
+std::string RemoveSlashs(std::string path)
+{
+    std::string result;
+    bool lastWasSlash = false;
+    
+    result.reserve(path.length());
+    
+    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
+    {
+        if (*it == '/')
+        {
+            if (!lastWasSlash)
+            {
+                result += *it;
+                lastWasSlash = true;
+            }
+        }
+        else
+        {
+            result += *it;
+            lastWasSlash = false;
+        }
+    }
+    return result;
+}
+
 std::string ConfigNode::GetRightLocation(std::string path)
 {
     std::vector<ConfigNode> locations = getChildren();
@@ -554,11 +576,11 @@ std::string ConfigNode::GetRightLocation(std::string path)
     {
         std::vector<std::string> tokens = split(Alllocations->name.c_str());
         std::string loc = tokens[1];
-        std::vector<std::string> SplitPath = split_path(loc);
+        std::vector<std::string> SplitPath = split_path(RemoveSlashs(loc));
         for (std::vector<std::string>::iterator SplitLocPath = SplitPath.begin(); SplitLocPath != SplitPath.end(); ++SplitLocPath)
         {
             // std::cout << "path: [" << *SplitLocPath << "]" << std::endl;
-            if (startsWith(path, *SplitLocPath) == true)
+            if (startsWith(RemoveSlashs(path), *SplitLocPath) == true)
                 RightLocation = loc;
         }
     }
