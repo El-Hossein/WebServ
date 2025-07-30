@@ -131,14 +131,13 @@ void	TrimSpaces(std::string& str)
 	str = str.substr(start, end - start);
 }
 
-void	CreateDirectory(std::string FilenamePath)
+void	CreateDirectory(std::string &FilenameDir)
 {
 	struct stat	Tmp;
-	(void)FilenamePath;
 
-    if (stat("Uploads", &Tmp)) // return 0 if exists || if not create it
+    if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
 	{
-		if (mkdir("Uploads", 0777)) // return 0 means success
+		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
 			PrintError("Could't open Directory"), throw "400 Bad Request";
 	}
 }

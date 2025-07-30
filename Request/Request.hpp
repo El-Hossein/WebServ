@@ -113,6 +113,6 @@ bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
 size_t			CrlfCounter(std::string	&str);
-void			CreateDirectory(std::string FilenamePath);
+void			CreateDirectory(std::string &FilenameDir);
 int				FindFileName(std::string	&Buffer, std::string	&Filename);
 void			PrintCrlfString(std::string Buffer);
