@@ -432,7 +432,10 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
         std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
         std::vector<std::string> redirect = getInfoConfigMultiple(ConfigPars, "return", loc, req);
         if (redirect.size() != 0)
+        {
             prepareRedirectResponse(redirect, req, ConfigPars);
+            return ;
+        }
         _cgi.setcgiHeader("");
         int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
         if (checkCode == 1)
