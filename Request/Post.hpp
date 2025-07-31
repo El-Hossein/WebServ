@@ -12,15 +12,17 @@ private:
 	_BoundarySettings					Boundary;
 	_SubBodyStatus						SubBodyStatus;
 	BoundaryFlager						Flager;
-	
 	_BoundaryStatus						BoundaryStatus;
 
-	bool								EndOfRequest;
+	_ChunkVariables						Chunk;
+
+	bool								FirstTime;
 	bool								BodyFullyRead;
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
 
+	std::string							Dir;
 	std::string							Filename;
 	std::ofstream						OutFile;
 
@@ -32,8 +34,12 @@ public:
 	void	FindFileName(std::string	&Buffer, std::string	&Filename);
 	void	WriteToFile(std::string	&Filename, std::string &Buffer);
 	void	GetSubBodies(std::string &Buffer);
-	void	ParseChunked(std::string);
+
 	void	ParseBoundary();
+	void	ParseBirnaryOrRaw();
+	void	ParseChunked();
+
+	void	SetUnprocessedBuffer();
 	void	IsBodyFullyRead();
 	void	HandlePost();
 };

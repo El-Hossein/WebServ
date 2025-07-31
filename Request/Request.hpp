@@ -24,15 +24,15 @@ enum	DataType
 
 enum	ContentType
 {
-	_Boundary, Binary, Raw, Other
+	_Boundary, BinaryOrRaw
 };
 
 class	Request
 {
 private:
-	_ServerDetails			ServerDetails;
-
-	std::string zbi;
+	_ServerDetails						ServerDetails;
+	std::map<std::string, std::string>	ExtentionsMap;
+	
 
 	ClientStatus			Client;
 	int						ClientFd;
@@ -50,6 +50,8 @@ private:
 	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
 	std::string					BodyUnprocessedBuffer;
+	std::string					FileExtention;
+
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
 	bool						KeepAlive;
@@ -67,6 +69,7 @@ public:
 	size_t								GetContentLength() const;
 	size_t								GetTotatlBytesRead() const;
 	std::string							GetFullPath() const;
+	std::string							GetFileExtention();
 	std::string							GetHeaderValue(std::string) const;
 	std::string							GetUnprocessedBuffer() const;
 	std::string							GetHeaderBuffer() const;
@@ -78,6 +81,7 @@ public:
 	_ServerDetails						GetServerDetails() const;
 	
 	// ---------		SETTERS 	 	--------- //
+	void	SetExtentionsMap();
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
@@ -116,3 +120,5 @@ size_t			CrlfCounter(std::string	&str);
 void			CreateDirectory(std::string &FilenameDir);
 int				FindFileName(std::string	&Buffer, std::string	&Filename);
 void			PrintCrlfString(std::string Buffer);
+std::string		RandomString();
+int				HexaToInt(std::string	&x);
