@@ -60,3 +60,12 @@ struct	_ServerDetails
 	std::string	ServerHost;
 	std::string	ServerPort;
 };
+
+struct	_ChunkVariables
+{
+	enum	ChunkStatus
+	{
+		None, GotHexaSize, GotBody, Finished
+	};
+
+};

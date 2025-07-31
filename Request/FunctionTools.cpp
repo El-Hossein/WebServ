@@ -1,5 +1,15 @@
 #include "Request.hpp"
 
+std::string	RandomString()
+{
+	std::string			Ret;
+	const std::string	Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+	while(Ret.size() != 15) // generante random 15 chars string
+		Ret += Chars[rand() % (Chars.size() - 1)];
+	return Ret;
+}
+
 void	PrintCrlfString(std::string Buffer)
 {
 	std::cout << "|";
@@ -16,7 +26,7 @@ void	PrintCrlfString(std::string Buffer)
 
 	std::cout << "|\n";
 }
-	
+
 // --------------#	URI TOOLS #-------------- //
 
 
@@ -38,6 +48,22 @@ std::string	HexaToChar(std::string	Hexa)
 
 	char	Helpervar = static_cast<char>(std::stod(tmp)); // Convert Hexa to Char
 	return std::string(1, Helpervar); // calling constructor string with 1 character
+}
+
+int			HexaToInt(std::string	&x)
+{
+	int y;
+    std::stringstream stream(x);
+
+	std::string HexaChars = "ABCDEFabcdef0123456789";
+	for (size_t i = 0; i < x.size() ; i++)
+	{
+		if (HexaChars.find(x[i]) == std::string::npos)
+			PrintError("Invalide Hexa value"), throw "400 Bad request";
+	}
+    stream << x;
+    stream >> std::hex >> y;
+    return y;
 }
 
 void		DecodeHexaToChar(std::string	&str)
@@ -135,7 +161,7 @@ void	CreateDirectory(std::string &FilenameDir)
 {
 	struct stat	Tmp;
 
-    if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
+	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
 	{
 		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
 			PrintError("Could't open Directory"), throw "400 Bad Request";

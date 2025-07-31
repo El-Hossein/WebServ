@@ -4,23 +4,27 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 						:	ClientFd(fd),
 							Client(ReadHeader),
 							DataType(FixedLength),
-							ContentType(Other),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),
 							ContentLength(0),
 							TotalBytesRead(0),
 							KeepAlive(false),
-							RequestNotComplete(true),
-							zbi("")
+							RequestNotComplete(true)
 {
 	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
+	SetExtentionsMap();
 }
 
 Request::~Request() {
 }
-//done:
-int	Request::GetClientFd() const
+
+/*	|#----------------------------------#|
+	|#			 	GETTERS    			#|
+	|#----------------------------------#|
+*/
+
+int		Request::GetClientFd() const
 {
 	return this->ClientFd;
 }
@@ -29,20 +33,17 @@ int		Request::GetClientStatus() const
 {
 	return this->Client;
 }
-void	Request::SetClientStatus(ClientStatus	Status) 
-{
-	this->Client = Status;
-}
 
 std::string	Request::GetHeaderBuffer() const
 {
 	return this->HeaderBuffer;
 }
 
-/*	|#----------------------------------#|
-	|#			 	GETTERS    			#|
-	|#----------------------------------#|
-*/
+std::string	Request::GetFileExtention()
+{
+	return this->FileExtention;
+}
+
 
 std::map<std::string, std::string>	Request::GetHeaders() const
 {
@@ -123,6 +124,11 @@ _ServerDetails	Request::GetServerDetails() const
 	|#----------------------------------#|
 */
 
+void	Request::SetClientStatus(ClientStatus	Status)
+{
+	this->Client = Status;
+}
+
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
 	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
@@ -130,6 +136,45 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 		if (key == it->first)
 			return it->second = NewValue, (void)0;
 	}
+}
+
+void	Request::SetExtentionsMap(void)
+{
+	this->ExtentionsMap["application/octet-stream"] = ".bin";
+    this->ExtentionsMap["application/json"] = ".json";
+    this->ExtentionsMap["application/xml"] = ".xml";
+    this->ExtentionsMap["application/zip"] = ".zip";
+    this->ExtentionsMap["application/gzip"] = ".gz";
+    this->ExtentionsMap["application/x-tar"] = ".tar";
+    this->ExtentionsMap["application/x-7z-compressed"] = ".7z";
+    this->ExtentionsMap["application/pdf"] = ".pdf";
+    this->ExtentionsMap["application/x-www-form-urlencoded"] = ".txt";
+    this->ExtentionsMap["application/x-bzip"] = ".bz";
+    this->ExtentionsMap["application/x-bzip2"] = ".bz2";
+    this->ExtentionsMap["application/x-rar-compressed"] = ".rar";
+    this->ExtentionsMap["application/x-msdownload"] = ".exe";
+    this->ExtentionsMap["application/vnd.ms-excel"] = ".xls";
+    this->ExtentionsMap["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = ".xlsx";
+    this->ExtentionsMap["text/plain"] = ".txt";
+    this->ExtentionsMap["text/html"] = ".html";
+    this->ExtentionsMap["text/css"] = ".css";
+    this->ExtentionsMap["text/csv"] = ".csv";
+    this->ExtentionsMap["text/javascript"] = ".js";
+    this->ExtentionsMap["application/javascript"] = ".js";
+    this->ExtentionsMap["image/jpeg"] = ".jpg";
+    this->ExtentionsMap["image/png"] = ".png";
+    this->ExtentionsMap["image/gif"] = ".gif";
+    this->ExtentionsMap["image/svg+xml"] = ".svg";
+    this->ExtentionsMap["image/webp"] = ".webp";
+    this->ExtentionsMap["image/bmp"] = ".bmp";
+    this->ExtentionsMap["audio/mpeg"] = ".mp3";
+    this->ExtentionsMap["audio/wav"] = ".wav";
+    this->ExtentionsMap["audio/ogg"] = ".ogg";
+    this->ExtentionsMap["video/mp4"] = ".mp4";
+    this->ExtentionsMap["video/x-msvideo"] = ".avi";
+    this->ExtentionsMap["video/webm"] = ".webm";
+    this->ExtentionsMap["video/quicktime"] = ".mov";
+    this->ExtentionsMap["video/x-flv"] = ".flv";
 }
 
 void	Request::SetContentLength(const size_t	Length)
@@ -242,12 +287,7 @@ void	Request::SplitURI()
 	std::string	URI = GetHeaderValue("uri");
 	
 	// ---------# Parse URI #--------- //
-	std::string URICharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
-	for (size_t i = 0; i < URI.size() ; i++)
-	{
-		if (URICharacters.find(URI[i]) == std::string::npos)
-			throw "400 Bad request";
-	}
+
 	size_t		pos = URI.find("?");
 	if (pos == std::string::npos) // Query has not been found
 		Path = URI, Query = "";
@@ -346,12 +386,15 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = _Boundary;
 			GetBoundaryFromHeader();
 		}
+		if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
+			PrintError("Unsupported Media Type"), throw "415";
+		FileExtention = ExtentionsMap[Headers["content-type"]];
+		this->ContentType = BinaryOrRaw;
 	}
 }
 
 void	Request::ParseHeaders()
 {
-
 	if (Headers.find("host") == Headers.end())
 		PrintError("No Host has been found!"), throw "400 Bad request";
 	if (Headers.find("connection") != Headers.end())
@@ -399,6 +442,7 @@ void	Request::ReadRequestHeader()
 		Client = EndReading;
 
 	HeaderBuffer.append(buffer, BytesRead);
+	std::cout << HeaderBuffer << "\n\n\n\n";
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
@@ -428,9 +472,6 @@ void	Request::SetUpRequest()
 		case	ReadBody	:	ReadBodyChunk();		break ;
 		case	EndReading	:	break ;
 	}
-
-	// std::cout << "Before Post:" << TotalBytesRead << "--" << ContentLength << std::endl;
-
 	if (Client == EndReading)
 	{
 		if (RequestNotComplete == true)
