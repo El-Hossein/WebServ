@@ -33,7 +33,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re test
 
 test:
 	c++ -w -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
