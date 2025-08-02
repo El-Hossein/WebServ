@@ -8,3 +8,4 @@ a.tldr
 test/
 .vscode/
 AllServer/GenerateJWT.php
+./config.conf

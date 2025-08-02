@@ -28,19 +28,18 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath, Request &req)
         httpResponse += "Content-Type: text/html\r\n";
     if (cgiHeader.find("Content-Length") == std::string::npos)
         httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
-    //need to check connection 
     if (cgiHeader.find("Connection") == std::string::npos)
     {
-        // if (req.GetHeaderValue("connection") == "keep-alive")
-        // {
-        //     httpResponse += "Connection: keep-alive\r\n\r\n";
-        //     checkConnection = keepAlive;
-        // }
-        // else
-        // {
+        if (req.GetHeaderValue("connection") == "keep-alive")
+        {
+            httpResponse += "Connection: keep-alive\r\n\r\n";
+            checkConnection = keepAlive;
+        }
+        else
+        {
             httpResponse += "Connection: close\r\n\r\n";
-            // checkConnection = _close;
-        // }
+            checkConnection = _close;
+        }
 
     }
     cgiHeader = httpResponse;
@@ -81,18 +80,45 @@ std::string handWritingErrorcgi(const std::string& message, int statusCode)
     return html;
 }
 
+std::string readFileToStringCgi(const std::string& path)
+{
+    std::ifstream file(path.c_str(), std::ios::binary);
+    if (!file)
+        return "";
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    file.close();
+    return contents.str();
+}
+
+std::string Cgi::getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+{
+    ConfigNode a = req.GetRightServer();
+
+    std::vector<std::string> temp = a.getValuesForKey(a, what, location);
+    if (!temp.empty())
+        return temp[0];
+	return "";
+}
+
 bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req)
 {
     std::string body;
-    (void)ConfigPars;
-    switch (statusCode)
-    {
-        // i need to read error pages provided by config file
-        case 403: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/403.html"); break;
-        case 404: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/404.html"); break;
-        case 500: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/500.html"); break;
-        case 501: body = readFileToStringcgi("/Users/i61mail/Desktop/WebServ/Response/errorPages/501.html"); break;
-    }
+    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::string root = getInfoConfigCgi(ConfigPars, "root", loc, req);
+    std::vector<std::string> error_page = getInfoConfigMultipleCgi(ConfigPars, "error_page", loc, req);
+    for (size_t i = 0; i + 1 < error_page.size(); i += 2)
+	{
+		if (std::atoi(error_page[i].c_str()) == statusCode)
+		{
+			std::string errorPath = root;
+			if (!root.empty() && root.back() != '/')
+				errorPath += "/";
+			errorPath += error_page[i + 1];
+			body = readFileToStringCgi(errorPath);
+			break;
+		}
+	}
     if (body.empty())
         body = handWritingErrorcgi(message, statusCode);
     statCgiFileBody = body;
@@ -107,6 +133,12 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
         case 404: cgiHeader += " Not Found"; break;
         case 500: cgiHeader += " Internal Server Error"; break;
         case 501: cgiHeader += " Method not implemented"; break;
+        case 400: cgiHeader += " Bad Request"; break;
+        case 413: cgiHeader += " Content Too Large"; break;
+        case 414: cgiHeader += " URI Too Long"; break;
+        case 505: cgiHeader += " HTTP Version Not Supported"; break;
+        case 504: cgiHeader += " Gateway Timeout"; break;
+        case 405: cgiHeader += " Method Not Allowed"; break;
     }
     cgiHeader += "\r\n";
     cgiHeader += "Content-Type: text/html\r\n";
