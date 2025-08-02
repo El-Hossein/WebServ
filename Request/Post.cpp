@@ -12,6 +12,10 @@ Post::Post(Request	&_obj) :	obj(_obj),
 	Flager.BoolEnd = false;
 	Flager.BoolFile = false;
 	Flager.CrlfCount = 0;
+
+	Chunk.ChunkStatus = ChunkVars::None;
+	Chunk.TotalBytesWritten = 0;
+	
 	Dir = "/Users/zderfouf/goinfre/ServerUploads";
 	srand(time(NULL));
 }
@@ -214,37 +218,86 @@ void	Post::ParseBirnaryOrRaw()
 	|#----------------------------------#|
 */
 
-void	Post::ParseChunked()
+void	Post::GetChunks()
 {
 	size_t		start = 0, end = 0, BodySize = 0;
 	std::string HexaStr, BodyContent;
 
+	// switch (Chunk.ChunkStatus)
+	// {
+	// 	case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
+	// 	case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
+	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
+	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
+	// }
 	std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
-		start = UnprocessedBuffer.find("\r\n", 0);
-		if (start == std::string::npos)
-			throw "400 Bad Request";
-		HexaStr = UnprocessedBuffer.substr(0, start);
-		BodySize = HexaToInt(HexaStr);
-		std::cout << "---->HexaStr:{" << HexaStr << "}" << std::endl;
-
-		end = UnprocessedBuffer.find("\r\n", start + 2);
-		if (end == std::string::npos)
-			throw "400 Bad Request";
-
-		BodyContent = UnprocessedBuffer.substr(start + 2, BodySize);
-		std::cout << "---->BodyContent:{" << BodyContent << "}" << std::endl;
-
-		size_t  finish = UnprocessedBuffer.find("0\r\n\r\n");
-		std::cout << end << "-" << finish << std::endl;
-		if (end + 2 == finish)
+		switch (Chunk.ChunkStatus)
 		{
-			obj.SetClientStatus(EndReading);
-			std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+			case	ChunkVars::None		:
+			{
+				start = UnprocessedBuffer.find("\r\n", 0);
+				if (start == std::string::npos)
+					return ;
+				HexaStr = UnprocessedBuffer.substr(0, start);
+				UnprocessedBuffer.erase(0, start + 2);
+				BodySize = HexaToInt(HexaStr); // Body size b hexa value
+				std::cout << "------>HexaStr:{" << HexaStr << "}" << std::endl;
+				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
+			}
+			case	ChunkVars::GotHexaSize	:
+			{
+				BodyContent = UnprocessedBuffer.substr(0, BodySize);
+				std::cout << "--->BodyContent{" << BodyContent << "}" << std::endl; // WRITE BODYCONTENT TO FILE 
+				UnprocessedBuffer.erase(0, BodySize);
+				std::cout << "--->LeftOver UnprocessedBuffer{" << UnprocessedBuffer << "}\n\n" << std::endl; // WRITE BODYCONTENT TO FILE 
+
+				Chunk.TotalBytesWritten += BodyContent.size();
+				std::cout << Chunk.TotalBytesWritten << "--" << BodySize << std::endl;
+				if (Chunk.TotalBytesWritten >= BodySize)
+				{
+					Chunk.ChunkStatus = ChunkVars::GotFullBody; break ;
+				}
+				
+				// if (Chunk.TotalBytesWritten >= BodySize)
+				// {
+				// 	if (Chunk.TotalBytesWritten > BodySize)
+				// 	{
+				// 		size_t LenOfLastBody = Chunk.TotalBytesWritten - BodySize;
+				// 		BodyContent.erase(LenOfLastBody);
+				// 	}
+				// 	else
+				// 		Chunk.ChunkStatus = ChunkVars::GotFullBody; // TotalBytesWritten == BodySize
+				// }
+				return ;
+			}
+			case	ChunkVars::GotFullBody	: // look for the CRLF (end of chunk) || look for the end of Request
+			{
+				Chunk.TotalBytesWritten = 0;
+
+				end = UnprocessedBuffer.find("\r\n", 0);
+				if (end != std::string::npos)
+				{
+					Chunk.ChunkStatus = ChunkVars::None;
+					UnprocessedBuffer.erase(0, end + 2);
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+						Chunk.ChunkStatus = ChunkVars::Finished; break ;
+				}
+				return ; // return to wait for the FullBody end 
+			}
+			case	ChunkVars::Finished	:
+			{
+				obj.SetClientStatus(EndReading);
+				std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+			}
 		}
-		UnprocessedBuffer.erase(0, end + 2);
 	}
+}
+
+void	Post::ParseChunked()
+{
+	GetChunks();
 }
 
 void	Post::SetUnprocessedBuffer()
@@ -275,3 +328,40 @@ void	Post::HandlePost()
 		}
 	}
 }
+
+
+
+
+
+
+		// start = UnprocessedBuffer.find("\r\n", 0);
+		// if (start == std::string::npos)
+		// 	throw "400 Bad Request";
+		// HexaStr = UnprocessedBuffer.substr(0, start);
+		// UnprocessedBuffer.erase(0, start + 2);
+		// BodySize = HexaToInt(HexaStr); // Body size b hexa value
+		// std::cout << "---->HexaStr:{" << HexaStr << "}" << std::endl;
+
+		// BodyContent = UnprocessedBuffer.substr(0, BodySize);
+		// UnprocessedBuffer.erase(0, BodySize);
+		// if (BodyContent.size() == BodySize)
+		// {
+		// 	end = UnprocessedBuffer.find("\r\n", 0);
+		// 	if (end == std::string::npos)
+		// 		; // mal9itch CRLF donc Body mazal masala, wait for next chunk
+		// 	else
+		// 		; // salit chunk go to next
+		// }
+
+
+
+		// std::cout << "---->BodyContent:{" << BodyContent << "}" << std::endl;
+
+		// size_t  finish = UnprocessedBuffer.find("0\r\n\r\n");
+		// std::cout << end << "-" << finish << std::endl;
+		// if (end + 2 == finish)
+		// {
+		// 	obj.SetClientStatus(EndReading);
+		// 	std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+		// }
+		// UnprocessedBuffer.erase(0, end + 2);
