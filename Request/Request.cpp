@@ -129,6 +129,11 @@ void	Request::SetClientStatus(ClientStatus	Status)
 	this->Client = Status;
 }
 
+void	Request::SetFullSystemPath(std::string	&Path)
+{
+	this->FullSystemPath = Path;
+}
+
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
 	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
