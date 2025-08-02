@@ -186,7 +186,7 @@ void	Request::SetServerDetails()
 {
 	std::string	&Host = Headers["host"];
 	if (Host.empty())
-		PrintError("Host Error"), throw "400 Bad Request";
+		PrintError("Host Error"), throw 400;
 
 	size_t		Pos = Host.find(":");
 	if (Pos == std::string::npos)
@@ -200,7 +200,7 @@ void	Request::SetServerDetails()
 	ServerDetails.ServerPort = Host.substr(Pos + 1);
 
 	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
-		PrintError("Host Error"), throw "400 Bad Request";
+		PrintError("Host Error"), throw 400;
 }
 
 /*	|#----------------------------------#|
@@ -215,11 +215,11 @@ void	Request::GetBoundaryFromHeader()
 
 	size_t	pos = it->second.find("=");
 	if (pos == std::string::npos)
-		throw "400 Bad Request -ParseBoundary()";
+		PrintError("Boundary Error, ParseBoundary()"), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
 	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		throw "400 Bad Request -ParseBoundary() -Boundary Parsing.";
+		PrintError("Boundary Error, ParseBoundary()"), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
@@ -271,7 +271,7 @@ void   Request::HandlePath()
 	while (std::getline(stream, part, '/'))
 	{
 		if (part == "..")
-			throw ("403 Forbidden");
+			PrintError("Path Error"), throw 403; // Forbiden
 		else if (!part.empty() && part != ".")
 		{
 			PathParts.push_back(part);
@@ -305,7 +305,7 @@ void	Request::ParseURI()
 {
 	std::string URI = Headers["uri"];
 	if (URI.length() > 2048)
-		throw "414 Request-URI too long";
+		PrintError("Request-URI too long"), throw 414;
 
 	SplitURI();
 	HandlePath();
@@ -326,14 +326,14 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	if		(method == "GET")		this->Method = GET;
 	else if (method == "POST")		this->Method = POST;
 	else if (method == "DELETE")	this->Method = DELETE;	
-	else							throw ("400: Invalide request method.");
+	else							PrintError("Invalide request method"), throw 400;
 		
 	Headers["method"] = method;
 
 	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
-		throw ("505: Invalide request protocol.");
+		PrintError("Invalide request protocol"), throw 505;
 	Headers["protocol"] =  protocol;
 }
 
@@ -350,12 +350,12 @@ void	Request::ReadHeaders(std::string Header)
 
 		headerName = line.substr(0, pos);
 		if (!ValidFieldName(headerName))
-			throw "400 Bad Request ReadHeaders()-1";
+			PrintError("Bad Request"), throw 400;
 
 		headerValue = line.substr(pos + 2);
 		TrimSpaces(headerValue);
 		if (!ValidFieldValue(headerValue))
-			throw "400 Bad Request ReadHeaders()-2";
+			PrintError("Bad Request"), throw 400;
 
 		std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
 
@@ -366,18 +366,18 @@ void	Request::ReadHeaders(std::string Header)
 void	Request::PostRequiredHeaders()
 {
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
-		PrintError("Missing POST required headers"), throw "400 Bad request";
+		PrintError("Missing POST headers"), throw 400;
 
 	if (Headers.find("content-length") != Headers.end())
 	{
 		if (!ValidContentLength(Headers["content-length"]))
-			PrintError("Invalide Content-Length"), throw "400: Bad Request";
+			PrintError("Invalide Content-Length"), throw 400;
 		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
 		this->DataType = FixedLength;
 	}
 	
 	if (Headers.find("transfer-encoding") != Headers.end())
-		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw "501 Not implemented - PostRequestHeaders()";
+		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	
 	if (Headers.find("content-type") != Headers.end())
 	{
@@ -387,7 +387,7 @@ void	Request::PostRequiredHeaders()
 			GetBoundaryFromHeader();
 		}
 		if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
-			PrintError("Unsupported Media Type"), throw "415";
+			PrintError("Unsupported Media Type"), throw 415;
 		FileExtention = ExtentionsMap[Headers["content-type"]];
 		this->ContentType = BinaryOrRaw;
 	}
@@ -396,7 +396,7 @@ void	Request::PostRequiredHeaders()
 void	Request::ParseHeaders()
 {
 	if (Headers.find("host") == Headers.end())
-		PrintError("No Host has been found!"), throw "400 Bad request";
+		PrintError("No Host has been found!"), throw 400;
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	if (Method == POST)
@@ -416,7 +416,7 @@ void Request::ReadBodyChunk()
 	std::memset(buffer, 0, BUFFER_SIZE);
     BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
     if (BytesRead < 0)
-        throw ("Error: Read failed.");
+        PrintError("Error: Read failed"), throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
 		Client = EndReading;
@@ -437,7 +437,7 @@ void	Request::ReadRequestHeader()
 	std::memset(buffer, 0, MAX_HEADER_SIZE);
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead < 0)
-		throw ("Error: Read return.");
+        PrintError("Error: Read failed"), throw -1; // -1 is a flag
 	if (BytesRead == 0)
 		Client = EndReading;
 
@@ -453,7 +453,7 @@ void	Request::ReadRequestHeader()
 	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 	if (HeaderBuffer.size() >= 8192) // 8kb
-		PrintError("Header too long."), throw "400 Bad Request";
+		PrintError("Header too long."), throw 400;
 
 	if (BodyUnprocessedBuffer.size() == 2)
 		Client = EndReading;
@@ -475,7 +475,7 @@ void	Request::SetUpRequest()
 	if (Client == EndReading)
 	{
 		if (RequestNotComplete == true)
-			PrintError("Something is missing."), throw "404 Bad Request";
+			PrintError("Missing Double CRLF in headers"), throw 400;
 	}
 	if (Method == POST)
 	{
