@@ -10,11 +10,10 @@ class Post
 private:
 	Request	&obj;
 	_BoundarySettings					Boundary;
-	_SubBodyStatus						SubBodyStatus;
 	BoundaryFlager						Flager;
 	_BoundaryStatus						BoundaryStatus;
 
-	_ChunkVariables						Chunk;
+	ChunkVars							Chunk;
 
 	bool								FirstTime;
 	bool								BodyFullyRead;
@@ -32,11 +31,13 @@ public:
 	~Post();
 
 	void	FindFileName(std::string	&Buffer, std::string	&Filename);
-	void	WriteToFile(std::string	&Filename, std::string &Buffer);
-	void	GetSubBodies(std::string &Buffer);
 
+	void	GetSubBodies(std::string &Buffer);
 	void	ParseBoundary();
+
 	void	ParseBirnaryOrRaw();
+
+	void	GetChunks();
 	void	ParseChunked();
 
 	void	SetUnprocessedBuffer();

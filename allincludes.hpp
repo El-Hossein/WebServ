@@ -30,13 +30,6 @@ struct	_BoundarySettings
 	std::string	BoundaryEnd;
 };
 
-enum	_SubBodyStatus
-{
-	WithBoundaryStart,
-	WithBothBoundaries,
-	WithNoBoundary
-};
-
 enum	_BoundaryStatus
 {
 	None,
@@ -61,11 +54,13 @@ struct	_ServerDetails
 	std::string	ServerPort;
 };
 
-struct	_ChunkVariables
-{
-	enum	ChunkStatus
-	{
-		None, GotHexaSize, GotBody, Finished
-	};
 
+struct	ChunkVars
+{
+	enum	_ChunkStatus
+	{
+		None, GotHexaSize, GotFullBody, Finished
+	};
+	_ChunkStatus	ChunkStatus;
+	size_t			TotalBytesWritten;
 };
