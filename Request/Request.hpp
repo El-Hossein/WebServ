@@ -81,6 +81,7 @@ public:
 	_ServerDetails						GetServerDetails() const;
 	
 	// ---------		SETTERS 	 	--------- //
+	void	SetFullSystemPath(std::string	&Path);
 	void	SetExtentionsMap();
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
