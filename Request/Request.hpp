@@ -5,7 +5,7 @@
 #include "../pars_config/config.hpp"
 
 #define MAX_HEADER_SIZE	8192
-#define BUFFER_SIZE		100000
+#define BUFFER_SIZE		80000
 
 enum	Method
 {
@@ -24,15 +24,15 @@ enum	DataType
 
 enum	ContentType
 {
-	_Boundary, Binary, Raw, Other
+	_Boundary, BinaryOrRaw
 };
 
 class	Request
 {
 private:
-	_ServerDetails			ServerDetails;
-
-	std::string zbi;
+	_ServerDetails						ServerDetails;
+	std::map<std::string, std::string>	ExtentionsMap;
+	
 
 	ClientStatus			Client;
 	int						ClientFd;
@@ -50,6 +50,8 @@ private:
 	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
 	std::string					BodyUnprocessedBuffer;
+	std::string					FileExtention;
+
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
 	bool						KeepAlive;
@@ -67,6 +69,7 @@ public:
 	size_t								GetContentLength() const;
 	size_t								GetTotatlBytesRead() const;
 	std::string							GetFullPath() const;
+	std::string							GetFileExtention();
 	std::string							GetHeaderValue(std::string) const;
 	std::string							GetUnprocessedBuffer() const;
 	std::string							GetHeaderBuffer() const;
@@ -78,6 +81,8 @@ public:
 	_ServerDetails						GetServerDetails() const;
 	
 	// ---------		SETTERS 	 	--------- //
+	void	SetFullSystemPath(std::string	&Path);
+	void	SetExtentionsMap();
 	void	SetHeaderValue(std::string, std::string);
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
@@ -113,5 +118,8 @@ bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
 size_t			CrlfCounter(std::string	&str);
-void			CreateDirectory(std::string FilenamePath);
-void			FindFileName(std::string	&Buffer, std::string	&Filename);
+void			CreateDirectory(std::string &FilenameDir);
+int				FindFileName(std::string	&Buffer, std::string	&Filename);
+void			PrintCrlfString(std::string Buffer);
+std::string		RandomString();
+int				HexaToInt(std::string	&x);

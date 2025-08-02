@@ -213,7 +213,7 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	if (event->filter == EVFILT_READ)
 	{
 		try { request->SetUpRequest(); }
-			catch (const char* e) { return; }
+			catch (int	&e) { return; }
 		if (request->GetClientStatus() != EndReading)
 			return;
 
