@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sstream>
 #include <fstream>
+#include <dirent.h>
 #include "../Request/Request.hpp"
 
 class Response;
@@ -57,6 +58,8 @@ class Cgi
         time_t startTime;
         std::string uniq;
         int checkConnection;
+        std::string memoExt;
+        bool hasPendingCgi;
 
 
     public :
@@ -101,10 +104,19 @@ class Cgi
         std::string    getinfile();
         bool                getCheckConnection();
         void                setCheckConnection(int conn);
+        int                 checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
+        int                 IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars);
+        int                servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars, std::string uri);
+        bool                generateAutoIndexOnCgi(Request &req);
+        std::string         generateListingDirCgi(Request &req);
+        bool                gethasPendingCgi();
+        void                sethasPendingCgi(bool pendingcgi);
+        std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+        std::string getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         
         
 
 };
 
 std::string intToString(int n);
-int         IsCgiRequest(const char *uri);
+std::string readFileToStringCgi(const std::string& path);
