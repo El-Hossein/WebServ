@@ -4,23 +4,27 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 						:	ClientFd(fd),
 							Client(ReadHeader),
 							DataType(FixedLength),
-							ContentType(Other),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),
 							ContentLength(0),
 							TotalBytesRead(0),
 							KeepAlive(false),
-							RequestNotComplete(true),
-							zbi("")
+							RequestNotComplete(true)
 {
 	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
+	SetExtentionsMap();
 }
 
 Request::~Request() {
 }
-//done:
-int	Request::GetClientFd() const
+
+/*	|#----------------------------------#|
+	|#			 	GETTERS    			#|
+	|#----------------------------------#|
+*/
+
+int		Request::GetClientFd() const
 {
 	return this->ClientFd;
 }
@@ -29,20 +33,17 @@ int		Request::GetClientStatus() const
 {
 	return this->Client;
 }
-void	Request::SetClientStatus(ClientStatus	Status) 
-{
-	this->Client = Status;
-}
 
 std::string	Request::GetHeaderBuffer() const
 {
 	return this->HeaderBuffer;
 }
 
-/*	|#----------------------------------#|
-	|#			 	GETTERS    			#|
-	|#----------------------------------#|
-*/
+std::string	Request::GetFileExtention()
+{
+	return this->FileExtention;
+}
+
 
 std::map<std::string, std::string>	Request::GetHeaders() const
 {
@@ -123,6 +124,16 @@ _ServerDetails	Request::GetServerDetails() const
 	|#----------------------------------#|
 */
 
+void	Request::SetClientStatus(ClientStatus	Status)
+{
+	this->Client = Status;
+}
+
+void	Request::SetFullSystemPath(std::string	&Path)
+{
+	this->FullSystemPath = Path;
+}
+
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
 	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
@@ -130,6 +141,45 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 		if (key == it->first)
 			return it->second = NewValue, (void)0;
 	}
+}
+
+void	Request::SetExtentionsMap(void)
+{
+	this->ExtentionsMap["application/octet-stream"] = ".bin";
+    this->ExtentionsMap["application/json"] = ".json";
+    this->ExtentionsMap["application/xml"] = ".xml";
+    this->ExtentionsMap["application/zip"] = ".zip";
+    this->ExtentionsMap["application/gzip"] = ".gz";
+    this->ExtentionsMap["application/x-tar"] = ".tar";
+    this->ExtentionsMap["application/x-7z-compressed"] = ".7z";
+    this->ExtentionsMap["application/pdf"] = ".pdf";
+    this->ExtentionsMap["application/x-www-form-urlencoded"] = ".txt";
+    this->ExtentionsMap["application/x-bzip"] = ".bz";
+    this->ExtentionsMap["application/x-bzip2"] = ".bz2";
+    this->ExtentionsMap["application/x-rar-compressed"] = ".rar";
+    this->ExtentionsMap["application/x-msdownload"] = ".exe";
+    this->ExtentionsMap["application/vnd.ms-excel"] = ".xls";
+    this->ExtentionsMap["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = ".xlsx";
+    this->ExtentionsMap["text/plain"] = ".txt";
+    this->ExtentionsMap["text/html"] = ".html";
+    this->ExtentionsMap["text/css"] = ".css";
+    this->ExtentionsMap["text/csv"] = ".csv";
+    this->ExtentionsMap["text/javascript"] = ".js";
+    this->ExtentionsMap["application/javascript"] = ".js";
+    this->ExtentionsMap["image/jpeg"] = ".jpg";
+    this->ExtentionsMap["image/png"] = ".png";
+    this->ExtentionsMap["image/gif"] = ".gif";
+    this->ExtentionsMap["image/svg+xml"] = ".svg";
+    this->ExtentionsMap["image/webp"] = ".webp";
+    this->ExtentionsMap["image/bmp"] = ".bmp";
+    this->ExtentionsMap["audio/mpeg"] = ".mp3";
+    this->ExtentionsMap["audio/wav"] = ".wav";
+    this->ExtentionsMap["audio/ogg"] = ".ogg";
+    this->ExtentionsMap["video/mp4"] = ".mp4";
+    this->ExtentionsMap["video/x-msvideo"] = ".avi";
+    this->ExtentionsMap["video/webm"] = ".webm";
+    this->ExtentionsMap["video/quicktime"] = ".mov";
+    this->ExtentionsMap["video/x-flv"] = ".flv";
 }
 
 void	Request::SetContentLength(const size_t	Length)
@@ -141,7 +191,7 @@ void	Request::SetServerDetails()
 {
 	std::string	&Host = Headers["host"];
 	if (Host.empty())
-		PrintError("Host Error"), throw "400 Bad Request";
+		PrintError("Host Error"), throw 400;
 
 	size_t		Pos = Host.find(":");
 	if (Pos == std::string::npos)
@@ -155,7 +205,7 @@ void	Request::SetServerDetails()
 	ServerDetails.ServerPort = Host.substr(Pos + 1);
 
 	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
-		PrintError("Host Error"), throw "400 Bad Request";
+		PrintError("Host Error"), throw 400;
 }
 
 /*	|#----------------------------------#|
@@ -170,15 +220,15 @@ void	Request::GetBoundaryFromHeader()
 
 	size_t	pos = it->second.find("=");
 	if (pos == std::string::npos)
-		throw "400 Bad Request -ParseBoundary()";
+		PrintError("Boundary Error, ParseBoundary()"), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
 	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		throw "400 Bad Request -ParseBoundary() -Boundary Parsing.";
+		PrintError("Boundary Error, ParseBoundary()"), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
-	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--";
+	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--\r\n";
 }
 
 void	Request::HandleQuery()
@@ -226,7 +276,7 @@ void   Request::HandlePath()
 	while (std::getline(stream, part, '/'))
 	{
 		if (part == "..")
-			throw ("403 Forbidden");
+			PrintError("Path Error"), throw 403; // Forbiden
 		else if (!part.empty() && part != ".")
 		{
 			PathParts.push_back(part);
@@ -242,12 +292,7 @@ void	Request::SplitURI()
 	std::string	URI = GetHeaderValue("uri");
 	
 	// ---------# Parse URI #--------- //
-	std::string URICharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
-	for (size_t i = 0; i < URI.size() ; i++)
-	{
-		if (URICharacters.find(URI[i]) == std::string::npos)
-			throw "400 Bad request";
-	}
+
 	size_t		pos = URI.find("?");
 	if (pos == std::string::npos) // Query has not been found
 		Path = URI, Query = "";
@@ -265,7 +310,7 @@ void	Request::ParseURI()
 {
 	std::string URI = Headers["uri"];
 	if (URI.length() > 2048)
-		throw "414 Request-URI too long";
+		PrintError("Request-URI too long"), throw 414;
 
 	SplitURI();
 	HandlePath();
@@ -286,14 +331,14 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	if		(method == "GET")		this->Method = GET;
 	else if (method == "POST")		this->Method = POST;
 	else if (method == "DELETE")	this->Method = DELETE;	
-	else							throw ("400: Invalide request method.");
+	else							PrintError("Invalide request method"), throw 400;
 		
 	Headers["method"] = method;
 
 	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
-		throw ("505: Invalide request protocol.");
+		PrintError("Invalide request protocol"), throw 505;
 	Headers["protocol"] =  protocol;
 }
 
@@ -310,12 +355,12 @@ void	Request::ReadHeaders(std::string Header)
 
 		headerName = line.substr(0, pos);
 		if (!ValidFieldName(headerName))
-			throw "400 Bad Request ReadHeaders()-1";
+			PrintError("Bad Request"), throw 400;
 
 		headerValue = line.substr(pos + 2);
 		TrimSpaces(headerValue);
 		if (!ValidFieldValue(headerValue))
-			throw "400 Bad Request ReadHeaders()-2";
+			PrintError("Bad Request"), throw 400;
 
 		std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
 
@@ -326,18 +371,18 @@ void	Request::ReadHeaders(std::string Header)
 void	Request::PostRequiredHeaders()
 {
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
-		PrintError("Missing POST required headers"), throw "400 Bad request";
+		PrintError("Missing POST headers"), throw 400;
 
 	if (Headers.find("content-length") != Headers.end())
 	{
 		if (!ValidContentLength(Headers["content-length"]))
-			PrintError("Invalide Content-Length"), throw "400: Bad Request";
+			PrintError("Invalide Content-Length"), throw 400;
 		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
 		this->DataType = FixedLength;
 	}
 	
 	if (Headers.find("transfer-encoding") != Headers.end())
-		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw "501 Not implemented - PostRequestHeaders()";
+		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	
 	if (Headers.find("content-type") != Headers.end())
 	{
@@ -346,14 +391,17 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = _Boundary;
 			GetBoundaryFromHeader();
 		}
+		if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
+			PrintError("Unsupported Media Type"), throw 415;
+		FileExtention = ExtentionsMap[Headers["content-type"]];
+		this->ContentType = BinaryOrRaw;
 	}
 }
 
 void	Request::ParseHeaders()
 {
-
 	if (Headers.find("host") == Headers.end())
-		PrintError("No Host has been found!"), throw "400 Bad request";
+		PrintError("No Host has been found!"), throw 400;
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	if (Method == POST)
@@ -373,7 +421,7 @@ void Request::ReadBodyChunk()
 	std::memset(buffer, 0, BUFFER_SIZE);
     BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
     if (BytesRead < 0)
-        throw ("Error: Read failed.");
+        PrintError("Error: Read failed"), throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
 		Client = EndReading;
@@ -384,8 +432,6 @@ void Request::ReadBodyChunk()
 
 	if (TotalBytesRead == ContentLength)
 		Client = EndReading;
-
-	zbi += buffer;
 }
 
 void	Request::ReadRequestHeader()
@@ -396,13 +442,12 @@ void	Request::ReadRequestHeader()
 	std::memset(buffer, 0, MAX_HEADER_SIZE);
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead < 0)
-		throw ("Error: Read return.");
+        PrintError("Error: Read failed"), throw -1; // -1 is a flag
 	if (BytesRead == 0)
 		Client = EndReading;
 
 	HeaderBuffer.append(buffer, BytesRead);
-
-	zbi += HeaderBuffer;
+	std::cout << HeaderBuffer << "\n\n\n\n";
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
@@ -413,7 +458,7 @@ void	Request::ReadRequestHeader()
 	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 	if (HeaderBuffer.size() >= 8192) // 8kb
-		PrintError("Header too long."), throw "400 Bad Request";
+		PrintError("Header too long."), throw 400;
 
 	if (BodyUnprocessedBuffer.size() == 2)
 		Client = EndReading;
@@ -432,13 +477,10 @@ void	Request::SetUpRequest()
 		case	ReadBody	:	ReadBodyChunk();		break ;
 		case	EndReading	:	break ;
 	}
-
 	if (Client == EndReading)
 	{
 		if (RequestNotComplete == true)
-			PrintError("Something is missing."), throw "404 Bad Request";
-
-		// std::ofstream File; File.open("ZRawRequest.txt"), File << zbi ;
+			PrintError("Missing Double CRLF in headers"), throw 400;
 	}
 	if (Method == POST)
 	{

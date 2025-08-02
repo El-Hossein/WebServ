@@ -404,9 +404,9 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             int checkCode = IsCgiRequest(htmlFound, req, ConfigPars);
             if (checkCode == 1)
             {
-                req.setFullSystemPath(htmlFound);
+                req.SetFullSystemPath(htmlFound);
                 handleCgiRequest(req, ConfigPars);
-                req.setFullSystemPath(uri);
+                req.SetFullSystemPath(uri);
                 if (getcgistatus() == CGI_RUNNING)
                 {
                     hasPendingCgi = true;
