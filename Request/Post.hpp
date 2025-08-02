@@ -10,26 +10,37 @@ class Post
 private:
 	Request	&obj;
 	_BoundarySettings					Boundary;
-	_SubBodyStatus						SubBodyStatus;
 	BoundaryFlager						Flager;
-	
 	_BoundaryStatus						BoundaryStatus;
 
-	bool								EndOfRequest;
+	ChunkVars							Chunk;
+
+	bool								FirstTime;
 	bool								BodyFullyRead;
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
+
+	std::string							Dir;
+	std::string							Filename;
+	std::ofstream						OutFile;
 
 	size_t			MaxAllowedBodySize;
 public:
 	Post(Request	&_obj);
 	~Post();
 
-	void	WriteToFile(std::string	&Filename, std::string &Buffer);
+	void	FindFileName(std::string	&Buffer, std::string	&Filename);
+
 	void	GetSubBodies(std::string &Buffer);
-	void	ParseChunked(std::string);
-	void	ParseBoundary(std::string);
+	void	ParseBoundary();
+
+	void	ParseBirnaryOrRaw();
+
+	void	GetChunks();
+	void	ParseChunked();
+
+	void	SetUnprocessedBuffer();
 	void	IsBodyFullyRead();
 	void	HandlePost();
 };

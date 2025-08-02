@@ -29,11 +29,11 @@ clean:
 	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -rf $(NAME) test
+	rm -rf $(NAME) test Uploads
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re test
 
 test:
 	c++ -w -fsanitize=address -std=c++98 Request/z.cpp -o test && echo "\n" && ./test
