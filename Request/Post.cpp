@@ -54,7 +54,7 @@ void	Post::FindFileName(std::string	&Buffer, std::string	&Filename)
 
 	if (FilenamePos == std::string::npos || FilenameEndPos == std::string::npos)
 	{
-		PrintError("Could't find file"), throw "400 Bad Request";
+		PrintError("Could't find file"), throw 400;
 	}
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 
@@ -63,7 +63,7 @@ void	Post::FindFileName(std::string	&Buffer, std::string	&Filename)
 
 	OutFile.open(Filename.c_str(), std::ios::binary); // std::ios::app => to append
 	if (!OutFile.is_open())
-		PrintError("Could't open file"), throw "500 Internal Server Error";
+		PrintError("Could't open file"), throw 500; // Internal Server Error
 }
 
 /*	|#----------------------------------#|
@@ -119,7 +119,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		{
 			start = Buffer.find(Boundary.BoundaryStart, 0);
 			if (start == std::string::npos)
-				PrintError("Boudary Error"), throw "400 Bad Request";
+				PrintError("Boudary Error"), throw 400;
 
 			// std::string Previous(Buffer, start);
 			// if (Previous.size() > 0 && !Filename.empty())
@@ -139,7 +139,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 			BodyPos = Buffer.find("\r\n\r\n");
 			if (BodyPos == std::string::npos) // ila makantch
 			{
-				PrintError("No Body Found - No Double CRLF"), throw "400 Bad Request";
+				PrintError("No Body Found"), throw 400;
 			}
 			else // kayn Double CRLF
 			{
@@ -177,7 +177,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 			{
 				obj.SetClientStatus(EndReading);
 				BoundaryStatus = Finished;
-				std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+				std::cout << "File Uploaded!" << std::endl, throw 201; // "Created"
 			}
 			BoundaryStatus = None;
 		}
@@ -194,7 +194,7 @@ void	Post::ParseBoundary()
 		std::cout << "$$$$$$\n\n";
 		obj.SetClientStatus(EndReading);
 		if (BoundaryStatus != Finished)
-			throw "400 Bad Request";
+			PrintError("Incomplete Request"), throw 400;
 	}
 }
 
@@ -208,7 +208,7 @@ void	Post::ParseBirnaryOrRaw()
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
 		OutFile.close();
-		std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+		std::cout << "File Uploaded!" << std::endl, throw 201;
 		obj.SetClientStatus(EndReading);
 	}
 }
@@ -289,7 +289,7 @@ void	Post::GetChunks()
 			case	ChunkVars::Finished	:
 			{
 				obj.SetClientStatus(EndReading);
-				std::cout << "File Uploaded!" << std::endl, throw "201 Created";
+				std::cout << "File Uploaded!" << std::endl, throw 201;
 			}
 		}
 	}
