@@ -505,33 +505,37 @@ std::vector<std::string> split_path(const std::string& path)
 {
     std::vector<std::string> components;
     std::string current;
-    bool in_component = false;
-    if (path.size() == 1)
-    {
-        if (path[0] == '/')
-        {
-            components.push_back("/");
-            return components;
-        }
+    
+    // Handle empty path or single slash
+    if (path.empty() || path == "/") {
+        components.push_back("/");
+        return components;
     }
-    for (size_t i = 0; i < path.length(); ++i)
-    {
-        if (path[i] == '/')
-        {
-            if (in_component && !current.empty())
-            {
-                components.push_back("/" + current);
-                current.clear();
-                in_component = false;
+
+    // Split path into individual components
+    std::vector<std::string> parts;
+    std::string temp;
+    for (std::string::size_type i = 0; i < path.length(); ++i) {
+        if (path[i] == '/') {
+            if (!temp.empty()) {
+                parts.push_back(temp);
+                temp.clear();
             }
-        } else
-        {
-            current += path[i];
-            in_component = true;
+        } else {
+            temp += path[i];
         }
     }
-    if (in_component && !current.empty())
-        components.push_back("/" + current);
+    if (!temp.empty()) {
+        parts.push_back(temp);
+    }
+
+    // Build cumulative paths
+    current = "";
+    for (std::vector<std::string>::size_type i = 0; i < parts.size(); ++i) {
+        current += "/" + parts[i];
+        components.push_back(current + "/");
+    }
+
     return components;
 }
 
@@ -575,13 +579,20 @@ std::string ConfigNode::GetRightLocation(std::string path)
     for (std::vector<ConfigNode>::iterator Alllocations = locations.begin(); Alllocations != locations.end(); ++Alllocations)
     {
         std::vector<std::string> tokens = split(Alllocations->name.c_str());
-        std::string loc = tokens[1];
-        std::vector<std::string> SplitPath = split_path(RemoveSlashs(loc));
-        for (std::vector<std::string>::iterator SplitLocPath = SplitPath.begin(); SplitLocPath != SplitPath.end(); ++SplitLocPath)
+        std::string loc = RemoveSlashs(tokens[1]);
+
+        std::vector<std::string> SplitPath = split_path(RemoveSlashs(path));
+
+        for (std::vector<std::string>::iterator IterSplitPath = SplitPath.begin(); IterSplitPath != SplitPath.end(); ++IterSplitPath)
         {
-            // std::cout << "path: [" << *SplitLocPath << "]" << std::endl;
-            if (startsWith(RemoveSlashs(path), *SplitLocPath) == true)
-                RightLocation = loc;
+            std::string chunkPath = (*IterSplitPath).c_str();
+            if (SplitPath.size() == 1 && loc == chunkPath)
+                return loc;
+            if (startsWith(chunkPath, loc))
+            {
+                if (loc.length() > RightLocation.length())
+                    RightLocation = loc;
+            }
         }
     }
     return RightLocation;
