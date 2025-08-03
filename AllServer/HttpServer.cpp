@@ -148,18 +148,16 @@ int	stringtoint(const char *e)
 	return num;
 }
 
-void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, const char *e)
+void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, int &e)
 {
-	// int num = stringtoint(e);
-	// switch (num)
-	// {
-	// 	case 500: res->responseError(500, " Internal Server Error", ConfigPars); return;
-	// 	case 501: res->responseError(501, " Not Implemented", ConfigPars); return;
-	// 	case 400: res->responseError(400, " Bad Request", ConfigPars); return;
-	// 	case 413: res->responseError(413, " Content Too Large", ConfigPars); return;
-	// 	case 414: res->responseError(414, " URI Too Long", ConfigPars); return;
-	// }
-	(void)e;
+	switch (e)
+	{
+		case 500: res->responseError(500, " Internal Server Error", ConfigPars, Request); return;
+		case 501: res->responseError(501, " Not Implemented", ConfigPars, Request); return;
+		case 400: res->responseError(400, " Bad Request", ConfigPars, Request); return;
+		case 413: res->responseError(413, " Content Too Large", ConfigPars, Request); return;
+		case 414: res->responseError(414, " URI Too Long", ConfigPars, Request); return;
+	}
 	res->moveToResponse(client_fd, Request, ConfigPars);
 }
 
@@ -213,31 +211,33 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	if (event->filter == EVFILT_READ)
 	{
 		try { request->SetUpRequest(); }
-			catch (int	&e) { return; }
-		if (request->GetClientStatus() != EndReading)
-			return;
-
+		catch (int	&e)
+		{ 
+			if (request->GetClientStatus() != EndReading || e == -1)
+				return;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		// std::map<std::string, std::string> all_header = request->GetHeaders();
 		// for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
 		// 	std::cout << it->first << ": " << it->second << std::endl;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 
-							SetUpResponse(client_fd, response, *request, ConfigPars, NULL);
+			SetUpResponse(client_fd, response, *request, ConfigPars, e);
 
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
 		// response->setHasMore(response->getNextChunk(100000));
 		// response->setBytesSent(0);
 		// std::cout << "response: " << response->getChunk().c_str() << std::endl;
 		// std::cout << "++++++++++++++++++++++++++++++" << std::endl;
-							if (response->_cgi.gethasPendingCgi())
-								return;
-							else
-							{
-								struct kevent ev;
-								AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-								AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-							}
+			if (response->_cgi.gethasPendingCgi())
+				return;
+			else
+			{
+				struct kevent ev;
+				AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+				AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+			}
+		}
+
 	}
 
 	if (event->filter == EVFILT_WRITE)
