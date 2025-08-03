@@ -9,3 +9,4 @@ test/
 .vscode/
 AllServer/GenerateJWT.php
 ./config.conf
+./scirpt.py
