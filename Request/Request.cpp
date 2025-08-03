@@ -206,12 +206,22 @@ void	Request::SetServerDetails()
 
 	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
 		PrintError("Host Error"), throw 400;
+	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
 }
 
 /*	|#----------------------------------#|
 	|#			MEMBER FUNCTIONS    	#|
 	|#----------------------------------#|
 */
+
+void	Request::CheckIfAllowedMethod()
+{
+	Location = RightServer.GetRightLocation(GetHeaderValue("path")); // {/}
+	AllowedMethods = ConfigNode::getValuesForKey(RightServer, "allow_methods", Location);
+
+	if (std::find(AllowedMethods.begin(), AllowedMethods.end(), GetHeaderValue("method")) == AllowedMethods.end())
+		PrintError("Method Not Allowed"), throw 405;
+}
 
 void	Request::GetBoundaryFromHeader()
 {
@@ -264,11 +274,7 @@ void	Request::HandleQuery()
 void   Request::HandlePath()
 {
 	std::string					UriPath = GetHeaderValue("path");
-	std::string					Location = RightServer.GetRightLocation(UriPath);
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
-	// std::vector<std::string>	AllowMethods = ConfigNode::getValuesForKey(RightServer, "allow_methods", Location);
-	// std::cout << a[0] << std::endl;
-	// exit(1);
 
 	if (ConfigPath.empty())
 		return ;
@@ -414,8 +420,8 @@ void	Request::ParseHeaders()
 		PostRequiredHeaders();
 	}
 	SetServerDetails(); // Init localhost + port
-	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
 	ParseURI();
+	CheckIfAllowedMethod();
 }
 
 void Request::ReadBodyChunk()
@@ -452,7 +458,7 @@ void	Request::ReadRequestHeader()
 		Client = EndReading;
 
 	HeaderBuffer.append(buffer, BytesRead);
-	std::cout << HeaderBuffer << "\n\n\n\n";
+	// std::cout << HeaderBuffer << "\n\n\n\n";
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
@@ -462,7 +468,7 @@ void	Request::ReadRequestHeader()
 
 	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
-	if (HeaderBuffer.size() >= 8192) // 8kb
+	if (HeaderBuffer.size() >= MAX_HEADER_SIZE)
 		PrintError("Header too long."), throw 400;
 
 	if (BodyUnprocessedBuffer.size() == 2)
