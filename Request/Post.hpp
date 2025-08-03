@@ -37,6 +37,7 @@ public:
 
 	void	ParseBirnaryOrRaw();
 
+	void	WriteChunkToFile(std::string &BodyContent);
 	void	GetChunks();
 	void	ParseChunked();
 
