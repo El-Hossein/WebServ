@@ -202,6 +202,47 @@ Response * RightResponse(int client_fd, std::vector<Response*>& all_res)
 
 void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<ConfigNode> ConfigPars, std::vector<Request*>& all_req, std::vector<Response*>& all_res) {
 
+    // Check for EOF (client disconnect) or error
+    if (event->flags & EV_EOF) {
+        remove_client(client_fd);
+        // Also clean up request and response objects
+        for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it) {
+            if ((*it)->GetClientFd() == client_fd) {
+                delete *it;
+                all_req.erase(it);
+                break;
+            }
+        }
+        for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
+            if ((*it)->getClientFd() == client_fd) {
+                delete *it;
+                all_res.erase(it);
+                break;
+            }
+        }
+        return;
+    }
+    if (event->flags & EV_ERROR) {
+        std::cerr << "kevent error on fd " << client_fd << std::endl;
+        remove_client(client_fd);
+        // Also clean up request and response objects
+        for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it) {
+            if ((*it)->GetClientFd() == client_fd) {
+                delete *it;
+                all_req.erase(it);
+                break;
+            }
+        }
+        for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
+            if ((*it)->getClientFd() == client_fd) {
+                delete *it;
+                all_res.erase(it);
+                break;
+            }
+        }
+        return;
+    }
+
 	// Find the corresponding Request object
 	Request		*request = RightRequest(client_fd, all_req);
 	Response	*response = RightResponse(client_fd, all_res);
@@ -271,7 +312,34 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 
 			struct kevent ev;
 			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_DISABLE);
-			if (true)
+			if (response->_cgi.getCheckConnection() == keepAlive)
+			{
+				// Remove old objects
+				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
+				{
+					if ((*it)->GetClientFd() == client_fd)
+					{
+						delete *it;
+						all_req.erase(it);
+						break;
+					}
+				}
+				for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
+					if ((*it)->getClientFd() == client_fd) {
+						delete *it;
+						all_res.erase(it);
+						break;
+					}
+				}
+				// Create new Request/Response for the same fd
+				int server_port = 0;
+				Request* new_request = new Request(client_fd, ReadHeader, ConfigPars, server_port);
+				Response* new_response = new Response(*new_request, client_fd);
+				all_req.push_back(new_request);
+				all_res.push_back(new_response);
+				AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
+			}
+			else if (response->_cgi.getCheckConnection() == _close)
 			{
 				response->_cgi.setCheckConnection(_Empty);
 				remove_client(client_fd);
@@ -291,8 +359,6 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 						break;
 					}
 				}
-			} else {
-				AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE);
 			}
 		}
 	}
@@ -330,7 +396,10 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 							struct kevent ev;
 							int client_fd = all_res[j]->getClientFd();
 							AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-							AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+							// Only disable EVFILT_READ if connection is close
+							if (all_res[j]->_cgi.getCheckConnection() == _close) {
+								AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+							}
 						}
 
 						break; // Stop once found
