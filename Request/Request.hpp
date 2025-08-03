@@ -45,6 +45,8 @@ private:
 	std::map<std::string, std::string>	Headers;
 	std::map<std::string, std::string>	QueryParams;
 	std::string							FullSystemPath;
+	std::string							Location;
+	std::vector<std::string>			AllowedMethods;
 	std::vector<std::string>			PathParts;
 
 	_BoundarySettings			BoundaryAttri;
@@ -96,6 +98,7 @@ public:
 
 	void	ParseHeaders();
 
+	void	CheckIfAllowedMethod();
 	void	HandleQuery();
 	void	HandlePath();
 	void	SplitURI();
