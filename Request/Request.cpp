@@ -264,7 +264,12 @@ void	Request::HandleQuery()
 void   Request::HandlePath()
 {
 	std::string					UriPath = GetHeaderValue("path");
-	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", "NULL");
+	std::string					Location = RightServer.GetRightLocation(UriPath);
+	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
+	// std::vector<std::string>	AllowMethods = ConfigNode::getValuesForKey(RightServer, "allow_methods", Location);
+	// std::cout << a[0] << std::endl;
+	// exit(1);
+
 	if (ConfigPath.empty())
 		return ;
 	this->FullSystemPath = ConfigPath[0] + UriPath;
@@ -430,7 +435,7 @@ void Request::ReadBodyChunk()
 	TotalBytesRead += BytesRead;
 	BodyUnprocessedBuffer.assign(buffer, BytesRead);
 
-	if (TotalBytesRead == ContentLength)
+	if (TotalBytesRead == ContentLength) // fix here
 		Client = EndReading;
 }
 
@@ -469,6 +474,11 @@ void	Request::ReadRequestHeader()
 	ParseHeaders();
 }
 
+/**
+ * @brief	throw -1 If request didn't end yet.
+ * 			throw 200 if completed reading request.
+ */
+
 void	Request::SetUpRequest()
 {
 	switch (Client)
@@ -481,12 +491,14 @@ void	Request::SetUpRequest()
 	{
 		if (RequestNotComplete == true)
 			PrintError("Missing Double CRLF in headers"), throw 400;
+		throw 200;
 	}
 	if (Method == POST)
 	{
 		static	Post	PostObj(*this);
 
 		PostObj.HandlePost();
+		throw -1;
 	}
 }
 
