@@ -62,5 +62,5 @@ struct	ChunkVars
 		None, GotHexaSize, GotFullBody, Finished
 	};
 	_ChunkStatus	ChunkStatus;
-	size_t			TotalBytesWritten;
+	size_t			BodySize;
 };

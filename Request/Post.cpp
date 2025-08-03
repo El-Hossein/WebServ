@@ -14,7 +14,7 @@ Post::Post(Request	&_obj) :	obj(_obj),
 	Flager.CrlfCount = 0;
 
 	Chunk.ChunkStatus = ChunkVars::None;
-	Chunk.TotalBytesWritten = 0;
+	Chunk.BodySize = 0;
 	
 	Dir = "/Users/zderfouf/goinfre/ServerUploads";
 	srand(time(NULL));
@@ -218,9 +218,22 @@ void	Post::ParseBirnaryOrRaw()
 	|#----------------------------------#|
 */
 
+void	Post::WriteChunkToFile(std::string &BodyContent)
+{
+	if (FirstTime)
+	{
+		CreateDirectory(Dir);
+		OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary), FirstTime = false;
+		if (!OutFile.is_open())
+			PrintError("Could't open file"), throw 500; // Internal Server Error
+	}
+
+	OutFile.write(BodyContent.c_str(), BodyContent.size());
+}
+
 void	Post::GetChunks()
 {
-	size_t		start = 0, end = 0, BodySize = 0;
+	size_t		start = 0, end = 0;
 	std::string HexaStr, BodyContent;
 
 	// switch (Chunk.ChunkStatus)
@@ -230,7 +243,7 @@ void	Post::GetChunks()
 	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
 	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
 	// }
-	std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
+	// std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
 		switch (Chunk.ChunkStatus)
@@ -242,39 +255,31 @@ void	Post::GetChunks()
 					return ;
 				HexaStr = UnprocessedBuffer.substr(0, start);
 				UnprocessedBuffer.erase(0, start + 2);
-				BodySize = HexaToInt(HexaStr); // Body size b hexa value
-				std::cout << "------>HexaStr:{" << HexaStr << "}" << std::endl;
+				Chunk.BodySize = HexaToInt(HexaStr); // Body size b hexa value
+				std::cout << "------>HexaStr:{" << HexaStr << "} -> To int is:[" << Chunk.BodySize << "]" << std::endl;
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
 			}
 			case	ChunkVars::GotHexaSize	:
 			{
-				BodyContent = UnprocessedBuffer.substr(0, BodySize);
-				std::cout << "--->BodyContent{" << BodyContent << "}" << std::endl; // WRITE BODYCONTENT TO FILE 
-				UnprocessedBuffer.erase(0, BodySize);
-				std::cout << "--->LeftOver UnprocessedBuffer{" << UnprocessedBuffer << "}\n\n" << std::endl; // WRITE BODYCONTENT TO FILE 
+				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
+				std::cout << "Size that will be written to file[" << BodyContent.size() << "]" << std::endl;
 
-				Chunk.TotalBytesWritten += BodyContent.size();
-				std::cout << Chunk.TotalBytesWritten << "--" << BodySize << std::endl;
-				if (Chunk.TotalBytesWritten >= BodySize)
+				WriteChunkToFile(BodyContent);
+				// std::cout << "--->BodyContent{" << BodyContent << "}" << std::endl; // WRITE BODYCONTENT TO FILE 
+				UnprocessedBuffer.erase(0, Chunk.BodySize);
+				// std::cout << "--->LeftOver UnprocessedBuffer{" << UnprocessedBuffer << "}\n\n" << std::endl; // WRITE BODYCONTENT TO FILE 
+				Chunk.BodySize = Chunk.BodySize - BodyContent.size();
+				std::cout << "LeftOverBytes Neeeded:[" << Chunk.BodySize << "]\n\n";
+
+				if (!Chunk.BodySize)
 				{
-					Chunk.ChunkStatus = ChunkVars::GotFullBody; break ;
+					Chunk.ChunkStatus = ChunkVars::GotFullBody;
+					break ;
 				}
-				
-				// if (Chunk.TotalBytesWritten >= BodySize)
-				// {
-				// 	if (Chunk.TotalBytesWritten > BodySize)
-				// 	{
-				// 		size_t LenOfLastBody = Chunk.TotalBytesWritten - BodySize;
-				// 		BodyContent.erase(LenOfLastBody);
-				// 	}
-				// 	else
-				// 		Chunk.ChunkStatus = ChunkVars::GotFullBody; // TotalBytesWritten == BodySize
-				// }
 				return ;
 			}
 			case	ChunkVars::GotFullBody	: // look for the CRLF (end of chunk) || look for the end of Request
 			{
-				Chunk.TotalBytesWritten = 0;
 
 				end = UnprocessedBuffer.find("\r\n", 0);
 				if (end != std::string::npos)
@@ -288,6 +293,7 @@ void	Post::GetChunks()
 			}
 			case	ChunkVars::Finished	:
 			{
+				this->OutFile.close();
 				obj.SetClientStatus(EndReading);
 				std::cout << "File Uploaded!" << std::endl, throw 201;
 			}
@@ -297,7 +303,7 @@ void	Post::GetChunks()
 
 void	Post::ParseChunked()
 {
-	GetChunks();
+	// GetChunks();
 }
 
 void	Post::SetUnprocessedBuffer()

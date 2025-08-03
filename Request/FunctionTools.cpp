@@ -59,10 +59,13 @@ int			HexaToInt(std::string	&x)
 	for (size_t i = 0; i < x.size() ; i++)
 	{
 		if (HexaChars.find(x[i]) == std::string::npos)
-			PrintError("Invalide Hexa value"), throw "400 Bad request";
+			PrintError("Invalide Hexa value"), throw 400;
 	}
     stream << x;
     stream >> std::hex >> y;
+
+	if (y < 0)
+			PrintError("Invalide Hexa value"), throw 400;
     return y;
 }
 
@@ -78,7 +81,7 @@ void		DecodeHexaToChar(std::string	&str)
 			pos += 1; // 1 -> size d charachter
 		}
 		else
-			throw "Error: % in the str";
+			PrintError("Query invalid percent-encoding"), throw 400;
     }
 }
 
@@ -164,7 +167,7 @@ void	CreateDirectory(std::string &FilenameDir)
 	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
 	{
 		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
-			PrintError("Could't open Directory"), throw "400 Bad Request";
+			PrintError("Could't open Directory"), throw 400;
 	}
 }
 
