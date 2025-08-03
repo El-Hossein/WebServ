@@ -40,7 +40,7 @@ class Cgi
         std::string pathInfo;
         char **envp;
         pid_t pid;
-        int exitCode;
+        int exCode;
         int cgiStatusCode;
         std::string cgiHeader;
         std::string cgiBody;

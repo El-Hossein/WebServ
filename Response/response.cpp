@@ -233,8 +233,8 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req)
         
         if (WIFEXITED(status))
         {
-            int exitCode = WEXITSTATUS(status);
-            if (exitCode == 0)
+            int exCode = WEXITSTATUS(status);
+            if (exCode == 0)
             {
                 _cgi.parseOutput();
                 _cgi.formatHttpResponse(_cgi.getoutfile(), req);
