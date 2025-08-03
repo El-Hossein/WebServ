@@ -430,7 +430,7 @@ void Request::ReadBodyChunk()
 	TotalBytesRead += BytesRead;
 	BodyUnprocessedBuffer.assign(buffer, BytesRead);
 
-	if (TotalBytesRead == ContentLength)
+	if (TotalBytesRead == ContentLength) // fix here
 		Client = EndReading;
 }
 
@@ -468,6 +468,11 @@ void	Request::ReadRequestHeader()
 	ReadHeaders(HeaderBuffer); // other lines
 	ParseHeaders();
 }
+
+/**
+ * @brief	throw -1 If request didn't end yet.
+ * 			throw 200 if completed reading request.
+ */
 
 void	Request::SetUpRequest()
 {
