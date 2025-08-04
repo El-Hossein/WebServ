@@ -234,15 +234,15 @@ void	Post::WriteChunkToFile(std::string &BodyContent)
 void	Post::GetChunks()
 {
 	size_t		start = 0, end = 0;
-	std::string HexaStr, BodyContent;
+	std::string	BodyContent;
 
-	// switch (Chunk.ChunkStatus)
-	// {
-	// 	case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
-	// 	case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
-	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
-	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
-	// }
+	switch (Chunk.ChunkStatus)
+	{
+		case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
+		case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
+		case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
+		case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
+	}
 	// std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
@@ -253,23 +253,24 @@ void	Post::GetChunks()
 				start = UnprocessedBuffer.find("\r\n", 0);
 				if (start == std::string::npos)
 					return ;
-				HexaStr = UnprocessedBuffer.substr(0, start);
+
+				Chunk.BodySize = HexaToInt(UnprocessedBuffer.substr(0, start)); // Body size b hexa value
 				UnprocessedBuffer.erase(0, start + 2);
-				Chunk.BodySize = HexaToInt(HexaStr); // Body size b hexa value
-				std::cout << "------>HexaStr:{" << HexaStr << "} -> To int is:[" << Chunk.BodySize << "]" << std::endl;
+				std::cout << "------>HexaSize To read:{" << Chunk.BodySize << "}" << std::endl;
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
 			}
 			case	ChunkVars::GotHexaSize	:
 			{
 				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
-				std::cout << "Size that will be written to file[" << BodyContent.size() << "]" << std::endl;
+				std::cout << BodyContent.size() << std::endl;
+				std::cout << "------>Bodycontent:{" << BodyContent << "}" << std::endl;
+				std::cout << "------>UnprocessedBuffer:{" << UnprocessedBuffer << "}" << std::endl;
 
 				WriteChunkToFile(BodyContent);
-				// std::cout << "--->BodyContent{" << BodyContent << "}" << std::endl; // WRITE BODYCONTENT TO FILE 
-				UnprocessedBuffer.erase(0, Chunk.BodySize);
-				// std::cout << "--->LeftOver UnprocessedBuffer{" << UnprocessedBuffer << "}\n\n" << std::endl; // WRITE BODYCONTENT TO FILE 
-				Chunk.BodySize = Chunk.BodySize - BodyContent.size();
-				std::cout << "LeftOverBytes Neeeded:[" << Chunk.BodySize << "]\n\n";
+				UnprocessedBuffer.erase(0, BodyContent.size());
+
+				Chunk.BodySize -= BodyContent.size();
+				std::cout << "LeftOverBytes Neeeded:[" << Chunk.BodySize << "]\n";
 
 				if (!Chunk.BodySize)
 				{
@@ -280,19 +281,22 @@ void	Post::GetChunks()
 			}
 			case	ChunkVars::GotFullBody	: // look for the CRLF (end of chunk) || look for the end of Request
 			{
-
 				end = UnprocessedBuffer.find("\r\n", 0);
 				if (end != std::string::npos)
 				{
 					Chunk.ChunkStatus = ChunkVars::None;
 					UnprocessedBuffer.erase(0, end + 2);
+
 					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
-						Chunk.ChunkStatus = ChunkVars::Finished; break ;
+						Chunk.ChunkStatus = ChunkVars::Finished;
+					std::cout << "\nNone again\n";
+					break ;
 				}
 				return ; // return to wait for the FullBody end 
 			}
 			case	ChunkVars::Finished	:
 			{
+				std::cout << "\n\n\n####	Finished	####\n\n\n";
 				this->OutFile.close();
 				obj.SetClientStatus(EndReading);
 				std::cout << "File Uploaded!" << std::endl, throw 201;
@@ -303,7 +307,7 @@ void	Post::GetChunks()
 
 void	Post::ParseChunked()
 {
-	// GetChunks();
+	GetChunks();
 }
 
 void	Post::SetUnprocessedBuffer()
