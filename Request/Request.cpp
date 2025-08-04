@@ -455,10 +455,13 @@ void	Request::ReadRequestHeader()
 	if (BytesRead < 0)
         PrintError("Error: Read failed"), throw -1; // -1 is a flag
 	if (BytesRead == 0)
+	{
 		Client = EndReading;
+		if (RequestNotComplete)
+			PrintError("Missing Double CRLF in headers"), throw 400;
+	}
 
 	HeaderBuffer.append(buffer, BytesRead);
-	// std::cout << HeaderBuffer << "\n\n\n\n";
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
@@ -491,14 +494,9 @@ void	Request::SetUpRequest()
 	{
 		case	ReadHeader	:	ReadRequestHeader();	break ;
 		case	ReadBody	:	ReadBodyChunk();		break ;
-		case	EndReading	:	break ;
+		case	EndReading	:	throw -42 ;
 	}
-	if (Client == EndReading)
-	{
-		if (RequestNotComplete == true)
-			PrintError("Missing Double CRLF in headers"), throw 400;
-		throw 200;
-	}
+
 	if (Method == POST)
 	{
 		static	Post	PostObj(*this);
