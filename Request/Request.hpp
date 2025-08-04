@@ -4,8 +4,8 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define MAX_HEADER_SIZE	8192
-#define BUFFER_SIZE		80000
+#define MAX_HEADER_SIZE	300
+#define BUFFER_SIZE		70
 
 enum	Method
 {
@@ -91,6 +91,7 @@ public:
 	void	SetServerDetails();
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
+
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
@@ -125,4 +126,5 @@ void			CreateDirectory(std::string &FilenameDir);
 int				FindFileName(std::string	&Buffer, std::string	&Filename);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
-int				HexaToInt(std::string	&x);
+int				HexaToInt(std::string	x);
+std::string		RemoveCrlf(std::string BodyContent);
