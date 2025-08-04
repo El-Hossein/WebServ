@@ -4,8 +4,8 @@
 #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 
-#define MAX_HEADER_SIZE	300
-#define BUFFER_SIZE		70
+#define MAX_HEADER_SIZE	8000
+#define BUFFER_SIZE		80000
 
 enum	Method
 {
