@@ -100,6 +100,10 @@ bool Response::getNextChunk(size_t chunkSize)
         size_t left = headers.size() - headerSent;
         size_t sendNow = std::min(chunkSize, left);
         chunk = headers.substr(headerSent, sendNow);
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ RESPONSE static headers\033[0m" << std::endl;
+        // std::cout << Response::getClientFd() << " | " << pathRequested << std::endl;
+        // std::cout << chunk << std::endl;
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ END RESPONSE static headers\033[0m" << std::endl;
         headerSent += sendNow;
         return true;
     }
@@ -110,6 +114,10 @@ bool Response::getNextChunk(size_t chunkSize)
         size_t left = _cgi.getCgiHeader().size() - _cgi.getCgiHeaderSent();
         size_t sendNow = std::min(chunkSize, left);
         chunk = _cgi.getCgiHeader().substr(_cgi.getCgiHeaderSent(), sendNow);
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ RESPONSE Cgi headers\033[0m" << std::endl;
+        // std::cout << Response::getClientFd() << " | " << pathRequested  << std::endl;
+        // std::cout << chunk << std::endl;
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ END RESPONSE Cgi headers\033[0m" << std::endl;
         _cgi.setCgiHeaderSent(_cgi.getCgiHeaderSent() + sendNow);
         return true;
     }
@@ -184,7 +192,10 @@ bool Response::getNextChunk(size_t chunkSize)
             delete [] buffer;
             if (_cgi.getFilePos() >= _cgi.getFileSize())
                 f.close();
-
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ RESPONSE Cgi\033[0m" << std::endl;
+        // std::cout << Response::getClientFd() << " | " << pathRequested  << std::endl;
+        // std::cout << chunk << std::endl;
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ END RESPONSE Cgi\033[0m" << std::endl;
             return true;
         }
         delete [] buffer;
@@ -207,6 +218,10 @@ bool Response::getNextChunk(size_t chunkSize)
             if (filePos >= fileSize)
                 file.close();
 
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ RESPONSE static\033[0m" << std::endl;
+        // std::cout << Response::getClientFd() << " | " << pathRequested  << std::endl;
+        // std::cout << chunk << std::endl;
+		// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ END RESPONSE static\033[0m" << std::endl;
             return true;
         }
 
