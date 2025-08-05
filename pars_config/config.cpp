@@ -196,29 +196,6 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
     count = KV.size() - 1;
     if (key != KV[0]) return;
     
-    if (key == "alias" || key == "root")
-        checkAliasRoot(key, ConfNode);
-    if (key == "allow_methods")
-    {
-        int CheckNono = 0;
-        int CheckOthers = 0;
-        for (std::vector<std::string>::iterator it = KV.begin(); it != KV.end(); ++it) {
-            if (*it == "GET" || *it == "POST" || *it == "DELETE")
-                CheckOthers = 1;
-            else if (*it == "NONE")
-                CheckNono = 1;
-        }
-        if (CheckNono == 1 && CheckOthers == 1)
-            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
-    }
-    
-    if (key == "autoindex")
-    {
-        std::cout << KV[0] << std::endl;
-        if (KV[1] != "on" && KV[1] != "off")
-            throw std::runtime_error("Error: antoindex take only on or off");
-    }
-
     std::vector<std::string> helo = ConfNode.ConfgetValuesForKey(ConfNode, key, "NULL");
     if (!helo.empty())
     {
@@ -269,13 +246,31 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
     ErrorHandle(words, ConfNode, blockType);
 }
 
+void CheckUnit(std::string value)
+{
+    int i = value.size() - 1;
+    if (i >= 0 && value[i] != 'B' && value[i] != 'K' && value[i] != 'M' && value[i] != 'G')
+    {
+
+        throw std::runtime_error("Unit of the client_max_body_size is not correct (B, K, M, G)");
+    }
+    i--;
+    while (i >= 0) {
+        if (!isdigit(value[i]))
+            throw std::runtime_error("Unit of the client_max_body_size is not correct (B, K, M, G)");
+
+        i--;
+    }
+}
+
 void MaxBodySizeToBytes(std::vector<std::string>& words) {
-    if (words.empty() || words.size() < 2 || words[1].empty()) {
+    if (words.empty() || words[1].empty()) {
         words[1] = "0";
         return;
     }
 
     std::string value = words[1];
+    CheckUnit(value);
     char unit = value[value.length() - 1];
     size_t number = 0;
 
@@ -308,6 +303,34 @@ void MaxBodySizeToBytes(std::vector<std::string>& words) {
     result << number;
     words[1] = result.str();
 }
+
+void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
+{
+    if (words[0] == "client_max_body_size")
+        MaxBodySizeToBytes(words);
+
+    if (words[0] == "alias" || words[0] == "root")
+        checkAliasRoot(words[0], ConfNode);
+
+    if (words[0] == "allow_methods")
+    {
+        int CheckNono = 0;
+        int CheckOthers = 0;
+        for (std::vector<std::string>::iterator it = words.begin(); it != words.end(); ++it) {
+            if (*it == "GET" || *it == "POST" || *it == "DELETE")
+                CheckOthers = 1;
+            else if (*it == "NONE")
+                CheckNono = 1;
+        }
+        if (CheckNono == 1 && CheckOthers == 1)
+            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
+    }
+    
+    if (words[0] == "autoindex")
+        if (words[1] != "on" && words[1] != "off")
+            throw std::runtime_error("Error: antoindex take only on or off");
+}
+
 // add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
@@ -352,13 +375,9 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, locations[0]);
     else
         throw std::runtime_error("Error: Unknown block type in configuration.");
-    if (words[0] == "client_max_body_size")
-    {
-        MaxBodySizeToBytes(words);
-        // std::cout << "test: " << words[1] << std::endl;
-    }
-        
-        
+
+    CheckEdgeCases(words, ConfNode);
+    
     for (size_t i = 1; i < words.size(); ++i)
         ConfNode.addValue(words[0], words[i]);
 }
