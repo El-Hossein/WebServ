@@ -141,16 +141,6 @@ Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> Co
 	return new_request;
 }
 
-
-int	stringtoint(const char *e)
-{
-	int num = 0;
-
-	std::stringstream ss(e);
-	ss >> num;
-	return num;
-}
-
 void	SetUpResponse(int &client_fd, Response * res, Request	&Request, std::vector<ConfigNode> ConfigPars, int &e)
 {
 	switch (e)
@@ -375,32 +365,6 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	}
 }
 
-// 1. Handle CGI process exit notification
-void HandleCGIExit(struct kevent* event, std::vector<Response*> all_res, std::vector<Request*> all_request, int kq, std::vector<ConfigNode> ConfigPars)
-{
-	if (event->filter == EVFILT_PROC && (event->fflags & NOTE_EXIT)) {
-		pid_t exitedPid = event->ident;
-
-		// Match this PID with the correct Response object
-		for (size_t j = 0; j < all_res.size(); ++j) {
-			if (all_res[j]->_cgi.gethasPendingCgi() &&
-				all_res[j]->_cgi.getpid_1() == exitedPid) {
-				int tempClientFd = all_res[j]->getClientFd();
-				Request* _reqPtr = RightRequest(tempClientFd, all_request);
-				if (all_res[j]->checkPendingCgi(ConfigPars, *_reqPtr)) {
-					struct kevent ev;
-					int client_fd = all_res[j]->getClientFd();
-					AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
-					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
-				}
-
-				break; // Stop once found
-			}
-		}
-
-		return; // done with this event
-	}
-}
 
 void HandleCGIprocesses(std::vector<Response*> all_res, int kq, std::vector<Request*> all_request, std::vector<ConfigNode> ConfigPars)
 {
@@ -408,16 +372,16 @@ void HandleCGIprocesses(std::vector<Response*> all_res, int kq, std::vector<Requ
 	{
 		if (all_res[i]->_cgi.gethasPendingCgi())
 		{
-			// Check for timeout
 			time_t currentTime = time(NULL);
 			time_t cgiStart = all_res[i]->_cgi.gettime();
 			if (currentTime - cgiStart > 10)
 			{
 				pid_t pid = all_res[i]->_cgi.getpid_1();
-
+				
 				struct kevent kev;
-				AddToKqueue(kev, kq, pid, EVFILT_PROC, EV_DELETE);
-
+				EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+				kevent(globalKq, &kev, 1, NULL, 0, NULL);
+				
 				kill(pid, SIGTERM);
 				usleep(100000);
 				
@@ -426,7 +390,7 @@ void HandleCGIprocesses(std::vector<Response*> all_res, int kq, std::vector<Requ
 				if (result == 0)
 				{
 					kill(pid, SIGKILL);
-					usleep(50000);
+					usleep(100000);
 					waitpid(pid, &status, 0);
 				}
 				int tempClientFd = all_res[i]->getClientFd();
@@ -435,40 +399,71 @@ void HandleCGIprocesses(std::vector<Response*> all_res, int kq, std::vector<Requ
 				all_res[i]->_cgi.setcgistatus(CGI_ERROR);
 				all_res[i]->_cgi.sethasPendingCgi(false);
 
+
 				struct kevent ev;
 				int client_fd = all_res[i]->getClientFd();
 				AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
 				AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
 				break;
+				
 			}
 		}
 	}
 }
 
-void HttpServer::run(std::vector<ConfigNode> ConfigPars)
+
+void	HttpServer::traiteCgiProcess(std::vector<Response*> all_res, int kq, std::vector<Request*> all_request, std::vector<ConfigNode> ConfigPars, int i)
 {
-    struct kevent events[BACKLOG];
+	pid_t exitedPid = events[i].ident;
+	for (size_t j = 0; j < all_res.size(); ++j)
+	{
+		if (all_res[j]->_cgi.gethasPendingCgi() && all_res[j]->_cgi.getpid_1() == exitedPid)
+		{
+			int tempClientFd = all_res[j]->getClientFd();
+			Request* _reqPtr = RightRequest(tempClientFd, all_request);
+			if (all_res[j]->checkPendingCgi(ConfigPars, *_reqPtr))
+			{
+				pid_t pid = all_res[i]->_cgi.getpid_1();
+				struct kevent kev;
+				EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+				kevent(globalKq, &kev, 1, NULL, 0, NULL);
+
+				struct kevent ev;
+				int client_fd = all_res[j]->getClientFd();
+				AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE);
+				if (all_res[j]->_cgi.getCheckConnection() == _close)
+					AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE);
+			}
+			all_res[j]->_cgi.sethasPendingCgi(false);
+			break;
+		}
+	}
+}
+
+void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
     std::vector<Request*> all_request;
     std::vector<Response*> all_res;
     
-    while (true)
-	{
+    while (true) {
         struct timespec timeout;
         timeout.tv_sec = 0;
-        timeout.tv_nsec = 100000000;
+        timeout.tv_nsec = 10000000;
         
-        int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
-        if (nev < 0)
-		{
-            std::cout << "kevent error: " << strerror(errno) << std::endl;
+        int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
+        if (nev < 0) {
+            std::cerr << "kevent error: " << strerror(errno) << std::endl;
             continue;
         }
         // Handle all kevent events
+
 		for (int i = 0; i < nev; ++i)
 		{
-			// 1. Handle CGI process exit notification
-			HandleCGIExit(&events[i], all_res, all_request, kq, ConfigPars);
-			
+			if (events[i].filter == EVFILT_PROC && (events[i].fflags & NOTE_EXIT))
+			{
+				traiteCgiProcess(all_res, kq, all_request, ConfigPars, i);
+				continue;
+			}
+
 			// 2. Check if it's a server socket
 			int fd = events[i].ident;
 			// 1. Check if it's a server FD (new connection)
@@ -496,8 +491,6 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 				}
 			}
 		}
-        
-        // Handle CGI processes
-		HandleCGIprocesses(all_res, kq , all_request, ConfigPars);
+		HandleCGIprocesses(all_res, kq, all_request, ConfigPars);
     }
 }
