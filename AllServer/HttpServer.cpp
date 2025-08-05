@@ -389,7 +389,6 @@ void HandleCGIprocesses(std::vector<Response*> all_res, int kq, std::vector<Requ
 				int result = waitpid(pid, &status, WNOHANG);
 				if (result == 0)
 				{
-					std::cout << "                jejejjejejejejejejjejj    " << std::endl;
 					kill(pid, SIGKILL);
 					usleep(100000);
 					waitpid(pid, &status, 0);
