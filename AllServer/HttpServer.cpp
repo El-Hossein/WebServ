@@ -63,20 +63,24 @@ void AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags)
 }
 
 //done with the server setup
-void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
+void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
+{
 	std::cout << "\033[34mSetting up server...\033[0m" << std::endl;
 	kq = kqueue();
-	if (kq == -1) throw std::runtime_error("Failed to create kqueue");
+	if (kq == -1) throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
 
 	globalKq = kq;
 	
 	std::vector<std::vector<int> > AllPorts;
 	GetAllPorts(ConfigPars, AllPorts);
 
-	for (size_t i = 0; i < AllPorts.size(); i++) {
-		for (size_t j = 0; j < AllPorts[i].size(); j++) {
+	for (size_t i = 0; i < AllPorts.size(); i++)
+	{
+		for (size_t j = 0; j < AllPorts[i].size(); j++)
+		{
 			int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-			if (server_fd == -1) {
+			if (server_fd == -1)
+			{
 				std::cout << "\033[31mSocket creation failed for server " << i << " on port " << AllPorts[i][j] << "\033[0m\n";
 				continue;
 			}
@@ -87,7 +91,8 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
 
 			struct sockaddr_in server_addr;
 			SetUpForBind(server_addr, AllPorts[i][j]);
-			if (BindAndListen(server_fd, server_addr, AllPorts[i][j], i) == 1) {
+			if (BindAndListen(server_fd, server_addr, AllPorts[i][j], i) == 1)
+			{
 				close(server_fd);
 				continue;
 			}
@@ -103,13 +108,16 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars) {
 }
 
 
-Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> ConfigPars) {
+Request* HttpServer::accept_new_client(int server_fd, std::vector<ConfigNode> ConfigPars)
+{
 	struct sockaddr_in client_addr;
 	socklen_t addr_len = sizeof(client_addr);
 	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addr_len);
 	
-	if (client_fd < 0) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) {
+	if (client_fd < 0)
+	{
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+		{
 			std::cout << "\033[31mAccept failed on server_fd " << server_fd << ": " << strerror(errno) << "\033[0m" << std::endl;
 		}
 		int tmp(0);return new Request(-1, ReadHeader,ConfigPars, tmp);
@@ -166,19 +174,36 @@ void HttpServer::remove_client(int client_fd)
 	close(client_fd);
 }
 
-void remove_request(int fd, std::vector<Request*>& all) {
-	for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it) {
-		if ((*it)->GetClientFd() == fd) {
-			delete *it;        // Free memory
-			all.erase(it);     // Remove pointer from vector
+void remove_request(int fd, std::vector<Request*>& all)
+{
+	for (std::vector<Request*>::iterator it = all.begin(); it != all.end(); ++it)
+	{
+		if ((*it)->GetClientFd() == fd)
+		{
+			delete *it;
+			all.erase(it);
 			return;
+		}
+	}
+}
+void remove_Response(int client_fd, std::vector<Response*>& all_res)
+{
+	for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it)
+	{
+		if ((*it)->getClientFd() == client_fd)
+		{
+			delete *it;
+			all_res.erase(it);
+			break;
 		}
 	}
 }
 Request * RightRequest(int client_fd, std::vector<Request*>& all_req)
 {
-	for (size_t i = 0; i < all_req.size(); ++i) {
-		if (all_req[i]->GetClientFd() == client_fd) {
+	for (size_t i = 0; i < all_req.size(); ++i)
+	{
+		if (all_req[i]->GetClientFd() == client_fd)
+		{
 			return  all_req[i];
 		}
 	}
@@ -186,8 +211,10 @@ Request * RightRequest(int client_fd, std::vector<Request*>& all_req)
 }
 Response * RightResponse(int client_fd, std::vector<Response*>& all_res)
 {
-	for (size_t i = 0; i < all_res.size(); ++i) {
-		if (all_res[i]->getClientFd() == client_fd) {
+	for (size_t i = 0; i < all_res.size(); ++i)
+	{
+		if (all_res[i]->getClientFd() == client_fd)
+		{
 			return all_res[i];
 		}
 	}
@@ -201,24 +228,8 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 	{
         remove_client(client_fd);
         // Also clean up request and response objects
-        for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
-		{
-            if ((*it)->GetClientFd() == client_fd)
-			{
-                delete *it;
-                all_req.erase(it);
-                break;
-            }
-        }
-        for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it)
-		{
-            if ((*it)->getClientFd() == client_fd)
-			{
-                delete *it;
-                all_res.erase(it);
-                break;
-            }
-        }
+		remove_request(client_fd, all_req);
+		remove_Response(client_fd, all_res);
         return;
     }
     if (event->flags & EV_ERROR)
@@ -226,24 +237,8 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
         std::cout << "kevent error on fd " << client_fd << std::endl;
         remove_client(client_fd);
         // Also clean up request and response objects
-        for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
-		{
-            if ((*it)->GetClientFd() == client_fd)
-			{
-                delete *it;
-                all_req.erase(it);
-                break;
-            }
-        }
-        for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it)
-		{
-            if ((*it)->getClientFd() == client_fd)
-			{
-                delete *it;
-                all_res.erase(it);
-                break;
-            }
-        }
+		remove_request(client_fd, all_req);
+		remove_Response(client_fd, all_res);
         return;
     }
 
@@ -316,22 +311,8 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			if (response->_cgi.getCheckConnection() == keepAlive)
 			{
 				// Remove old objects
-				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
-				{
-					if ((*it)->GetClientFd() == client_fd)
-					{
-						delete *it;
-						all_req.erase(it);
-						break;
-					}
-				}
-				for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
-					if ((*it)->getClientFd() == client_fd) {
-						delete *it;
-						all_res.erase(it);
-						break;
-					}
-				}
+				remove_request(client_fd, all_req);
+				remove_Response(client_fd, all_res);
 				// Create new Request/Response for the same fd
 				int server_port = 0;
 				Request* new_request = new Request(client_fd, ReadHeader, ConfigPars, server_port);
@@ -344,22 +325,8 @@ void HttpServer::handle_client(int client_fd, struct kevent* event, std::vector<
 			{
 				response->_cgi.setCheckConnection(_Empty);
 				remove_client(client_fd);
-				for (std::vector<Request*>::iterator it = all_req.begin(); it != all_req.end(); ++it)
-				{
-					if ((*it)->GetClientFd() == client_fd)
-					{
-						delete *it;
-						all_req.erase(it);
-						break;
-					}
-				}
-				for (std::vector<Response*>::iterator it = all_res.begin(); it != all_res.end(); ++it) {
-					if ((*it)->getClientFd() == client_fd) {
-						delete *it;
-						all_res.erase(it);
-						break;
-					}
-				}
+				remove_request(client_fd, all_req);
+				remove_Response(client_fd, all_res);
 			}
 		}
 	}
@@ -440,17 +407,20 @@ void	HttpServer::traiteCgiProcess(std::vector<Response*> all_res, int kq, std::v
 	}
 }
 
-void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
+void HttpServer::run(std::vector<ConfigNode> ConfigPars)
+{
     std::vector<Request*> all_request;
     std::vector<Response*> all_res;
     
-    while (true) {
+    while (true)
+	{
         struct timespec timeout;
         timeout.tv_sec = 0;
         timeout.tv_nsec = 10000000;
         
         int nev = kevent(kq, NULL, 0, events, BACKLOG, &timeout);
-        if (nev < 0) {
+        if (nev < 0)
+		{
             std::cerr << "kevent error: " << strerror(errno) << std::endl;
             continue;
         }
@@ -467,25 +437,29 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars) {
 			// 2. Check if it's a server socket
 			int fd = events[i].ident;
 			// 1. Check if it's a server FD (new connection)
-			for (size_t j = 0; j < server_fds.size(); ++j) {
-				if (server_fds[j] == fd) {
+			for (size_t j = 0; j < server_fds.size(); ++j)
+			{
+				if (server_fds[j] == fd)
+				{
 					Request* new_request = accept_new_client(fd, ConfigPars);
-					if (new_request->GetClientFd() != -1) {
+					if (new_request->GetClientFd() != -1)
+					{
 						Response * res = new Response(*new_request, new_request->GetClientFd());
 						all_request.push_back(new_request);
 						all_res.push_back(res);
 						handle_client(new_request->GetClientFd(), &events[i], ConfigPars, all_request, all_res);
 					}
-					else {
+					else
 						delete new_request;
-					}
 					break;
 				}
 			}
 
 			// 3. Handle client socket
-			for (size_t j = 0; j < all_request.size(); ++j) {
-				if (all_request[j]->GetClientFd() == fd) {
+			for (size_t j = 0; j < all_request.size(); ++j)
+			{
+				if (all_request[j]->GetClientFd() == fd)
+				{
 					handle_client(fd, &events[i], ConfigPars, all_request, all_res);
 					break;
 				}
