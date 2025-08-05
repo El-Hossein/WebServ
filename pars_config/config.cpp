@@ -211,6 +211,14 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
         if (CheckNono == 1 && CheckOthers == 1)
             throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
     }
+    
+    if (key == "autoindex")
+    {
+        std::cout << KV[0] << std::endl;
+        if (KV[1] != "on" && KV[1] != "off")
+            throw std::runtime_error("Error: antoindex take only on or off");
+    }
+
     std::vector<std::string> helo = ConfNode.ConfgetValuesForKey(ConfNode, key, "NULL");
     if (!helo.empty())
     {
