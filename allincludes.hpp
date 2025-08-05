@@ -64,3 +64,5 @@ struct	ChunkVars
 	_ChunkStatus	ChunkStatus;
 	size_t			BodySize;
 };
+
+void AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
