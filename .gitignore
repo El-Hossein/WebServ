@@ -10,3 +10,4 @@ test/
 AllServer/GenerateJWT.php
 ./config.conf
 ./scirpt.py
+./all_test
