@@ -70,7 +70,7 @@ class Response
         std::string         postResponseSuccess(const std::string& message);
         int                 checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
         int                 prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars);
-
+        void                nonRedirect(std::string redirectUrl, Request &req, std::vector<ConfigNode> ConfigPars, int statusCode);
 };
 
 
