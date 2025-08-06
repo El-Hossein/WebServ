@@ -113,18 +113,7 @@ class Cgi
         void                sethasPendingCgi(bool pendingcgi);
         std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         std::string getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
-        void    cleanup() {
-        if (!outFile.empty()) {
-            unlink(outFile.c_str());
-            outFile.clear();
-        }
         
-        sethasPendingCgi(false);
-        pid = -1;
-    }
-        
-        
-
 };
 
 std::string intToString(int n);
