@@ -382,7 +382,7 @@ void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector
     {
         case 200: headers += " Ok"; break;
         case 201: headers += " Created"; break;
-        case 204: headers += " No Content"; break;
+        case 204: headers += " No Content"; staticFileBody = ""; redirectUrl.clear(); break;
         case 400: headers += " Bad Request"; break;
         case 403: headers += " Forbidden"; break;
         case 404: headers += " Not Found"; break;
