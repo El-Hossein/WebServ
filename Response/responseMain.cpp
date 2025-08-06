@@ -13,6 +13,7 @@ Response::Response(Request	&req, int _clientFd)
     staticFilePos= 0;
     usingStaticFile = false;
     bytesSent = 0;
+    _cgi.sethasPendingCgi(false);
 }
 
 Response::~Response(){
@@ -303,7 +304,7 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
 
     headers = "HTTP/1.1 200 OK\r\n";
     headers += contentType;
-    if ( contentType == "video/mp4\r\n" == 0)
+    if (contentType == "video/mp4\r\n" == 0)
         headers += "Accept-Ranges: bytes\r\n";
     headers += "Content-Length: " + intToString(fileSize) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
@@ -369,20 +370,54 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
 }
 
 
+void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector<ConfigNode> ConfigPars, int statusCode)
+{
+    staticFileBody = redirectUrl;
+    staticFilePos = 0;
+    usingStaticFile = true;
+    filePos = 0;
+
+    headers = "HTTP/1.1 " + intToString(statusCode);
+    switch (statusCode)
+    {
+        case 200: headers += " Ok"; break;
+        case 201: headers += " Created"; break;
+        case 204: headers += " No Content"; staticFileBody = ""; redirectUrl.clear(); break;
+        case 400: headers += " Bad Request"; break;
+        case 403: headers += " Forbidden"; break;
+        case 404: headers += " Not Found"; break;
+        case 500: headers += " Internal Server Error"; break;
+    }
+    headers += "\r\n";
+    headers += "Content-Type: text/plain\r\n";
+    headers += "Content-Length: " + intToString(redirectUrl.size()) + "\r\n";
+    if (req.GetHeaderValue("connection") == "keep-alive")
+    {
+        headers += "Connection: keep-alive\r\n";
+        _cgi.setCheckConnection(keepAlive);
+    }
+    else
+    {
+        headers += "Connection: close\r\n";
+        _cgi.setCheckConnection(_close);
+    }
+
+    headers += "\r\n";
+    headerSent = 0;
+}
+
 int Response::prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars)
 {
     int statusCode = std::atoi(redirect[0].c_str());
-    std::string redirectUrl = redirect[1];
-    if (statusCode != 301 && statusCode != 302 && statusCode != 303 && statusCode != 302 && statusCode != 307 && statusCode != 308)
+    std::string redirectUrl;
+    if (redirect.size() > 1)
+        redirectUrl = redirect[1];
+    else
+        redirectUrl = "";
+    if (statusCode < 301 || statusCode > 599)
     {
-        responseError(500, "Invalid redirect status code", ConfigPars, req);
-        return -1;
-    }
-
-    if (redirectUrl.empty())
-    {
-        responseError(500, "Invalid redirect URL", ConfigPars, req);
-        return -1;
+        nonRedirect(redirectUrl, req, ConfigPars, statusCode);
+        return 0;
     }
     staticFileBody.clear();
     staticFilePos = 0;
@@ -400,6 +435,7 @@ int Response::prepareRedirectResponse(std::vector<std::string> redirect, Request
         case 308: headers += " Permanent Redirect"; break;
     }
     headers += "\r\n";
+    headers += "Content-Type: text/plain\r\n";
     headers += "Location: " + redirectUrl + "\r\n";
     headers += "Content-Length: 0\r\n";
     

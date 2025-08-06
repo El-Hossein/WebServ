@@ -40,7 +40,7 @@ class Cgi
         std::string pathInfo;
         char **envp;
         pid_t pid;
-        int exitCode;
+        int exCode;
         int cgiStatusCode;
         std::string cgiHeader;
         std::string cgiBody;
@@ -114,8 +114,6 @@ class Cgi
         std::vector<std::string> getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         std::string getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
         
-        
-
 };
 
 std::string intToString(int n);
