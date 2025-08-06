@@ -38,6 +38,8 @@ public:
 
 	void	ParseBirnaryOrRaw();
 
+	void	ParseChunkedBoundary();
+
 	void	WriteChunkToFile(std::string &BodyContent);
 	void	GetChunks();
 	void	ParseChunked();
