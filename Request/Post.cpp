@@ -6,6 +6,7 @@ Post::Post(Request	&_obj) :	obj(_obj),
 								Boundary(obj.GetBoundarySettings()),
 								// MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
 								FirstTime(true),
+								RmvFirstCrlf(false),
 								BodyFullyRead(false)
 {
 	Flager.BoolStart = false;
@@ -305,8 +306,6 @@ void	Post::ParseChunked()
 
 void	Post::SetUnprocessedBuffer()
 {
-	static bool	RmvFirstCrlf = false;
-
 	UnprocessedBuffer = obj.GetUnprocessedBuffer();
 	if (!RmvFirstCrlf && obj.GetContentType() == BinaryOrRaw)
 		UnprocessedBuffer.erase(0, 2), RmvFirstCrlf = true;
