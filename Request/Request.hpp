@@ -27,9 +27,12 @@ enum	ContentType
 	_Boundary, BinaryOrRaw
 };
 
+class	Post;
+
 class	Request
 {
 private:
+	Post								*PostObj;
 	_ServerDetails						ServerDetails;
 	std::map<std::string, std::string>	ExtentionsMap;
 	
