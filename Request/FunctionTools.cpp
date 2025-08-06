@@ -50,41 +50,6 @@ std::string	HexaToChar(std::string	Hexa)
 	return std::string(1, Helpervar); // calling constructor string with 1 character
 }
 
-int			HexaToInt(std::string	x)
-{
-	int y;
-    std::stringstream stream(x);
-
-	std::string HexaChars = "ABCDEFabcdef0123456789";
-	for (size_t i = 0; i < x.size() ; i++)
-	{
-		if (HexaChars.find(x[i]) == std::string::npos)
-			PrintError("Invalide Hexa value"), throw 400;
-	}
-    stream << x;
-    stream >> std::hex >> y;
-
-	if (y < 0)
-			PrintError("Invalide Hexa value"), throw 400;
-    return y;
-}
-
-void		DecodeHexaToChar(std::string	&str)
-{
-	size_t	pos = 0;
-	
-	while((pos = str.find("%", pos)) != std::string::npos)
-	{
-		if (pos + 2 < str.size() && IsHexa(str[pos + 1]) && IsHexa(str[pos + 2]))
-		{
-			str.replace(pos, 3, HexaToChar(str.substr(pos + 1, 2))); // 2 letters after '%
-			pos += 1; // 1 -> size d charachter
-		}
-		else
-			PrintError("Query invalid percent-encoding"), throw 400;
-    }
-}
-
 // --------------#	PRINTER	 #-------------- //
 
 void	PrintHeaders(std::map<std::string, std::string> Headers)
@@ -92,11 +57,6 @@ void	PrintHeaders(std::map<std::string, std::string> Headers)
 	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); ++it)
 	std::cout << "key{" << it->first << "}		value:" << it->second << std::endl;
 	std::cout  << "-----------------------------------------------------" << std::endl;
-}
-
-void	PrintError(const std::string	&Err)
-{
-	std::cerr << Err << std::endl;
 }
 
 // --------------#	PARSERS	 #-------------- //
@@ -158,17 +118,6 @@ void	TrimSpaces(std::string& str)
         --end;
 
 	str = str.substr(start, end - start);
-}
-
-void	CreateDirectory(std::string &FilenameDir)
-{
-	struct stat	Tmp;
-
-	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
-	{
-		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
-			PrintError("Could't open Directory"), throw 400;
-	}
 }
 
 // --------------#	COUNTERS	 #-------------- //

@@ -55,16 +55,16 @@ void	Post::FindFileName(std::string	&Buffer, std::string	&Filename)
 
 	if (FilenamePos == std::string::npos || FilenameEndPos == std::string::npos)
 	{
-		PrintError("Could't find file"), throw 400;
+		obj.PrintError("Could't find file", obj), throw 400;
 	}
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 
-	CreateDirectory(Dir);
+	obj.CreateDirectory(Dir);
 	Filename = Dir + "/" + Filename; // "/Users/zderfouf/goinfre/ServerUploads" --- Uploads
 
 	OutFile.open(Filename.c_str(), std::ios::binary); // std::ios::app => to append
 	if (!OutFile.is_open())
-		PrintError("Could't open file"), throw 500; // Internal Server Error
+		obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
 }
 
 /*	|#----------------------------------#|
@@ -120,7 +120,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		{
 			start = Buffer.find(Boundary.BoundaryStart, 0);
 			if (start == std::string::npos)
-				PrintError("Boudary Error"), throw 400;
+				obj.PrintError("Boudary Error", obj), throw 400;
 
 			// std::string Previous(Buffer, start);
 			// if (Previous.size() > 0 && !Filename.empty())
@@ -140,7 +140,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 			BodyPos = Buffer.find("\r\n\r\n");
 			if (BodyPos == std::string::npos) // ila makantch
 			{
-				PrintError("No Body Found"), throw 400;
+				obj.PrintError("No Body Found", obj), throw 400;
 			}
 			else // kayn Double CRLF
 			{
@@ -195,7 +195,7 @@ void	Post::ParseBoundary()
 		std::cout << "$$$$$$\n\n";
 		obj.SetClientStatus(EndReading);
 		if (BoundaryStatus != Finished)
-			PrintError("Incomplete Request"), throw 400;
+			obj.PrintError("Incomplete Request", obj), throw 400;
 	}
 }
 
@@ -223,10 +223,10 @@ void	Post::WriteChunkToFile(std::string &BodyContent)
 {
 	if (FirstTime)
 	{
-		CreateDirectory(Dir);
+		obj.CreateDirectory(Dir);
 		OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary), FirstTime = false;
 		if (!OutFile.is_open())
-			PrintError("Could't open file"), throw 500; // Internal Server Error
+			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
 	}
 
 	OutFile.write(BodyContent.c_str(), BodyContent.size());
@@ -255,7 +255,7 @@ void	Post::GetChunks()
 				if (start == std::string::npos)
 					return ;
 				// std::cout << "{" << UnprocessedBuffer.substr(0, 7) << "}" << std::endl;
-				Chunk.BodySize = HexaToInt(UnprocessedBuffer.substr(0, start));
+				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
 				UnprocessedBuffer.erase(0, start + 2);
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
 			}

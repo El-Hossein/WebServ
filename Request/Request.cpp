@@ -194,7 +194,7 @@ void	Request::SetServerDetails()
 {
 	std::string	&Host = Headers["host"];
 	if (Host.empty())
-		PrintError("Host Error"), throw 400;
+		PrintError("Host Error", *this), throw 400;
 
 	size_t		Pos = Host.find(":");
 	if (Pos == std::string::npos)
@@ -208,8 +208,59 @@ void	Request::SetServerDetails()
 	ServerDetails.ServerPort = Host.substr(Pos + 1);
 
 	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
-		PrintError("Host Error"), throw 400;
+		PrintError("Host Error", *this), throw 400;
 	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
+}
+
+/*	|#----------------------------------#|
+	|#			TOOL FUNCTIONS    		#|
+	|#----------------------------------#|
+*/
+
+void	Request::DecodeHexaToChar(std::string	&str)
+{
+	size_t	pos = 0;
+	
+	while((pos = str.find("%", pos)) != std::string::npos)
+	{
+		if (pos + 2 < str.size() && IsHexa(str[pos + 1]) && IsHexa(str[pos + 2]))
+		{
+			str.replace(pos, 3, HexaToChar(str.substr(pos + 1, 2))); // 2 letters after '%
+			pos += 1; // 1 -> size d charachter
+		}
+		else
+			PrintError("Query invalid percent-encoding", *this), throw 400;
+    }
+}
+
+int		Request::HexaToInt(std::string	x)
+{
+	int y;
+    std::stringstream stream(x);
+
+	std::string HexaChars = "ABCDEFabcdef0123456789";
+	for (size_t i = 0; i < x.size() ; i++)
+	{
+		if (HexaChars.find(x[i]) == std::string::npos)
+			PrintError("Invalide Hexa value", *this), throw 400;
+	}
+    stream << x;
+    stream >> std::hex >> y;
+
+	if (y < 0)
+			PrintError("Invalide Hexa value", *this), throw 400;
+    return y;
+}
+
+void	Request::CreateDirectory(std::string &FilenameDir)
+{
+	struct stat	Tmp;
+
+	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
+	{
+		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
+			PrintError("Could't open Directory", *this), throw 400;
+	}
 }
 
 /*	|#----------------------------------#|
@@ -217,13 +268,19 @@ void	Request::SetServerDetails()
 	|#----------------------------------#|
 */
 
+void	Request::PrintError(const std::string	&Err, Request	&Obj)
+{
+	std::cerr << Err << std::endl;
+	// Obj.Client = EndReading;
+}
+
 void	Request::CheckIfAllowedMethod()
 {
 	Location = RightServer.GetRightLocation(GetHeaderValue("path")); // {/}
 	AllowedMethods = ConfigNode::getValuesForKey(RightServer, "allow_methods", Location);
 
 	if (std::find(AllowedMethods.begin(), AllowedMethods.end(), GetHeaderValue("method")) == AllowedMethods.end())
-		PrintError("Method Not Allowed"), throw 405;
+		PrintError("Method Not Allowed", *this), throw 405;
 }
 
 void	Request::GetBoundaryFromHeader()
@@ -233,11 +290,11 @@ void	Request::GetBoundaryFromHeader()
 
 	size_t	pos = it->second.find("=");
 	if (pos == std::string::npos)
-		PrintError("Boundary Error, ParseBoundary()"), throw 400;
+		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
 	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		PrintError("Boundary Error, ParseBoundary()"), throw 400;
+		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
@@ -290,7 +347,7 @@ void   Request::HandlePath()
 	while (std::getline(stream, part, '/'))
 	{
 		if (part == "..")
-			PrintError("Path Error"), throw 403; // Forbiden
+			PrintError("Path Error", *this), throw 403; // Forbiden
 		else if (!part.empty() && part != ".")
 		{
 			PathParts.push_back(part);
@@ -324,7 +381,7 @@ void	Request::ParseURI()
 {
 	std::string URI = Headers["uri"];
 	if (URI.length() > 2048)
-		PrintError("Request-URI too long"), throw 414;
+		PrintError("Request-URI too long", *this), throw 414;
 
 	SplitURI();
 	HandlePath();
@@ -345,14 +402,14 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	if		(method == "GET")		this->Method = GET;
 	else if (method == "POST")		this->Method = POST;
 	else if (method == "DELETE")	this->Method = DELETE;	
-	else							PrintError("Invalide request method"), throw 400;
+	else							PrintError("Invalide request method", *this), throw 400;
 		
 	Headers["method"] = method;
 
 	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
-		PrintError("Invalide request protocol"), throw 505;
+		PrintError("Invalide request protocol", *this), throw 505;
 	Headers["protocol"] =  protocol;
 }
 
@@ -369,12 +426,12 @@ void	Request::ReadHeaders(std::string Header)
 
 		headerName = line.substr(0, pos);
 		if (!ValidFieldName(headerName))
-			PrintError("Bad Request"), throw 400;
+			PrintError("Bad Request", *this), throw 400;
 
 		headerValue = line.substr(pos + 2);
 		TrimSpaces(headerValue);
 		if (!ValidFieldValue(headerValue))
-			PrintError("Bad Request"), throw 400;
+			PrintError("Bad Request", *this), throw 400;
 
 		std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
 
@@ -385,12 +442,12 @@ void	Request::ReadHeaders(std::string Header)
 void	Request::PostRequiredHeaders()
 {
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
-		PrintError("Missing POST headers"), throw 400;
+		PrintError("Missing POST headers", *this), throw 400;
 
 	if (Headers.find("content-length") != Headers.end())
 	{
 		if (!ValidContentLength(Headers["content-length"]))
-			PrintError("Invalide Content-Length"), throw 400;
+			PrintError("Invalide Content-Length", *this), throw 400;
 		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
 		this->DataType = FixedLength;
 	}
@@ -406,7 +463,7 @@ void	Request::PostRequiredHeaders()
 			GetBoundaryFromHeader();
 		}
 		if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
-			PrintError("Unsupported Media Type"), throw 415;
+			PrintError("Unsupported Media Type", *this), throw 415;
 		FileExtention = ExtentionsMap[Headers["content-type"]];
 		this->ContentType = BinaryOrRaw;
 	}
@@ -415,7 +472,7 @@ void	Request::PostRequiredHeaders()
 void	Request::ParseHeaders()
 {
 	if (Headers.find("host") == Headers.end())
-		PrintError("No Host has been found!"), throw 400;
+		PrintError("No Host has been found!", *this), throw 400;
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	if (Method == POST)
@@ -435,7 +492,7 @@ void Request::ReadBodyChunk()
 	std::memset(buffer, 0, BUFFER_SIZE);
     BytesRead = read(ClientFd, buffer, BUFFER_SIZE - 1);
     if (BytesRead < 0)
-        PrintError("Error: Read failed"), throw -1; // -1 is a flag
+        throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
 		Client = EndReading;
@@ -456,12 +513,12 @@ void	Request::ReadRequestHeader()
 	std::memset(buffer, 0, MAX_HEADER_SIZE);
 	BytesRead = read(ClientFd, buffer, MAX_HEADER_SIZE - 1);
 	if (BytesRead < 0)
-        PrintError("Error: Read failed"), throw -1; // -1 is a flag
+        throw -1; // -1 is a flag
 	if (BytesRead == 0)
 	{
 		Client = EndReading;
 		if (RequestNotComplete)
-			PrintError("Missing Double CRLF in headers"), throw 400;
+			PrintError("Missing Double CRLF in headers", *this), throw 400;
 	}
 
 	HeaderBuffer.append(buffer, BytesRead);
@@ -475,7 +532,7 @@ void	Request::ReadRequestHeader()
 	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 	if (HeaderBuffer.size() >= MAX_HEADER_SIZE)
-		PrintError("Header too long."), throw 400;
+		PrintError("Header too long.", *this), throw 400;
 
 	if (BodyUnprocessedBuffer.size() == 2)
 		Client = EndReading;

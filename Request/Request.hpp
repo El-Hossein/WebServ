@@ -95,6 +95,11 @@ public:
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 
+	static	void	PrintError(const std::string &Err, Request &Obj);
+	void			CreateDirectory(std::string &FilenameDir);
+	int				HexaToInt(std::string	x);
+	void			DecodeHexaToChar(std::string	&str);
+	
 	void	ReadRequestHeader();
 	void	ReadFirstLine(std::string);
 	void	ReadHeaders(std::string);
@@ -117,17 +122,12 @@ public:
 bool			IsHexa(char c);
 void			TrimSpaces(std::string& str);
 std::string		HexaToChar(std::string	Hexa);
-void			DecodeHexaToChar(std::string	&str);
 void			PrintHeaders(std::map<std::string, std::string> Headers);
-void			PrintError(const std::string	&Err);
 bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(const std::string	&value);
 size_t			CrlfCounter(std::string	&str);
-void			CreateDirectory(std::string &FilenameDir);
-int				FindFileName(std::string	&Buffer, std::string	&Filename);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
-int				HexaToInt(std::string	x);
 std::string		RemoveCrlf(std::string BodyContent);
