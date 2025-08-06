@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -196,24 +197,11 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
     count = KV.size() - 1;
     if (key != KV[0]) return;
     
-    if (key == "alias" || key == "root")
-        checkAliasRoot(key, ConfNode);
-    if (key == "allow_methods")
-    {
-        int CheckNono = 0;
-        int CheckOthers = 0;
-        for (std::vector<std::string>::iterator it = KV.begin(); it != KV.end(); ++it) {
-            if (*it == "GET" || *it == "POST" || *it == "DELETE")
-                CheckOthers = 1;
-            else if (*it == "NONE")
-                CheckNono = 1;
-        }
-        if (CheckNono == 1 && CheckOthers == 1)
-            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
-    }
     std::vector<std::string> helo = ConfNode.ConfgetValuesForKey(ConfNode, key, "NULL");
     if (!helo.empty())
     {
+        if (key == "return")
+            throw std::runtime_error("return should have 1 or 2 in the same return");
         if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
         if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
     }
@@ -235,12 +223,12 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "root", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, 2, 2);
+        CheckAllError(KV, "return", ConfNode, 2, 1);
     }
     else {
         CheckAllError(KV, "allow_methods", ConfNode, 3, 1);
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
-        CheckAllError(KV, "return", ConfNode, 2, 2);
+        CheckAllError(KV, "return", ConfNode, 2, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
         CheckAllError(KV, "alias", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
@@ -261,45 +249,137 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
     ErrorHandle(words, ConfNode, blockType);
 }
 
-void MaxBodySizeToBytes(std::vector<std::string>& words) {
-    if (words.empty() || words.size() < 2 || words[1].empty()) {
-        words[1] = "0";
-        return;
+
+int CheckDigit(std::string value)
+{
+    for (size_t i = 0; value[i] - 1; ++i) {
+        if (!std::isdigit(value[i]))
+            return 1;
     }
 
+    return 0;
+}
+
+void CheckUnit(const std::string& value)
+{
+    if (value.empty())
+        throw std::runtime_error("client_max_body_size is empty");
+
+    size_t len = value.length();
+    char unit = value[len - 1];
+
+    if (unit != 'B' && unit != 'K' && unit != 'M' && unit != 'G')
+        throw std::runtime_error("Unit of the client_max_body_size is not correct (B, K, M, G)");
+
+    // Check that all characters before the unit are digits
+    for (size_t i = 0; i < len - 1; ++i) {
+        if (!std::isdigit(value[i]))
+            throw std::runtime_error("client_max_body_size must be numeric before unit");
+    }
+}
+
+void MaxBodySizeToBytes(std::vector<std::string>& words)
+{
     std::string value = words[1];
+    CheckUnit(value);
+
     char unit = value[value.length() - 1];
-    size_t number = 0;
-
     std::string num_str = value.substr(0, value.length() - 1);
+
+    // Remove leading zeros
+    size_t start = 0;
+    while (start < num_str.length() && num_str[start] == '0')
+        ++start;
+    num_str = num_str.substr(start);
+    if (num_str.empty())    
+        words[1] = "0"; return;
+    // Prevent overly large inputs
+    if (num_str.length() >= 20)
+        throw std::runtime_error("client_max_body_size is too large");
+
+    // Parse to a wider type first
     std::stringstream ss(num_str);
-    ss >> number;
-    if (ss.fail()) {
-        words[1] = "0";
-        return;
-    }
+    unsigned long long temp = 0;
+    ss >> temp;
 
-    switch (unit) {
-        case 'B':
-            break;
-        case 'K':
-            number *= 1024;
-            break;
-        case 'M':
-            number *= 1024 * 1024;
-            break;
-        case 'G':
-            number *= 1024 * 1024 * 1024;
-            break;
+    if (ss.fail())
+        throw std::runtime_error("Invalid number for client_max_body_size");
+
+    // Apply unit multiplier with overflow check
+    unsigned long long multiplier = 1;
+    switch (unit)
+    {
+        case 'B': multiplier = 1; break;
+        case 'K': multiplier = 1024ULL; break;
+        case 'M': multiplier = 1024ULL * 1024; break;
+        case 'G': multiplier = 1024ULL * 1024 * 1024; break;
         default:
-            words[1] = "0";
-            return;
+            throw std::runtime_error("Unexpected unit");
     }
 
+    if (temp > std::numeric_limits<size_t>::max() / multiplier)
+        throw std::runtime_error("Overflow: client_max_body_size too large");
+
+    size_t number = static_cast<size_t>(temp * multiplier);
+
+    // Convert to string
     std::stringstream result;
     result << number;
     words[1] = result.str();
 }
+
+void CheckListen(std::vector<std::string>& words)
+{
+    int is = 0;
+    for (std::vector<std::string>::iterator it = words.begin(); it != words.end(); ++it)
+    {
+        if (*it == "listen" && is == 0)
+        {
+            is = 1;
+            continue;
+        }
+        // std::cout << *it << std::endl;
+        std::string port = it->c_str();
+        for (size_t i = 0; port[i]; ++i) {
+            if (!std::isdigit(port[i]))
+                throw std::runtime_error("listen only take digits.");
+        }
+        if (port.length() > 5)
+            throw std::runtime_error("listen port should be > 0 and < 65535.");
+        int a = std::atoi(port.c_str());
+        if (a > 65535)
+            throw std::runtime_error("listen port should be > 0 and < 65535.");
+    }
+}
+
+void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
+{
+    if (words[0] == "client_max_body_size")
+        MaxBodySizeToBytes(words);
+    else if (words[0] == "alias" || words[0] == "root")
+        checkAliasRoot(words[0], ConfNode);
+    else if (words[0] == "allow_methods")
+    {
+        int CheckNono = 0;
+        int CheckOthers = 0;
+        for (std::vector<std::string>::iterator it = words.begin(); it != words.end(); ++it) {
+            if (*it == "GET" || *it == "POST" || *it == "DELETE")
+                CheckOthers = 1;
+            else if (*it == "NONE")
+                CheckNono = 1;
+        }
+        if (CheckNono == 1 && CheckOthers == 1)
+            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
+    }
+    else if (words[0] == "autoindex")
+    {
+        if (words[1] != "on" && words[1] != "off")
+            throw std::runtime_error("Error: antoindex take only on or off");
+    }
+    else if (words[0] == "listen")
+        CheckListen(words);
+}
+
 // add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
@@ -344,13 +424,9 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, locations[0]);
     else
         throw std::runtime_error("Error: Unknown block type in configuration.");
-    if (words[0] == "client_max_body_size")
-    {
-        MaxBodySizeToBytes(words);
-        // std::cout << "test: " << words[1] << std::endl;
-    }
-        
-        
+
+    CheckEdgeCases(words, ConfNode);
+    
     for (size_t i = 1; i < words.size(); ++i)
         ConfNode.addValue(words[0], words[i]);
 }
@@ -505,33 +581,37 @@ std::vector<std::string> split_path(const std::string& path)
 {
     std::vector<std::string> components;
     std::string current;
-    bool in_component = false;
-    if (path.size() == 1)
-    {
-        if (path[0] == '/')
-        {
-            components.push_back("/");
-            return components;
-        }
+    
+    // Handle empty path or single slash
+    if (path.empty() || path == "/") {
+        components.push_back("/");
+        return components;
     }
-    for (size_t i = 0; i < path.length(); ++i)
-    {
-        if (path[i] == '/')
-        {
-            if (in_component && !current.empty())
-            {
-                components.push_back("/" + current);
-                current.clear();
-                in_component = false;
+
+    // Split path into individual components
+    std::vector<std::string> parts;
+    std::string temp;
+    for (std::string::size_type i = 0; i < path.length(); ++i) {
+        if (path[i] == '/') {
+            if (!temp.empty()) {
+                parts.push_back(temp);
+                temp.clear();
             }
-        } else
-        {
-            current += path[i];
-            in_component = true;
+        } else {
+            temp += path[i];
         }
     }
-    if (in_component && !current.empty())
-        components.push_back("/" + current);
+    if (!temp.empty()) {
+        parts.push_back(temp);
+    }
+
+    // Build cumulative paths
+    current = "";
+    for (std::vector<std::string>::size_type i = 0; i < parts.size(); ++i) {
+        current += "/" + parts[i];
+        components.push_back(current + "/");
+    }
+
     return components;
 }
 
@@ -575,13 +655,20 @@ std::string ConfigNode::GetRightLocation(std::string path)
     for (std::vector<ConfigNode>::iterator Alllocations = locations.begin(); Alllocations != locations.end(); ++Alllocations)
     {
         std::vector<std::string> tokens = split(Alllocations->name.c_str());
-        std::string loc = tokens[1];
-        std::vector<std::string> SplitPath = split_path(RemoveSlashs(loc));
-        for (std::vector<std::string>::iterator SplitLocPath = SplitPath.begin(); SplitLocPath != SplitPath.end(); ++SplitLocPath)
+        std::string loc = RemoveSlashs(tokens[1]);
+
+        std::vector<std::string> SplitPath = split_path(RemoveSlashs(path));
+
+        for (std::vector<std::string>::iterator IterSplitPath = SplitPath.begin(); IterSplitPath != SplitPath.end(); ++IterSplitPath)
         {
-            // std::cout << "path: [" << *SplitLocPath << "]" << std::endl;
-            if (startsWith(RemoveSlashs(path), *SplitLocPath) == true)
-                RightLocation = loc;
+            std::string chunkPath = (*IterSplitPath).c_str();
+            if (SplitPath.size() == 1 && loc == chunkPath)
+                return loc;
+            if (startsWith(chunkPath, loc))
+            {
+                if (loc.length() > RightLocation.length())
+                    RightLocation = loc;
+            }
         }
     }
     return RightLocation;
