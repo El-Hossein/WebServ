@@ -301,8 +301,24 @@ void	Post::ParseChunked()
 {
 	std::cout << obj.GetTotatlBytesRead() << "--" << obj.GetContentLength() << std::endl;
 	GetChunks();
-
 }
+
+/*	|#----------------------------------#|
+	|#			ParseChunked	    	#|
+	|#----------------------------------#|
+*/
+
+void	Post::ParseChunkedBoundary()
+{
+	std::cout << "ParseChunkedBoundary:\n";
+	std::cout << "{" << UnprocessedBuffer << "}" << std::endl;
+	exit(1);
+}
+
+/*	|#----------------------------------#|
+	|#			ParsingMenu		    	#|
+	|#----------------------------------#|
+*/
 
 void	Post::SetUnprocessedBuffer()
 {
@@ -326,7 +342,7 @@ void	Post::HandlePost()
 		case Chunked		:
 		{
 			if (obj.GetContentType() == _Boundary)
-				; // return ParseChunkedBoundary()
+				return ParseChunkedBoundary();
 			if (obj.GetContentType() == BinaryOrRaw)
 				return ParseChunked();
 		}
