@@ -253,6 +253,7 @@ void	Post::GetChunks()
 				start = UnprocessedBuffer.find("\r\n", 0);
 				if (start == std::string::npos)
 					return ;
+				// std::cout << "{" << UnprocessedBuffer.substr(0, 7) << "}" << std::endl;
 				Chunk.BodySize = HexaToInt(UnprocessedBuffer.substr(0, start));
 				UnprocessedBuffer.erase(0, start + 2);
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
@@ -297,7 +298,9 @@ void	Post::GetChunks()
 
 void	Post::ParseChunked()
 {
+	std::cout << obj.GetTotatlBytesRead() << "--" << obj.GetContentLength() << std::endl;
 	GetChunks();
+
 }
 
 void	Post::SetUnprocessedBuffer()

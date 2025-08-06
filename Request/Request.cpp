@@ -4,6 +4,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 						:	ClientFd(fd),
 							Client(ReadHeader),
 							DataType(FixedLength),
+							PostObj(NULL),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),
 							ContentLength(0),
@@ -17,6 +18,8 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 }
 
 Request::~Request() {
+	delete PostObj;
+	PostObj = NULL;
 }
 
 /*	|#----------------------------------#|
@@ -499,9 +502,9 @@ void	Request::SetUpRequest()
 
 	if (Method == POST)
 	{
-		static	Post	PostObj(*this);
-
-		PostObj.HandlePost();
+		if (!PostObj)
+			PostObj = new Post(*this);
+		PostObj->HandlePost();
 		throw -1;
 	}
 }
