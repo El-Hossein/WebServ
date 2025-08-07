@@ -14,6 +14,8 @@ Post::Post(Request	&_obj) :	obj(_obj),
 	Flager.BoolFile = false;
 	Flager.CrlfCount = 0;
 
+	BoundaryStatus = None;
+
 	Chunk.ChunkStatus = ChunkVars::None;
 	Chunk.BodySize = 0;
 
@@ -120,6 +122,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		if (BoundaryStatus == None)
 		{
 			start = Buffer.find(Boundary.BoundaryStart, 0);
+			// std::cout << "\n****" << Buffer.substr(0, 10) << "**********\n";
 			if (start == std::string::npos)
 				obj.PrintError("Boudary Error", obj), throw 400;
 
@@ -229,13 +232,13 @@ void	Post::GetChunks()
 	size_t		start = 0, end = 0;
 	std::string	BodyContent;
 
-	// switch (Chunk.ChunkStatus)
-	// {
-	// 	case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
-	// 	case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
-	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
-	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
-	// }
+	switch (Chunk.ChunkStatus)
+	{
+		case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
+		case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
+		case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
+		case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
+	}
 	// std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
@@ -296,15 +299,71 @@ void	Post::ParseChunked()
 }
 
 /*	|#----------------------------------#|
-	|#			ParseChunked	    	#|
+	|#		ParseChunkedBoundary	    #|
 	|#----------------------------------#|
 */
 
 void	Post::ParseChunkedBoundary()
 {
-	std::cout << "ParseChunkedBoundary:\n";
-	std::cout << "{" << UnprocessedBuffer << "}" << std::endl;
-	exit(1);
+	size_t		start = 0, end = 0;
+	std::string	BodyContent;
+
+	switch (Chunk.ChunkStatus)
+	{
+		case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
+		case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
+		case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
+		case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
+	}
+	while (true)
+	{
+		switch (Chunk.ChunkStatus)
+		{
+			case	ChunkVars::None		:
+			{
+				start = UnprocessedBuffer.find("\r\n", 0);
+				if (start == std::string::npos)
+					return ;
+				std::cout << "{" << UnprocessedBuffer.substr(0, 7) << "}" << std::endl;
+				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
+				UnprocessedBuffer.erase(0, start + 2);
+				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
+			}
+			case	ChunkVars::GotHexaSize	:
+			{
+				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
+				GetSubBodies(BodyContent);
+				UnprocessedBuffer.erase(0, BodyContent.size());
+
+				Chunk.BodySize -= BodyContent.size();
+				if (!Chunk.BodySize)
+				{
+					Chunk.ChunkStatus = ChunkVars::GotFullBody;
+					break ;
+				}
+				return ;
+			}
+			case	ChunkVars::GotFullBody	:
+			{
+				end = UnprocessedBuffer.find("\r\n", 0);
+				if (end != std::string::npos)
+				{
+					Chunk.ChunkStatus = ChunkVars::None;
+					UnprocessedBuffer.erase(0, end + 2);
+
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+						Chunk.ChunkStatus = ChunkVars::Finished;
+					break ;
+				}
+				return ; // return to wait for the FullBody end
+			}
+			case	ChunkVars::Finished	:
+			{
+				std::cout << "File Uploaded!" << std::endl, throw 201;
+			}
+		}
+	}
+
 }
 
 /*	|#----------------------------------#|
@@ -315,8 +374,15 @@ void	Post::ParseChunkedBoundary()
 void	Post::SetUnprocessedBuffer()
 {
 	UnprocessedBuffer = obj.GetUnprocessedBuffer();
-	// if (!RmvFirstCrlf && obj.GetContentType() == BinaryOrRaw)
-	// 	UnprocessedBuffer.erase(0, 2), RmvFirstCrlf = true;
+	if (!RmvFirstCrlf)
+	{
+		if (obj.GetContentType() == BinaryOrRaw)
+			UnprocessedBuffer.erase(0, 2);
+		if (obj.GetDataType() == Chunked && obj.GetContentType() == _Boundary)
+			UnprocessedBuffer.erase(0, 2);
+
+		RmvFirstCrlf = true;
+	}
 }
 
 void	Post::HandlePost()

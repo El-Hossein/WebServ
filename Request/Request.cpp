@@ -535,7 +535,6 @@ void	Request::ReadRequestHeader()
 	}
 
 	HeaderBuffer.append(buffer, BytesRead);
-
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
 	{
