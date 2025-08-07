@@ -281,7 +281,7 @@ void	Request::CreateDirectory(std::string &FilenameDir)
 void	Request::PrintError(const std::string	&Err, Request	&Obj)
 {
 	std::cerr << Err << std::endl;
-	// Obj.Client = EndReading;
+	Obj.Client = EndReading;
 }
 
 void	Request::CheckIfAllowedMethod()
@@ -306,7 +306,7 @@ void	Request::GetBoundaryFromHeader()
 		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
-	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
+	BoundaryAttri.BoundaryStart = "--" + Boundary + "\r\n";
 	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--\r\n";
 }
 
@@ -546,12 +546,12 @@ void	Request::ReadRequestHeader()
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
+	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 4));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	if (BodyUnprocessedBuffer.size() == 2)
+	if (BodyUnprocessedBuffer.size() == 0)
 		Client = EndReading;
-	TotalBytesRead += BodyUnprocessedBuffer.size() - 2; // (- 2) For CRLF
+	TotalBytesRead += BodyUnprocessedBuffer.size(); // (- 2) For CRLF
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
