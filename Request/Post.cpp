@@ -16,6 +16,8 @@ Post::Post(Request	&_obj) :	obj(_obj),
 
 	Chunk.ChunkStatus = ChunkVars::None;
 	Chunk.BodySize = 0;
+
+	BoundaryStatus = None;
 	
 	Dir = "/Users/zderfouf/goinfre/ServerUploads";
 	srand(time(NULL));
@@ -103,7 +105,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 	std::string	BodyContent;
 	size_t	start = 0, end = 0, BodyPos = 0;
 
-	// std::cout << "Buffer{" << Buffer << "}" << std::endl;
+	// std::cout << "\n\nBuffer{" << Buffer << "}" << std::endl;
 	// switch (BoundaryStatus)
 	// {
 	// 	case None : std::cout << "its Boundary Status[None]" << std::endl; break ;
@@ -113,7 +115,6 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 	// 	case GotBoundaryEnd : std::cout << "its Boundary Status[GotBoundaryEnd]" << std::endl; break ;
 	// 	case Finished : std::cout << "its Boundary Status[Finished]" << std::endl; break ;
 	// }
-	
 	while (true)
 	{
 		if (BoundaryStatus == None)
@@ -139,48 +140,40 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		{
 			BodyPos = Buffer.find("\r\n\r\n");
 			if (BodyPos == std::string::npos) // ila makantch
-			{
 				obj.PrintError("No Body Found", obj), throw 400;
-			}
 			else // kayn Double CRLF
 			{
-				Buffer.erase(0, BodyPos + 4);
-				BoundaryStatus = GotBody;
+				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
 			}
 		}
 		if (BoundaryStatus == GotBody)
 		{
-			end = Buffer.find(Boundary.BoundaryStart);
-			if (end != std::string::npos)
-			{
-				BodyContent = Buffer.substr(0, end);
-				Buffer.erase(0, end);
-				BoundaryStatus = GotBoundaryEnd;
-				// std::cout << "FilenameBody{" <<  BodyContent << "}\n" << std::endl; // WriteToFile(Filename, BodyContent);
-			}
-			else
+			end = Buffer.find("\r\n--" + Boundary.Boundary);
+			size_t	pos = end + 4 + Boundary.Boundary.size(); // 4{\r\n--}
+			if (end == std::string::npos) // malqitch --XXXX
 				BodyContent = Buffer;
-			// std::cout << "Body to write to Filename{" <<  BodyContent << "}\n" << std::endl; 
+			else	// lqit --XXXX
+			{
+				std::string	BoundaryFound;
+				if (Buffer.compare(pos , 2, "\r\n") == 0) // lqit BoundaryStart
+					BoundaryStatus = GotBoundaryEnd, BoundaryFound = Boundary.BoundaryStart;
+				else if (Buffer.compare(pos, 4, "--\r\n") == 0) // lqit finish
+					BoundaryStatus = Finished, BoundaryFound = Boundary.BoundaryEnd;
+				BodyContent = Buffer.substr(0, end);
+			}
 
 			OutFile.write(BodyContent.c_str(), BodyContent.size()); // WriteToFile(Filename, BodyContent);
 			// std::cout << "---->Filename:{" << Filename << "}" << std::endl;
 			// std::cout << "---->Its BodyContent:{" << BodyContent << "}\n" << std::endl;
-
-			if (BoundaryStatus != GotBoundaryEnd)
+			if (BoundaryStatus == GotBody)
 				break ;
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
+			OutFile.close(), BoundaryStatus = None;
+		if (BoundaryStatus == Finished)
 		{
-			OutFile.close();
-			// std::cout << "---->Its Buffer:{"; PrintCrlfString(Buffer) ; std::cout << "}\n" << std::endl;
-			// std::cout << "---->Its BoundaryEnd:{"; PrintCrlfString(Boundary.BoundaryEnd) ; std::cout << "}\n" << std::endl;
-			if (Buffer.find(Boundary.BoundaryStart) == Buffer.find(Boundary.BoundaryEnd)) // Check if Request Ended && found the BoundaryEnd
-			{
-				obj.SetClientStatus(EndReading);
-				BoundaryStatus = Finished;
-				std::cout << "File Uploaded!" << std::endl, throw 201; // "Created"
-			}
-			BoundaryStatus = None;
+			obj.SetClientStatus(EndReading);
+			std::cout << "File Uploaded!" << std::endl, throw 201; // "Created"
 		}
 	}
 }
@@ -192,7 +185,6 @@ void	Post::ParseBoundary()
 
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
-		std::cout << "$$$$$$\n\n";
 		obj.SetClientStatus(EndReading);
 		if (BoundaryStatus != Finished)
 			obj.PrintError("Incomplete Request", obj), throw 400;
@@ -323,8 +315,8 @@ void	Post::ParseChunkedBoundary()
 void	Post::SetUnprocessedBuffer()
 {
 	UnprocessedBuffer = obj.GetUnprocessedBuffer();
-	if (!RmvFirstCrlf && obj.GetContentType() == BinaryOrRaw)
-		UnprocessedBuffer.erase(0, 2), RmvFirstCrlf = true;
+	// if (!RmvFirstCrlf && obj.GetContentType() == BinaryOrRaw)
+	// 	UnprocessedBuffer.erase(0, 2), RmvFirstCrlf = true;
 }
 
 void	Post::HandlePost()
