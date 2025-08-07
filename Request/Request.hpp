@@ -61,6 +61,7 @@ private:
 	size_t						ContentLength;
 	bool						KeepAlive;
 	bool						RequestNotComplete;
+	time_t						CurrentTime;
 
 public:
 	Request(const int	&, ClientStatus, std::vector<ConfigNode>, int &);
@@ -84,7 +85,8 @@ public:
 	ConfigNode							&GetRightServer();
 	_BoundarySettings					GetBoundarySettings() const;
 	_ServerDetails						GetServerDetails() const;
-	
+	time_t    							GetTimeOut() const;
+
 	// ---------		SETTERS 	 	--------- //
 	void	SetFullSystemPath(std::string	&Path);
 	void	SetExtentionsMap();
@@ -92,6 +94,7 @@ public:
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
 	void	SetServerDetails();
+	void    SetTimeOut(time_t CurrentTime);
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 

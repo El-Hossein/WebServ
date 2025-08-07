@@ -122,10 +122,20 @@ _ServerDetails	Request::GetServerDetails() const
 	return this->ServerDetails;
 }
 
+time_t    Request::GetTimeOut() const
+{
+    return this->CurrentTime;
+}
+
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
 */
+
+void    Request::SetTimeOut(time_t _CurrentTime)
+{
+    this->CurrentTime = _CurrentTime;
+}
 
 void	Request::SetClientStatus(ClientStatus	Status)
 {
@@ -276,7 +286,6 @@ void	Request::PrintError(const std::string	&Err, Request	&Obj)
 
 void	Request::CheckIfAllowedMethod()
 {
-	Location = RightServer.GetRightLocation(GetHeaderValue("path")); // {/}
 	AllowedMethods = ConfigNode::getValuesForKey(RightServer, "allow_methods", Location);
 
 	if (std::find(AllowedMethods.begin(), AllowedMethods.end(), GetHeaderValue("method")) == AllowedMethods.end())
@@ -334,6 +343,7 @@ void	Request::HandleQuery()
 void   Request::HandlePath()
 {
 	std::string					UriPath = GetHeaderValue("path");
+	Location = RightServer.GetRightLocation(UriPath); // {/}
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
 
 	if (ConfigPath.empty())
@@ -462,10 +472,13 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = _Boundary;
 			GetBoundaryFromHeader();
 		}
-		if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
-			PrintError("Unsupported Media Type", *this), throw 415;
-		FileExtention = ExtentionsMap[Headers["content-type"]];
-		this->ContentType = BinaryOrRaw;
+		else
+		{
+			if (ExtentionsMap.find(Headers["content-type"]) == ExtentionsMap.end())
+				PrintError("Unsupported Media Type", *this), throw 415;
+			FileExtention = ExtentionsMap[Headers["content-type"]];
+			this->ContentType = BinaryOrRaw;
+		}
 	}
 }
 
@@ -501,7 +514,7 @@ void Request::ReadBodyChunk()
 	TotalBytesRead += BytesRead;
 	BodyUnprocessedBuffer.assign(buffer, BytesRead);
 
-	if (TotalBytesRead == ContentLength) // fix here
+	if (TotalBytesRead >= ContentLength) // fix here
 		Client = EndReading;
 }
 
@@ -525,14 +538,16 @@ void	Request::ReadRequestHeader()
 
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
-		return ;
+	{
+		if (HeaderBuffer.size() > MAX_HEADER_SIZE)
+			PrintError("Header too long.", *this), throw 400;
+		throw -1; // didn't end yet
+	}
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
 	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
-	if (HeaderBuffer.size() >= MAX_HEADER_SIZE)
-		PrintError("Header too long.", *this), throw 400;
 
 	if (BodyUnprocessedBuffer.size() == 2)
 		Client = EndReading;
@@ -545,7 +560,7 @@ void	Request::ReadRequestHeader()
 
 /**
  * @brief	throw -1 If request didn't end yet.
- * 			throw 200 if completed reading request.
+ * 			throw 42 if completed reading request.
  */
 
 void	Request::SetUpRequest()
@@ -554,7 +569,7 @@ void	Request::SetUpRequest()
 	{
 		case	ReadHeader	:	ReadRequestHeader();	break ;
 		case	ReadBody	:	ReadBodyChunk();		break ;
-		case	EndReading	:	throw -42 ;
+		case	EndReading	:	throw 42 ; // continue to Get || Delete
 	}
 
 	if (Method == POST)
@@ -564,6 +579,8 @@ void	Request::SetUpRequest()
 		PostObj->HandlePost();
 		throw -1;
 	}
+	else
+		throw 42; // Continue to Get || Delete
 }
 
 // std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
