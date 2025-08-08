@@ -44,7 +44,6 @@ public:
 	void	GetChunks();
 	void	ParseChunked();
 
-	void	SetUnprocessedBuffer();
 	void	IsBodyFullyRead();
 	void	HandlePost();
 };
