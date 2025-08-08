@@ -308,34 +308,45 @@ void	Post::ParseChunkedBoundary()
 	size_t		start = 0, end = 0;
 	std::string	BodyContent;
 
-	switch (Chunk.ChunkStatus)
-	{
-		case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
-		case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
-		case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
-		case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
-	}
+	// switch (Chunk.ChunkStatus)
+	// {
+	// 	case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
+	// 	case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
+	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
+	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
+	// }
+	std::cout << "--------------->{" << UnprocessedBuffer << "}" << std::endl;
 	while (true)
 	{
 		switch (Chunk.ChunkStatus)
 		{
 			case	ChunkVars::None		:
 			{
+				std::cout << "In None\n";
 				start = UnprocessedBuffer.find("\r\n", 0);
 				if (start == std::string::npos)
+				{
+					std::cout << "{" <<  UnprocessedBuffer.substr(0, 20) << "}" << std::endl;
+					std::cout << "CRLF not found in None\n";
 					return ;
-				std::cout << "{" << UnprocessedBuffer.substr(0, 7) << "}" << std::endl;
+				}
+				std::cout << "{" << UnprocessedBuffer.substr(0, start) << "}" << std::endl;
 				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
 				UnprocessedBuffer.erase(0, start + 2);
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
 			}
 			case	ChunkVars::GotHexaSize	:
 			{
+				std::cout << "In GotHexaSize\n";
 				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
+				size_t tmp = BodyContent.size();
+				std::cout << "BodyToPassTo GetSubBodies(){" << BodyContent.size()<< "}:[" << BodyContent << "]" << std::endl;
 				GetSubBodies(BodyContent);
-				UnprocessedBuffer.erase(0, BodyContent.size());
-
-				Chunk.BodySize -= BodyContent.size();
+				// UnprocessedBuffer.erase(0, BodyContent.size());
+				UnprocessedBuffer = UnprocessedBuffer.substr(tmp);
+				std::cout << "LeftOver:[" << UnprocessedBuffer << "]" << std::endl;
+				std::cout << Chunk.BodySize << "-------" << tmp << std::endl;
+				Chunk.BodySize -= tmp;
 				if (!Chunk.BodySize)
 				{
 					Chunk.ChunkStatus = ChunkVars::GotFullBody;
@@ -345,25 +356,28 @@ void	Post::ParseChunkedBoundary()
 			}
 			case	ChunkVars::GotFullBody	:
 			{
+				std::cout << "In GotFullBody\n";
 				end = UnprocessedBuffer.find("\r\n", 0);
 				if (end != std::string::npos)
 				{
 					Chunk.ChunkStatus = ChunkVars::None;
-					UnprocessedBuffer.erase(0, end + 2);
+					// UnprocessedBuffer.erase(0, end + 2);
+					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
 
 					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+					{
 						Chunk.ChunkStatus = ChunkVars::Finished;
+					}
 					break ;
 				}
 				return ; // return to wait for the FullBody end
 			}
 			case	ChunkVars::Finished	:
 			{
-				std::cout << "File Uploaded!" << std::endl, throw 201;
+				std::cout << "File Uploaded!" << std::endl, obj.SetClientStatus(EndReading), throw 201;
 			}
 		}
 	}
-
 }
 
 /*	|#----------------------------------#|
@@ -371,23 +385,9 @@ void	Post::ParseChunkedBoundary()
 	|#----------------------------------#|
 */
 
-void	Post::SetUnprocessedBuffer()
-{
-	UnprocessedBuffer = obj.GetUnprocessedBuffer();
-	if (!RmvFirstCrlf)
-	{
-		if (obj.GetContentType() == BinaryOrRaw)
-			UnprocessedBuffer.erase(0, 2);
-		if (obj.GetDataType() == Chunked && obj.GetContentType() == _Boundary)
-			UnprocessedBuffer.erase(0, 2);
-
-		RmvFirstCrlf = true;
-	}
-}
-
 void	Post::HandlePost()
 {
-	SetUnprocessedBuffer();
+	UnprocessedBuffer = obj.GetUnprocessedBuffer();
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength	:	
@@ -406,40 +406,3 @@ void	Post::HandlePost()
 		}
 	}
 }
-
-
-
-
-
-
-		// start = UnprocessedBuffer.find("\r\n", 0);
-		// if (start == std::string::npos)
-		// 	throw "400 Bad Request";
-		// HexaStr = UnprocessedBuffer.substr(0, start);
-		// UnprocessedBuffer.erase(0, start + 2);
-		// BodySize = HexaToInt(HexaStr); // Body size b hexa value
-		// std::cout << "---->HexaStr:{" << HexaStr << "}" << std::endl;
-
-		// BodyContent = UnprocessedBuffer.substr(0, BodySize);
-		// UnprocessedBuffer.erase(0, BodySize);
-		// if (BodyContent.size() == BodySize)
-		// {
-		// 	end = UnprocessedBuffer.find("\r\n", 0);
-		// 	if (end == std::string::npos)
-		// 		; // mal9itch CRLF donc Body mazal masala, wait for next chunk
-		// 	else
-		// 		; // salit chunk go to next
-		// }
-
-
-
-		// std::cout << "---->BodyContent:{" << BodyContent << "}" << std::endl;
-
-		// size_t  finish = UnprocessedBuffer.find("0\r\n\r\n");
-		// std::cout << end << "-" << finish << std::endl;
-		// if (end + 2 == finish)
-		// {
-		// 	obj.SetClientStatus(EndReading);
-		// 	std::cout << "File Uploaded!" << std::endl, throw "201 Created";
-		// }
-		// UnprocessedBuffer.erase(0, end + 2);

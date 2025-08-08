@@ -210,15 +210,17 @@ void	Request::SetServerDetails()
 	if (Pos == std::string::npos)
 	{
 		ServerDetails.ServerHost = Host;
-		return ;
+		// return ;
 	}
+	else
+	{
+		ServerDetails.IsPortExist = true;
+		ServerDetails.ServerHost = Host.substr(0, Pos);
+		ServerDetails.ServerPort = Host.substr(Pos + 1);
 
-	ServerDetails.IsPortExist = true;
-	ServerDetails.ServerHost = Host.substr(0, Pos);
-	ServerDetails.ServerPort = Host.substr(Pos + 1);
-
-	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
-		PrintError("Host Error", *this), throw 400;
+		if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
+			PrintError("Host Error", *this), throw 400;
+	}
 	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
 }
 
@@ -581,6 +583,3 @@ void	Request::SetUpRequest()
 	else
 		throw 42; // Continue to Get || Delete
 }
-
-// std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
-
