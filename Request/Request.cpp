@@ -309,7 +309,7 @@ void	Request::GetBoundaryFromHeader()
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "--" + Boundary + "\r\n";
-	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--\r\n";
+	BoundaryAttri.BoundaryEnd = "--" + Boundary + "--\r\n";
 }
 
 void	Request::HandleQuery()
@@ -510,14 +510,12 @@ void Request::ReadBodyChunk()
         throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
+		std::cout << "\nThere is nothing to read no more!\n";
 		Client = EndReading;
 		return ;
 	}
 	TotalBytesRead += BytesRead;
 	BodyUnprocessedBuffer.assign(buffer, BytesRead);
-
-	if (TotalBytesRead >= ContentLength) // fix here
-		Client = EndReading;
 }
 
 void	Request::ReadRequestHeader()
@@ -572,7 +570,6 @@ void	Request::SetUpRequest()
 		case	ReadBody	:	ReadBodyChunk();		break ;
 		case	EndReading	:	throw 42 ; // continue to Get || Delete
 	}
-
 	if (Method == POST)
 	{
 		if (!PostObj)

@@ -36,6 +36,7 @@ enum	_BoundaryStatus
 	GotBoundaryStart,
 	GotFile,
 	GotBody,
+	GotBodyEnd,
 	GotBoundaryEnd,
 	Finished
 };

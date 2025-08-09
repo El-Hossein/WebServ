@@ -117,6 +117,7 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 	// 	case GotBoundaryEnd : std::cout << "its Boundary Status[GotBoundaryEnd]" << std::endl; break ;
 	// 	case Finished : std::cout << "its Boundary Status[Finished]" << std::endl; break ;
 	// }
+
 	while (true)
 	{
 		if (BoundaryStatus == None)
@@ -151,26 +152,34 @@ void	Post::GetSubBodies(std::string &Buffer) // state machine
 		}
 		if (BoundaryStatus == GotBody)
 		{
-			end = Buffer.find("\r\n--" + Boundary.Boundary);
-			size_t	pos = end + 4 + Boundary.Boundary.size(); // 4{\r\n--}
-			if (end == std::string::npos) // malqitch --XXXX
-				BodyContent = Buffer;
-			else	// lqit --XXXX
-			{
-				std::string	BoundaryFound;
-				if (Buffer.compare(pos , 2, "\r\n") == 0) // lqit BoundaryStart
-					BoundaryStatus = GotBoundaryEnd, BoundaryFound = Boundary.BoundaryStart;
-				else if (Buffer.compare(pos, 4, "--\r\n") == 0) // lqit finish
-					BoundaryStatus = Finished, BoundaryFound = Boundary.BoundaryEnd;
-				BodyContent = Buffer.substr(0, end);
-			}
+			size_t end;
+			end = Buffer.find("\r\n");
+			if (end != std::string::npos)
+				BoundaryStatus = GotBodyEnd;
 
-			OutFile.write(BodyContent.c_str(), BodyContent.size()); // WriteToFile(Filename, BodyContent);
+			BodyContent = Buffer.substr(0, end);
+			Buffer = Buffer.substr(0, BodyContent.size());
+
+			// std::cout << "\n>{" << BodyContent << "}" << std::endl;
+			OutFile.write(BodyContent.c_str(), BodyContent.size());
 			// std::cout << "---->Filename:{" << Filename << "}" << std::endl;
 			// std::cout << "---->Its BodyContent:{" << BodyContent << "}\n" << std::endl;
 			if (BoundaryStatus == GotBody)
 				break ;
 		}
+		if (BoundaryStatus == GotBodyEnd)
+        {
+        	size_t  pos;
+        	pos = Buffer.find(Boundary.BoundaryStart);
+        	if (pos != std::string::npos)
+				BoundaryStatus = GotBoundaryEnd;
+        	pos = Buffer.find(Boundary.BoundaryEnd);
+        	if (pos != std::string::npos)
+				BoundaryStatus = Finished;
+
+        	if (BoundaryStatus == GotBodyEnd)
+				break ;
+        }
 		if (BoundaryStatus == GotBoundaryEnd)
 			OutFile.close(), BoundaryStatus = None;
 		if (BoundaryStatus == Finished)
@@ -303,19 +312,87 @@ void	Post::ParseChunked()
 	|#----------------------------------#|
 */
 
+void	Post::GetSubBodies2(std::string &Buffer) // state machine
+{
+	std::string	BodyContent;
+	size_t	start = 0, end = 0, BodyPos = 0;
+
+	while (true)
+	{
+		if (BoundaryStatus == None)
+		{
+			start = Buffer.find(Boundary.BoundaryStart, 0);
+			if (start == std::string::npos)
+				obj.PrintError("Boudary Error", obj), throw 400;
+
+			Buffer.erase(0, start + Boundary.BoundaryStart.size());
+			BoundaryStatus = GotBoundaryStart;
+		}
+		if (BoundaryStatus == GotBoundaryStart)
+		{
+			FindFileName(Buffer, Filename);
+			BoundaryStatus = GotFile;
+		}
+		if (BoundaryStatus == GotFile)
+		{
+			BodyPos = Buffer.find("\r\n\r\n");
+			if (BodyPos == std::string::npos) // ila makantch
+				obj.PrintError("No Body Found", obj), throw 400;
+			else // kayn Double CRLF
+			{
+				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
+			}
+		}
+		if (BoundaryStatus == GotBody)
+		{
+			size_t end;
+			end = Buffer.find("\r\n--");
+			if (end != std::string::npos)
+				BoundaryStatus = GotBodyEnd;
+			BodyContent = Buffer.substr(0, end);
+			Buffer = Buffer.substr(0, BodyContent.size());
+
+			// std::cout << "size of BodyContent:{" << BodyContent.size() << "}***BodyContent^^"<< BodyContent << "^^\n\n" << std::endl;
+
+			// std::cout << "BodyContent:{" << BodyContent<< "}\n------------------\n" << std::endl;
+			// static int i = 0;
+			// i++;
+			// if (i == 2)
+			// 	exit(12);
+			OutFile.write(BodyContent.c_str(), BodyContent.size());
+			// std::cout << "---->Filename:{" << Filename << "}" << std::endl;
+			if (BoundaryStatus == GotBody)
+				break ;
+		}
+		if (BoundaryStatus == GotBodyEnd)
+        {
+        	size_t  pos;
+        	pos = Buffer.find(Boundary.BoundaryStart);
+        	if (pos != std::string::npos)
+				BoundaryStatus = GotBoundaryEnd;
+        	pos = Buffer.find(Boundary.BoundaryEnd);
+        	if (pos != std::string::npos)
+			{
+				BoundaryStatus = Finished;
+			}
+
+        	if (BoundaryStatus == GotBodyEnd)
+				break ;
+        }
+		if (BoundaryStatus == GotBoundaryEnd)
+			OutFile.close(), BoundaryStatus = None;
+		if (BoundaryStatus == Finished)
+		{
+			std::cout << "File Uploaded!" << std::endl, obj.SetClientStatus(EndReading), throw 201;
+		}
+	}
+}
+
 void	Post::ParseChunkedBoundary()
 {
 	size_t		start = 0, end = 0;
 	std::string	BodyContent;
 
-	// switch (Chunk.ChunkStatus)
-	// {
-	// 	case ChunkVars::None : std::cout << "Status[None]" << std::endl; break ;
-	// 	case ChunkVars::GotHexaSize : std::cout << "Status[GotHexaSize]" << std::endl; break ;
-	// 	case ChunkVars::GotFullBody : std::cout << "Status[GotFullBody]" << std::endl; break ;
-	// 	case ChunkVars::Finished : std::cout << "Status[Finished]" << std::endl; break ;
-	// }
-	std::cout << "--------------->{" << UnprocessedBuffer << "}" << std::endl;
 	while (true)
 	{
 		switch (Chunk.ChunkStatus)
@@ -323,14 +400,20 @@ void	Post::ParseChunkedBoundary()
 			case	ChunkVars::None		:
 			{
 				std::cout << "In None\n";
+				UnprocessedBuffer = PreviousBuffer + UnprocessedBuffer, PreviousBuffer.clear();
 				start = UnprocessedBuffer.find("\r\n", 0);
 				if (start == std::string::npos)
 				{
-					std::cout << "{" <<  UnprocessedBuffer.substr(0, 20) << "}" << std::endl;
-					std::cout << "CRLF not found in None\n";
+					if (!UnprocessedBuffer.empty())
+					{
+						PreviousBuffer = UnprocessedBuffer;
+						// std::cout << "Previous Buffer:|" << PreviousBuffer << "|\n";
+					}
+					// std::cout << "CRLF not found in None:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
 					return ;
 				}
-				std::cout << "{" << UnprocessedBuffer.substr(0, start) << "}" << std::endl;
+				// std::cout << "Buffer to look for hexa:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
+				std::cout << "Hexa found:{" << UnprocessedBuffer.substr(0, 20) << "}" << std::endl;
 				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
 				UnprocessedBuffer.erase(0, start + 2);
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize; break;
@@ -340,11 +423,11 @@ void	Post::ParseChunkedBoundary()
 				std::cout << "In GotHexaSize\n";
 				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
 				size_t tmp = BodyContent.size();
-				std::cout << "BodyToPassTo GetSubBodies(){" << BodyContent.size()<< "}:[" << BodyContent << "]" << std::endl;
-				GetSubBodies(BodyContent);
-				// UnprocessedBuffer.erase(0, BodyContent.size());
+
+				GetSubBodies2(BodyContent);
+
 				UnprocessedBuffer = UnprocessedBuffer.substr(tmp);
-				std::cout << "LeftOver:[" << UnprocessedBuffer << "]" << std::endl;
+
 				std::cout << Chunk.BodySize << "-------" << tmp << std::endl;
 				Chunk.BodySize -= tmp;
 				if (!Chunk.BodySize)
@@ -356,12 +439,13 @@ void	Post::ParseChunkedBoundary()
 			}
 			case	ChunkVars::GotFullBody	:
 			{
-				std::cout << "In GotFullBody\n";
-				end = UnprocessedBuffer.find("\r\n", 0);
+				// std::cout << "In GotFullBody{" << UnprocessedBuffer.substr(0, 10) << "}*****End\n";
+				end = UnprocessedBuffer.find("\r\n");
+				PrintCrlfString(UnprocessedBuffer.substr(0, 10));
+				std::cout << "=[" << end<< "]\n";
 				if (end != std::string::npos)
 				{
 					Chunk.ChunkStatus = ChunkVars::None;
-					// UnprocessedBuffer.erase(0, end + 2);
 					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
 
 					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
