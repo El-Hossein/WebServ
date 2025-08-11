@@ -22,6 +22,7 @@ private:
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
 	std::string							PreviousBuffer;
+	std::string							AccumulateBuffer;
 
 	std::string							Dir;
 	std::string							Filename;
