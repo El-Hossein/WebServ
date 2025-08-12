@@ -1,8 +1,4 @@
 #include "config.hpp"
-#include <cstddef>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 ConfigNode::ConfigNode(){}
 

@@ -1,10 +1,6 @@
 #pragma once
 
-#include "../AllServer/HttpServer.hpp"
-#include <dirent.h>
 #include "../cgi/cgiHeader.hpp"
-
-
 class Response
 {
     private:
