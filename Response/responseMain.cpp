@@ -100,20 +100,54 @@ void    Response::setFinalResponse(std::string _finalResponse)
 
 std::string Response::deleteResponseSuccess(const std::string& message)
 {
-    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
-    html += "<body><h1>";
-    html += message;
-    html += "</h1></body></html>";
+    std::string html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">";
+    html += "<title>Success</title>";
+    html += "<style>";
+    html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
+            "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
+            "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
+
+    html += ".success-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
+            "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
+            "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
+
+    html += "h1 { font-size: 48px; color: #b3ffb3; margin-bottom: 20px; "
+            "text-shadow: 0 0 10px rgba(179, 255, 179, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
+
+    html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
+    html += "@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } "
+            "to { transform: translateY(0); opacity: 1; } }\n";
+    html += "</style></head><body>";
+    html += "<div class=\"success-container\">";
+    html += "<h1>✅ " + message + "</h1>";
+    html += "</div></body></html>";
 
     return html;
 }
 
 std::string Response::postResponseSuccess(const std::string& message)
 {
-    std::string html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Error</title></head>";
-    html += "<body><h1>";
-    html += message;
-    html += "</h1></body></html>";
+    std::string html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">";
+    html += "<title>Success</title>";
+    html += "<style>";
+    html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
+            "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
+            "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
+
+    html += ".success-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
+            "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
+            "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
+
+    html += "h1 { font-size: 48px; color: #b3ffb3; margin-bottom: 20px; "
+            "text-shadow: 0 0 10px rgba(179, 255, 179, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
+
+    html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
+    html += "@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } "
+            "to { transform: translateY(0); opacity: 1; } }\n";
+    html += "</style></head><body>";
+    html += "<div class=\"success-container\">";
+    html += "<h1>📤 " + message + "</h1>";
+    html += "</div></body></html>";
 
     return html;
 }
@@ -124,30 +158,66 @@ std::string Response::generateListingDir()
     if (!dirCheck)
         return "<html><body><h1>Cannot open directory</h1></body></html>";
 
-    std::string html = "<!DOCTYPE html>\n";
-    html += "<html>\n<head>\n<title>Index of " + uri + "</title>\n";
+    std::string html;
+    html += "<!DOCTYPE html>\n<html>\n<head>\n";
+    html += "<meta charset=\"UTF-8\">\n<title>Index of " + uri + "</title>\n";
     html += "<style>\n"
-            "body { background-color: #f0f4f8; font-family: Arial, sans-serif; color: #333; padding: 40px; }\n"
-            "h1 { color: #2c3e50; }\n"
-            "ul { list-style-type: none; padding-left: 0; }\n"
-            "li { margin: 10px 0; }\n"
-            "a { text-decoration: none; color: #3498db; font-weight: bold; }\n"
-            "a:hover { text-decoration: underline; color: #1abc9c; }\n"
-            ".container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 8px; }\n"
-            "</style>\n"
-            "</head>\n<body>\n<div class=\"container\">\n"
-            "<h1>Index of " + uri + "</h1>\n<ul>\n";
+            "body { background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e); font-family: 'Segoe UI', sans-serif; color: #e0e0e0; padding: 40px; margin: 0; }\n"
+            ".container { max-width: 950px; margin: auto; background: rgba(0,0,0,0.25); padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n"
+            "h1 { color: #a5d6a7; margin-bottom: 20px; text-shadow: 0 0 10px rgba(165, 214, 167, 0.8); animation: slideDown 0.5s ease-in-out; }\n"
+            "ul { list-style-type: none; padding: 0; margin: 0; }\n"
+            "li { margin: 10px 0; padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.05); display: flex; align-items: center; transform: translateX(-10px); opacity: 0; animation: slideIn 0.4s forwards; }\n"
+            "li:hover { background: rgba(76,175,80,0.25); transform: scale(1.02); transition: all 0.3s ease; }\n"
+            "a { text-decoration: none; color: #80cbc4; font-weight: bold; flex-grow: 1; transition: color 0.3s ease; }\n"
+            "a:hover { color: #b2dfdb; }\n"
+            ".icon { margin-right: 12px; font-size: 20px; }\n"
+
+            /* Upload section */
+            ".upload-section { margin-top: 30px; padding: 25px; background: rgba(0,0,0,0.25); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; color: #c8e6c9; animation: fadeIn 1s ease-in-out; }\n"
+            ".upload-section h2 { margin-bottom: 15px; font-size: 1.3rem; }\n"
+            ".file-input { display: inline-block; padding: 10px 20px; background: #2e7d32; color: #fff; border-radius: 6px; cursor: pointer; transition: background 0.3s ease; }\n"
+            ".file-input:hover { background: #388e3c; }\n"
+            "input[type=file] { display: none; }\n"
+            "input[type=submit] { margin-top: 15px; padding: 10px 20px; background: #43a047; border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; transition: background 0.3s ease; }\n"
+            "input[type=submit]:hover { background: #4caf50; }\n"
+
+            /* Animations */
+            "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n"
+            "@keyframes slideIn { to { opacity: 1; transform: translateX(0); } }\n"
+            "@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }\n"
+            "</style>\n</head>\n<body>\n";
+
+    html += "<div class=\"container\">\n";
+    html += "<h1>📂 Index of " + uri + "</h1>\n<ul>\n";
 
     struct dirent *dir;
     while ((dir = readdir(dirCheck)) != NULL)
     {
-        std::string name = pathRequested + (pathRequested[pathRequested.length() - 1] == '/' ? "" : "/") + dir->d_name;
-        html += "<li><a href=\"" + name + "\">" + dir->d_name + "</a></li>\n";
+        std::string name = dir->d_name;
+        if (name[0] == '.' && name != "." && name != "..")
+            continue;
+
+        std::string path = pathRequested + (pathRequested[pathRequested.length() - 1] == '/' ? "" : "/") + name;
+        std::string icon = (dir->d_type == DT_DIR) ? "📁" : "📄";
+        html += "<li><span class=\"icon\">" + icon + "</span><a href=\"" + path + "\">" + name + "</a></li>\n";
     }
     closedir(dirCheck);
-    html += "</ul>\n</div>\n</body>\n</html>\n";
+
+    html += "</ul>\n";
+
+    // Upload section
+    html += "<div class=\"upload-section\">\n";
+    html += "<h2>⬆️ Upload a File</h2>\n";
+    html += "<form action=\"" + uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
+    html += "<label class=\"file-input\">Choose File<input type=\"file\" name=\"file\"></label><br>\n";
+    html += "<input type=\"submit\" value=\"Upload\">\n";
+    html += "</form>\n</div>\n";
+
+    html += "</div>\n</body>\n</html>\n";
+
     return html;
 }
+
 
 std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
 {
