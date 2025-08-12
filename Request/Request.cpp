@@ -132,6 +132,11 @@ time_t    Request::GetTimeOut() const
 	|#----------------------------------#|
 */
 
+void    Request::SetContext(EventContext* _ctx)
+{
+    this->ctx = _ctx;
+}
+
 void    Request::SetTimeOut(time_t _CurrentTime)
 {
     this->CurrentTime = _CurrentTime;
