@@ -156,7 +156,7 @@ std::string Response::generateListingDir()
 {
     DIR *dirCheck = opendir(uri.c_str());
     if (!dirCheck)
-        return "<html><body><h1>Cannot open directory</h1></body></html>";
+        return "";
 
     std::string html;
     html += "<!DOCTYPE html>\n<html>\n<head>\n";
@@ -236,9 +236,14 @@ std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPar
     return a.getValuesForKey(a, what, location);
 }
 
-bool Response::generateAutoIndexOn(Request &req)
+bool Response::generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request &req)
 {
     staticFileBody = generateListingDir();
+    if (staticFileBody.empty())
+    {
+        responseError(403, " Forbidden", ConfigPars, req);
+        return false;
+    }
     staticFilePos = 0;
     usingStaticFile = true;
 
@@ -413,7 +418,7 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             if (S_ISDIR(st.st_mode))
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOn(req);
+                    generateAutoIndexOn(ConfigPars, req);
                 else
                     responseError(403, " Forbidden", ConfigPars, req);
                 return ;
@@ -421,7 +426,7 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             if (access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOn(req);
+                    generateAutoIndexOn(ConfigPars, req);
                 else
                     responseError(403, " Forbidden", ConfigPars, req);
                 return ;
@@ -429,12 +434,16 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             prepareFileResponse(htmlFound, checkContentType(1), req);
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOn(req);
+            generateAutoIndexOn(ConfigPars, req);
         else
             responseError(403, " Forbidden", ConfigPars, req);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOn(req);
+    {
+        std::cout << "ajadsjjdjasjdjdjsjdjsjd" << std::endl;
+        generateAutoIndexOn(ConfigPars, req);
+
+    }
     else
         responseError(403, " Forbidden", ConfigPars, req);
 }
