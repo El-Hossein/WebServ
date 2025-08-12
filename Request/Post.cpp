@@ -130,10 +130,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			if (start == std::string::npos)
 				obj.PrintError("Boudary Error", obj), throw 400;
 
-			// std::string Previous(Buffer, start);
-			// if (Previous.size() > 0 && !Filename.empty())
-			// 	WriteToFile(Filename, Previous);
-
 			Buffer.erase(0, start + Boundary.BoundaryStart.size());
 			BoundaryStatus = GotBoundaryStart;
 		}
@@ -155,17 +151,16 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 		}
 		if (BoundaryStatus == GotBody)
 		{
-			// AccumulateBuffer += Buffer;
 			AccumulateBuffer.append(Buffer.data(), Buffer.size());
 
-			std::string str = "\r\n--" + Boundary.Boundary;
-			size_t end = AccumulateBuffer.find(str);
+			size_t end = AccumulateBuffer.find("\r\n--" + Boundary.Boundary);
 			if (end != std::string::npos)
 			{
+				std::cout << "zbi!\n";
 				BoundaryStatus = GotBodyEnd;
 				BodyContent = AccumulateBuffer.substr(0, end);
 
-				std::cout << "Size to write to file:"<< BodyContent.size() << std::endl;
+				std::cout << "Size to write to" << Filename << " is: "<< BodyContent.size() << std::endl;
 				OutFile.write(BodyContent.c_str(), BodyContent.size());
 
 				Buffer = AccumulateBuffer.substr(end);
@@ -173,8 +168,10 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			}
 			else
 			{
-				BodyContent = AccumulateBuffer.substr(0, Buffer.size());
-				AccumulateBuffer = AccumulateBuffer.substr(Buffer.size());
+				size_t x = AccumulateBuffer.size() - Buffer.size();
+				BodyContent = AccumulateBuffer.substr(0, x);
+				AccumulateBuffer = AccumulateBuffer.substr(x);
+				// std::cout << "--->Filename{" << Filename << "}" << std::endl;
 				OutFile.write(BodyContent.c_str(), BodyContent.size());
 				break ;
 			}
@@ -332,85 +329,6 @@ void Post::ParseChunked()
 	|#		ParseChunkedBoundary	    #|
 	|#----------------------------------#|
 */
-
-void Post::GetSubBodies2(std::string &Buffer) // state machine
-{
-	std::string BodyContent;
-	size_t start = 0, end = 0, BodyPos = 0;
-
-	// std::cout << "Buffer:{" << Buffer << "}\n" << std::endl;
-
-	while (true)
-	{
-		if (BoundaryStatus == None)
-		{
-			start = Buffer.find(Boundary.BoundaryStart, 0);
-			if (start == std::string::npos)
-			{
-				std::cout << "Buffer in [None]:" << Buffer << std::endl;
-				obj.PrintError("Boudary Error", obj), throw 400;
-			}
-
-			Buffer.erase(0, start + Boundary.BoundaryStart.size());
-			BoundaryStatus = GotBoundaryStart;
-		}
-		if (BoundaryStatus == GotBoundaryStart)
-		{
-			FindFileName(Buffer, Filename);
-			BoundaryStatus = GotFile;
-		}
-		if (BoundaryStatus == GotFile)
-		{
-			BodyPos = Buffer.find("\r\n\r\n");
-			if (BodyPos == std::string::npos) // ila makantch
-				obj.PrintError("No Body Found", obj), throw 400;
-			else // kayn Double CRLF
-			{
-				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
-			}
-		}
-		if (BoundaryStatus == GotBody)
-		{
-			size_t end;
-			AccumulateBuffer += Buffer;
-
-			end = AccumulateBuffer.find("\r\n" + Boundary.BoundaryStart); // look for boundary start
-			if (end != std::string::npos)
-				BoundaryStatus = GotBoundaryEnd;
-			else // look for boundary end
-			{
-				end = AccumulateBuffer.find("\r\n" + Boundary.BoundaryEnd);
-				if (end != std::string::npos)
-					BoundaryStatus = Finished;
-				else
-					break;
-			}
-
-			if (BoundaryStatus != GotBody)
-				AccumulateBuffer.clear();
-			BodyContent = AccumulateBuffer.substr(0, end);
-			Buffer = AccumulateBuffer.substr(BodyContent.size());
-
-			// std::cout << "size of BodyContent:{" << BodyContent.size() << "}***BodyContent^^"<< BodyContent << "^^\n\n" << std::endl;
-
-			// std::cout << "BodyContent:{" << BodyContent<< "}\n------------------\n" << std::endl;
-			// static int i = 0;
-			// i++;
-			// if (i == 2)
-			// 	exit(12);
-			OutFile.write(BodyContent.c_str(), BodyContent.size());
-			// std::cout << "---->Filename:{" << Filename << "}" << std::endl;
-			if (BoundaryStatus == GotBody)
-				break;
-		}
-		if (BoundaryStatus == GotBoundaryEnd)
-			OutFile.close(), BoundaryStatus = None;
-		if (BoundaryStatus == Finished)
-		{
-			std::cout << "File Uploaded! subBodies" << std::endl, obj.SetClientStatus(EndReading), throw 201;
-		}
-	}
-}
 
 void Post::ParseChunkedBoundary()
 {
