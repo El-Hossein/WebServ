@@ -103,12 +103,12 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcpy(envp[8], "CONTENT_TYPE=");
     strcat(envp[8], req.GetHeaderValue("content-type").c_str());
     // std::cout << envp[8] << std::endl;
-    // //CONTENT_LENGTH
+    //CONTENT_LENGTH
     envp[9] = new char[strlen("CONTENT_LENGTH=") + strlen(req.GetHeaderValue("content-length").c_str()) + 1];
     strcpy(envp[9], "CONTENT_LENGTH=");
     strcat(envp[9], req.GetHeaderValue("content-length").c_str());
-    // // std::cout << envp[9] << std::endl;
-    // //SERVER_NAME
+    // std::cout << envp[9] << std::endl;
+    //SERVER_NAME
     envp[10] = new char[strlen("SERVER_NAME=") + strlen(req.GetHeaderValue("host").c_str()) + 1];
     strcpy(envp[10], "SERVER_NAME=");
     strcat(envp[10], req.GetHeaderValue("host").c_str());
