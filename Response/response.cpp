@@ -1,3 +1,4 @@
+#include "../AllServer/HttpServer.hpp"
 #include "responseHeader.hpp"
 
 std::string handWritingError(const std::string& message, int statusCode)

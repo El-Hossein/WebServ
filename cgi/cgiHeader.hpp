@@ -1,15 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <sstream>
-#include <fstream>
-#include <dirent.h>
 #include "../Request/Request.hpp"
 
 class Response;

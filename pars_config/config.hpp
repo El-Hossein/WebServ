@@ -3,9 +3,6 @@
 
 
 #include "../allincludes.hpp"
-#include <cstddef>
-#include <string>
-#include <vector>
 
 //  server === > "listen", "server_names", "error_page", "client_max_body_size", "root", "index", "autoindex", "return"
 //  location =====> "autoindex", "allow_methods", "return", "php-cgi", "root", "index", "py-cgi", "upload_store"
