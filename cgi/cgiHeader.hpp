@@ -97,7 +97,7 @@ class Cgi
         int                 checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
         int                 IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars);
         int                servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars, std::string uri);
-        bool                generateAutoIndexOnCgi(Request &req);
+        bool                generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req);
         std::string         generateListingDirCgi(Request &req);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);
