@@ -272,34 +272,42 @@ std::string Response::checkContentType(int index)
         exte = htmlFound;
     else
         exte = uri;
-    size_t dotPos = exte.find(".");
+    size_t dotPos = exte.find_last_of(".");
     if (dotPos != std::string::npos)
     {
         std::string extension = exte.substr(dotPos);
-        if (extension.compare(".png") == 0)
-            return "Content-Type: image/png\r\n";
-        else if (extension.compare(".jpeg") == 0)
-            return "Content-Type: image/jpeg\r\n";
-        else if (extension.compare(".mp4") == 0)
-            return "Content-Type: video/mp4\r\n";
-        else if (extension.compare(".mpeg") == 0)
-            return "Content-Type: audio/mpeg\r\n";
-        else if (extension.compare(".pdf") == 0)
-            return "Content-Type: application/pdf\r\n";
-        else if (extension.compare(".zip") == 0)
-            return "Content-Type: application/zip\r\n";
-        else if (extension.compare(".svg") == 0)
-            return "Content-Type: image/svg+xml\r\n";
-        else if (extension.compare(".mp3") == 0)
-            return "Content-Type: audio/mp3\r\n";
-        else if (extension.compare(".vorbis") == 0)
-            return "Content-Type: audio/vorbis\r\n";
-        else if (extension.compare(".js") == 0)
-            return "Content-Type: application/javascript\r\n";
-        else if (extension.compare(".json") == 0)
-            return "Content-Type: application/json\r\n";
-        else if (extension.compare(".html") == 0)
-            return "Content-Type: text/html\r\n";
+        if (extension == ".png")   return "Content-Type: image/png\r\n";
+        if (extension == ".jpg" || extension == ".jpeg") return "Content-Type: image/jpeg\r\n";
+        if (extension == ".gif")   return "Content-Type: image/gif\r\n";
+        if (extension == ".bmp")   return "Content-Type: image/bmp\r\n";
+        if (extension == ".webp")  return "Content-Type: image/webp\r\n";
+        if (extension == ".svg")   return "Content-Type: image/svg+xml\r\n";
+        if (extension == ".mp4")   return "Content-Type: video/mp4\r\n";
+        if (extension == ".webm")  return "Content-Type: video/webm\r\n";
+        if (extension == ".ogv")   return "Content-Type: video/ogg\r\n";
+        if (extension == ".avi")   return "Content-Type: video/x-msvideo\r\n";
+        if (extension == ".mov")   return "Content-Type: video/quicktime\r\n";
+        if (extension == ".mkv")   return "Content-Type: video/x-matroska\r\n";
+        if (extension == ".mp3")   return "Content-Type: audio/mpeg\r\n";
+        if (extension == ".wav")   return "Content-Type: audio/wav\r\n";
+        if (extension == ".ogg")   return "Content-Type: audio/ogg\r\n";
+        if (extension == ".flac")  return "Content-Type: audio/flac\r\n";
+        if (extension == ".aac")   return "Content-Type: audio/aac\r\n";
+        if (extension == ".pdf")   return "Content-Type: application/pdf\r\n";
+        if (extension == ".zip")   return "Content-Type: application/zip\r\n";
+        if (extension == ".tar")   return "Content-Type: application/x-tar\r\n";
+        if (extension == ".gz")    return "Content-Type: application/gzip\r\n";
+        if (extension == ".bz2")   return "Content-Type: application/x-bzip2\r\n";
+        if (extension == ".7z")    return "Content-Type: application/x-7z-compressed\r\n";
+        if (extension == ".rar")   return "Content-Type: application/vnd.rar\r\n";
+        if (extension == ".html" || extension == ".htm") return "Content-Type: text/html\r\n";
+        if (extension == ".css")   return "Content-Type: text/css\r\n";
+        if (extension == ".js")    return "Content-Type: application/javascript\r\n";
+        if (extension == ".json")  return "Content-Type: application/json\r\n";
+        if (extension == ".xml")   return "Content-Type: application/xml\r\n";
+        if (extension == ".txt")   return "Content-Type: text/plain\r\n";
+        if (extension == ".csv")   return "Content-Type: text/csv\r\n";
+        if (extension == ".md")    return "Content-Type: text/markdown\r\n";
         else
             return "Content-Type: text/plain\r\n";
     }
@@ -439,11 +447,7 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             responseError(403, " Forbidden", ConfigPars, req);
     }
     else if (autoIndexOn == "on")
-    {
-        std::cout << "ajadsjjdjasjdjdjsjdjsjd" << std::endl;
         generateAutoIndexOn(ConfigPars, req);
-
-    }
     else
         responseError(403, " Forbidden", ConfigPars, req);
 }
@@ -535,7 +539,7 @@ int Response::prepareRedirectResponse(std::vector<std::string> redirect, Request
     return 0;
 }
 
-void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
+void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars, int e)
 {
     struct stat st;
 
@@ -604,7 +608,11 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
             staticFileBody = postResponseSuccess("file succesefuly uploaded!");
             staticFilePos = 0;
             usingStaticFile = true;
-            headers = "HTTP/1.1 201 Created\r\n";
+            switch (e)
+            {
+                case 200: headers = "HTTP/1.1 200 OK\r\n";
+                case 201: headers = "HTTP/1.1 201 Created\r\n";
+            }
             headers += "Content-Type: text/plain\r\n";
             headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
             if (req.GetHeaderValue("connection") == "keep-alive")
@@ -623,7 +631,7 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars)
     }
 }
 
-void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars)
+void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars, int e)
 {
     uri = req.GetFullPath();
     method = req.GetHeaderValue("method");
@@ -631,7 +639,7 @@ void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<Confi
 
     if (method == "GET" || method == "POST")
     {
-        getResponse(req, ConfigPars);
+        getResponse(req, ConfigPars, e);
     }
     else if (method == "DELETE")
     {

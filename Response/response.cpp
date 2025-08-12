@@ -85,6 +85,7 @@ void     Response::responseError(int statusCode, const std::string& message, std
         case 400: headers += " Bad Request"; break;
         case 413: headers += " Content Too Large"; break;
         case 414: headers += " URI Too Long"; break;
+        case 415: headers += " Unsupported Media Type"; break;
         case 505: headers += " HTTP Version Not Supported"; break;
         case 504: headers += " Gateway Timeout"; break;
         case 405: headers += " Method Not Allowed"; break;
