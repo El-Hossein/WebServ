@@ -308,7 +308,7 @@ std::string Cgi::generateListingDirCgi(Request &req)
     std::string _uri = req.GetFullPath();
     DIR *dirCheck = opendir(_uri.c_str());
     if (!dirCheck)
-        return "<html><body><h1>Cannot open directory</h1></body></html>";
+        return "";
 
     std::string html;
     html += "<!DOCTYPE html>\n<html>\n<head>\n";
@@ -365,9 +365,14 @@ std::string Cgi::generateListingDirCgi(Request &req)
     return html;
 }
 
-bool Cgi::generateAutoIndexOnCgi(Request &req)
+bool Cgi::generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req)
 {
     statCgiFileBody = generateListingDirCgi(req);
+    if (statCgiFileBody.empty())
+    {
+        responseErrorcgi(403, "Forbidden", ConfigPars, req);
+        return false;
+    }
     statCgiFilePos = 0;
     usingCgiStatFile = true;
 
@@ -417,7 +422,7 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             if (S_ISDIR(st.st_mode))
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOnCgi(req);
+                    generateAutoIndexOnCgi(ConfigPars, req);
                 else
                     responseErrorcgi(403, " Forbidden", ConfigPars, req);
                 return -1;
@@ -425,7 +430,7 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             if (access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
-                   generateAutoIndexOnCgi(req);
+                   generateAutoIndexOnCgi(ConfigPars, req);
                 else
                     responseErrorcgi(403, " Forbidden", ConfigPars, req);
                 return -1;
@@ -449,12 +454,12 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
                 return 0;
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOnCgi(req);
+            generateAutoIndexOnCgi(ConfigPars, req);
         else
             responseErrorcgi(403, " Forbidden", ConfigPars, req);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOnCgi(req);
+        generateAutoIndexOnCgi(ConfigPars, req);
     else
         responseErrorcgi(403, " Forbidden", ConfigPars, req);
     return -1;
