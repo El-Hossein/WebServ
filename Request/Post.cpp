@@ -21,7 +21,7 @@ Post::Post(Request &_obj) : obj(_obj),
 
 	BoundaryStatus = None;
 
-	AccumulateBuffer = "";
+	PrevBuffer = "";
 
 	Dir = "/Users/zderfouf/goinfre/ServerUploads";
 	srand(time(NULL));
@@ -147,33 +147,32 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			else // kayn Double CRLF
 			{
 				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
+				if (Buffer.empty())
+					return ;
 			}
 		}
 		if (BoundaryStatus == GotBody)
 		{
-			AccumulateBuffer.append(Buffer.data(), Buffer.size());
+			std::string tmp(Buffer);
 
-			size_t end = AccumulateBuffer.find("\r\n--" + Boundary.Boundary);
-			if (end != std::string::npos)
+			Appender(Buffer, PrevBuffer, tmp);
+
+			size_t end = Buffer.find("\r\n--" + Boundary.Boundary);
+			if (end == std::string::npos)
 			{
-				std::cout << "zbi!\n";
-				BoundaryStatus = GotBodyEnd;
-				BodyContent = AccumulateBuffer.substr(0, end);
-
-				std::cout << "Size to write to" << Filename << " is: "<< BodyContent.size() << std::endl;
-				OutFile.write(BodyContent.c_str(), BodyContent.size());
-
-				Buffer = AccumulateBuffer.substr(end);
-				AccumulateBuffer.clear();
+				OutFile.write(PrevBuffer.data(), PrevBuffer.size());
+				PrevBuffer = tmp;
+				// std::cout << "--->Filename{" << Filename << "}" << std::endl;
+				break ;
 			}
 			else
 			{
-				size_t x = AccumulateBuffer.size() - Buffer.size();
-				BodyContent = AccumulateBuffer.substr(0, x);
-				AccumulateBuffer = AccumulateBuffer.substr(x);
-				// std::cout << "--->Filename{" << Filename << "}" << std::endl;
-				OutFile.write(BodyContent.c_str(), BodyContent.size());
-				break ;
+				BoundaryStatus = GotBodyEnd;
+
+				BodyContent = Buffer.substr(0, end);
+				OutFile.write(BodyContent.data(), BodyContent.size());
+				PrevBuffer.clear();
+				Buffer = Buffer.substr(end);
 			}
 		}
 		if (BoundaryStatus == GotBodyEnd)
@@ -185,9 +184,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			pos = Buffer.find(Boundary.BoundaryEnd);
 			if (pos != std::string::npos)
 				BoundaryStatus = Finished;
-
-			// if (BoundaryStatus == GotBodyEnd)
-			// 	break;
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
 			OutFile.close(), BoundaryStatus = None;
@@ -219,11 +215,12 @@ void Post::ParseBirnaryOrRaw()
 
 	OutFile.write(UnprocessedBuffer.c_str(), UnprocessedBuffer.size());
 
+	std::cout << "Total bytes read:" << obj.GetTotatlBytesRead() << std::endl;
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
 		OutFile.close();
-		std::cout << "File Uploaded!" << std::endl, throw 201;
 		obj.SetClientStatus(EndReading);
+		std::cout << "File Uploaded!" << std::endl, throw 201;
 	}
 }
 
@@ -250,78 +247,88 @@ void Post::GetChunks()
 	size_t start = 0, end = 0;
 	std::string BodyContent;
 
-	switch (Chunk.ChunkStatus)
-	{
-	case ChunkVars::None:
-		std::cout << "Status[None]" << std::endl;
-		break;
-	case ChunkVars::GotHexaSize:
-		std::cout << "Status[GotHexaSize]" << std::endl;
-		break;
-	case ChunkVars::GotFullBody:
-		std::cout << "Status[GotFullBody]" << std::endl;
-		break;
-	case ChunkVars::Finished:
-		std::cout << "Status[Finished]" << std::endl;
-		break;
-	}
+	// switch (Chunk.ChunkStatus)
+	// {
+	// 	case ChunkVars::None:
+	// 		std::cout << "Status[None]" << std::endl;
+	// 		break;
+	// 	case ChunkVars::GotHexaSize:
+	// 		std::cout << "Status[GotHexaSize]" << std::endl;
+	// 		break;
+	// 	case ChunkVars::GotFullBody:
+	// 		std::cout << "Status[GotFullBody]" << std::endl;
+	// 		break;
+	// 	case ChunkVars::Finished:
+	// 		std::cout << "Status[Finished]" << std::endl;
+	// 		break;
+	// }
 	// std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
 		switch (Chunk.ChunkStatus)
 		{
-		case ChunkVars::None:
-		{
-			start = UnprocessedBuffer.find("\r\n", 0);
-			if (start == std::string::npos)
+			case ChunkVars::None:
+			{
+				UnprocessedBuffer = PreviousBuffer + UnprocessedBuffer, PreviousBuffer.clear();
+				start = UnprocessedBuffer.find("\r\n", 0);
+				if (start == std::string::npos)
+				{
+					if (!UnprocessedBuffer.empty())
+					{
+						PreviousBuffer = UnprocessedBuffer;
+						// std::cout << "Previous Buffer:|" << PreviousBuffer << "|\n";
+					}
+					// std::cout << "CRLF not found in None:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
+					return;
+				}
+				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
+				UnprocessedBuffer.erase(0, start + 2);
+				Chunk.ChunkStatus = ChunkVars::GotHexaSize;
+				break;
+			}
+			case ChunkVars::GotHexaSize:
+			{
+				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
+				WriteChunkToFile(BodyContent);
+				UnprocessedBuffer.erase(0, BodyContent.size());
+
+				Chunk.BodySize -= BodyContent.size();
+				std::cout << "Left to write:{" << Chunk.BodySize << "}\n";
+				if (!Chunk.BodySize)
+				{
+					Chunk.ChunkStatus = ChunkVars::GotFullBody;
+					break;
+				}
 				return;
-			// std::cout << "{" << UnprocessedBuffer.substr(0, 7) << "}" << std::endl;
-			Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
-			UnprocessedBuffer.erase(0, start + 2);
-			Chunk.ChunkStatus = ChunkVars::GotHexaSize;
-			break;
-		}
-		case ChunkVars::GotHexaSize:
-		{
-			BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
-			WriteChunkToFile(BodyContent);
-			UnprocessedBuffer.erase(0, BodyContent.size());
-
-			Chunk.BodySize -= BodyContent.size();
-			if (!Chunk.BodySize)
-			{
-				Chunk.ChunkStatus = ChunkVars::GotFullBody;
-				break;
 			}
-			return;
-		}
-		case ChunkVars::GotFullBody:
-		{
-			end = UnprocessedBuffer.find("\r\n", 0);
-			if (end != std::string::npos)
+			case ChunkVars::GotFullBody:
 			{
-				Chunk.ChunkStatus = ChunkVars::None;
-				UnprocessedBuffer.erase(0, end + 2);
+				// std::cout << "---->Before gettings the Hexa:{" << UnprocessedBuffer.substr(0, 50) << "}\n";
+				end = UnprocessedBuffer.find("\r\n", 0);
+				if (end != std::string::npos)
+				{
+					Chunk.ChunkStatus = ChunkVars::None;
+					UnprocessedBuffer.erase(0, end + 2);
 
-				if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
-					Chunk.ChunkStatus = ChunkVars::Finished;
-				break;
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+						Chunk.ChunkStatus = ChunkVars::Finished;
+					break;
+				}
+				return; // return to wait for the FullBody end
 			}
-			return; // return to wait for the FullBody end
-		}
-		case ChunkVars::Finished:
-		{
-			this->OutFile.close();
-			obj.SetClientStatus(EndReading);
-			std::cout << "File Uploaded!" << std::endl, throw 201;
-		}
+			case ChunkVars::Finished:
+			{
+				this->OutFile.close();
+				obj.SetClientStatus(EndReading);
+				std::cout << "File Uploaded!" << std::endl, throw 201;
+			}
 		}
 	}
 }
 
 void Post::ParseChunked()
 {
-	std::cout << obj.GetTotatlBytesRead() << "--" << obj.GetContentLength() << std::endl;
+	// std::cout << obj.GetTotatlBytesRead() << "--" << obj.GetContentLength() << std::endl;
 	GetChunks();
 }
 
@@ -339,67 +346,67 @@ void Post::ParseChunkedBoundary()
 	{
 		switch (Chunk.ChunkStatus)
 		{
-		case ChunkVars::None:
-		{
-			// std::cout << "In None\n";
-			UnprocessedBuffer = PreviousBuffer + UnprocessedBuffer, PreviousBuffer.clear();
-			start = UnprocessedBuffer.find("\r\n", 0);
-			if (start == std::string::npos)
+			case ChunkVars::None:
 			{
-				if (!UnprocessedBuffer.empty())
+				// std::cout << "In None\n";
+				UnprocessedBuffer = PreviousBuffer + UnprocessedBuffer, PreviousBuffer.clear();
+				start = UnprocessedBuffer.find("\r\n", 0);
+				if (start == std::string::npos)
 				{
-					PreviousBuffer = UnprocessedBuffer;
-					// std::cout << "Previous Buffer:|" << PreviousBuffer << "|\n";
+					if (!UnprocessedBuffer.empty())
+					{
+						PreviousBuffer = UnprocessedBuffer;
+						// std::cout << "Previous Buffer:|" << PreviousBuffer << "|\n";
+					}
+					// std::cout << "CRLF not found in None:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
+					return;
 				}
-				// std::cout << "CRLF not found in None:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
+				// std::cout << "Buffer to look for hexa:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
+				// std::cout << "Hexa found:{" << UnprocessedBuffer.substr(0, 20) << "}" << std::endl;
+				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
+				UnprocessedBuffer.erase(0, start + 2);
+				Chunk.ChunkStatus = ChunkVars::GotHexaSize;
+				break;
+			}
+			case ChunkVars::GotHexaSize:
+			{
+				// std::cout << "In GotHexaSize\n";
+				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
+				size_t tmp = BodyContent.size();
+
+				GetSubBodies(BodyContent);
+
+				UnprocessedBuffer = UnprocessedBuffer.substr(tmp);
+
+				std::cout << Chunk.BodySize << "-------" << tmp << std::endl;
+				Chunk.BodySize -= tmp;
+				if (!Chunk.BodySize)
+				{
+					Chunk.ChunkStatus = ChunkVars::GotFullBody;
+					break;
+				}
 				return;
 			}
-			// std::cout << "Buffer to look for hexa:{" <<  UnprocessedBuffer.substr(0, 10) << "}" << std::endl;
-			// std::cout << "Hexa found:{" << UnprocessedBuffer.substr(0, 20) << "}" << std::endl;
-			Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
-			UnprocessedBuffer.erase(0, start + 2);
-			Chunk.ChunkStatus = ChunkVars::GotHexaSize;
-			break;
-		}
-		case ChunkVars::GotHexaSize:
-		{
-			// std::cout << "In GotHexaSize\n";
-			BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
-			size_t tmp = BodyContent.size();
-
-			GetSubBodies(BodyContent);
-
-			UnprocessedBuffer = UnprocessedBuffer.substr(tmp);
-
-			std::cout << Chunk.BodySize << "-------" << tmp << std::endl;
-			Chunk.BodySize -= tmp;
-			if (!Chunk.BodySize)
+			case ChunkVars::GotFullBody:
 			{
-				Chunk.ChunkStatus = ChunkVars::GotFullBody;
-				break;
-			}
-			return;
-		}
-		case ChunkVars::GotFullBody:
-		{
-			end = UnprocessedBuffer.find("\r\n");
-			if (end != std::string::npos)
-			{
-				Chunk.ChunkStatus = ChunkVars::None;
-				UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
-
-				if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+				end = UnprocessedBuffer.find("\r\n");
+				if (end != std::string::npos)
 				{
-					Chunk.ChunkStatus = ChunkVars::Finished;
+					Chunk.ChunkStatus = ChunkVars::None;
+					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
+
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+					{
+						Chunk.ChunkStatus = ChunkVars::Finished;
+					}
+					break;
 				}
-				break;
+				return; // return to wait for the FullBody end
 			}
-			return; // return to wait for the FullBody end
-		}
-		case ChunkVars::Finished:
-		{
-			std::cout << "File Uploaded!" << std::endl, obj.SetClientStatus(EndReading), throw 201;
-		}
+			case ChunkVars::Finished:
+			{
+				std::cout << "File Uploaded!" << std::endl, obj.SetClientStatus(EndReading), throw 201;
+			}
 		}
 	}
 }
@@ -414,19 +421,19 @@ void Post::HandlePost()
 	UnprocessedBuffer = obj.GetUnprocessedBuffer();
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
-	case FixedLength:
-	{
-		if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
-			return ParseBoundary();
-		if (obj.GetContentType() == BinaryOrRaw)
-			return ParseBirnaryOrRaw();
-	}
-	case Chunked:
-	{
-		if (obj.GetContentType() == _Boundary)
-			return ParseChunkedBoundary();
-		if (obj.GetContentType() == BinaryOrRaw)
-			return ParseChunked();
-	}
+		case FixedLength:
+		{
+			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
+				return ParseBoundary();
+			if (obj.GetContentType() == BinaryOrRaw)
+				return ParseBirnaryOrRaw();
+		}
+		case Chunked:
+		{
+			if (obj.GetContentType() == _Boundary)
+				return ParseChunkedBoundary();
+			if (obj.GetContentType() == BinaryOrRaw)
+				return ParseChunked();
+		}
 	}
 }

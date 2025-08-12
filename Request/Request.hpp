@@ -139,3 +139,4 @@ size_t			CrlfCounter(std::string	&str);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
 std::string		RemoveCrlf(std::string BodyContent);
+void			Appender(std::string &Buffer, const std::string &PrevBuffer, const std::string &tmp);

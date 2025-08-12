@@ -22,7 +22,7 @@ private:
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
 	std::string							PreviousBuffer;
-	std::string							AccumulateBuffer;
+	std::string							PrevBuffer;
 
 	std::string							Dir;
 	std::string							Filename;
@@ -40,7 +40,6 @@ public:
 
 	void	ParseBirnaryOrRaw();
 
-	void	GetSubBodies2(std::string &Buffer);
 	void	ParseChunkedBoundary();
 
 	void	WriteChunkToFile(std::string &BodyContent);
