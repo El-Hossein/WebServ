@@ -168,8 +168,6 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
         cgiHeader += "Connection: close\r\n\r\n";
         checkConnection = _close;
     }
-
-    
     cgiHeaderSent = 0;
     return false;
 }
