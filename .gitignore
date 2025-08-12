@@ -12,3 +12,4 @@ AllServer/GenerateJWT.php
 ./config.conf
 ./scirpt.py
 ./all_test
+./ALLServer/HttpServer1.cpp
