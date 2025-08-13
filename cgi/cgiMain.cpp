@@ -410,6 +410,10 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
     std::string autoIndexOn = getInfoConfigcgi(ConfigPars, "autoindex", loc, req);
     std::string index = getInfoConfigcgi(ConfigPars, "index", loc, req);
 
+    struct stat st;
+    stat(uri.c_str(), &st);
+    if (!S_ISDIR(st.st_mode))
+        return 0;
     if (!index.empty())
     {
         std::string htmlFound = uri;
