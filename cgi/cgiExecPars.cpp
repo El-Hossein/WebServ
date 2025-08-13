@@ -55,7 +55,7 @@ void     Cgi::parseOutput()
 
 char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    char **envp = new char*[12];
+    char **envp = new char*[13];
 
 
     // REQUEST_METHOD
@@ -114,11 +114,11 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcat(envp[10], req.GetHeaderValue("host").c_str());
     //std::cout << envp[10] << std::endl;
     //SERVER_PORT
-    // envp[11] = new char[strlen("SERVER_PORT") + "HHHHEEERE" + 1];
-    // strcpy(envp[11], "SERVER_PORT=");
-    // strcat(envp[11], "HHHHEEEREEE");
-    //std::cout << envp[11] << std::endl;
-    envp[11] = NULL;
+    envp[11] = new char[strlen("SERVER_PORT=") + strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
+    strcpy(envp[11], "SERVER_PORT=");
+    strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
+    // std::cout << envp[11] << std::endl;
+    envp[12] = NULL;
     return envp;
 }
 
@@ -157,7 +157,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
     std::ostringstream inp;
     std::ostringstream out;
     inp << "/tmp/cgiInput_" << uniq;
-    out << "/tmp/cgiOutput_" << uniq; // replace with the place the file stored
+    out << "/tmp/cgiOutput_" << uniq;
     inpFile = inp.str();
     outFile = out.str();
     pid = fork();
@@ -170,22 +170,11 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         std::freopen(outFile.c_str(), "w", stderr);
         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
         execCgi(scriptFile.c_str(), envp);
+        // delete [] envp;
     }
     else
     {
         startTime = time(NULL);
-        
-        // Write POST data
-        // if (req.GetHeaderValue("method") == "POST")
-        // {
-        //     std::ofstream inputFileStream(inpFile.c_str());
-        //     if (inputFileStream.is_open())
-        //     {
-        //         if (postRequestBody && strlen(postRequestBody) > 0)
-        //             inputFileStream << postRequestBody;
-        //         inputFileStream.close();
-        //     }
-        // }
         cgistatus = CGI_RUNNING;
         std::cout << "\033[34mCGI PID : " << pid << "\033[0m" << std::endl;
         // link pid to request context
