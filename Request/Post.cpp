@@ -9,11 +9,6 @@ Post::Post(Request &_obj) : obj(_obj),
 							RmvFirstCrlf(false),
 							BodyFullyRead(false)
 {
-	Flager.BoolStart = false;
-	Flager.BoolEnd = false;
-	Flager.BoolFile = false;
-	Flager.CrlfCount = 0;
-
 	BoundaryStatus = None;
 
 	Chunk.ChunkStatus = ChunkVars::None;
@@ -24,7 +19,7 @@ Post::Post(Request &_obj) : obj(_obj),
 
 	PrevBuffer = "";
 
-	Dir = "/Users/zderfouf/goinfre/ServerUploads";
+	Dir = obj.GetFullPath();
 	srand(time(NULL));
 }
 
