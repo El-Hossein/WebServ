@@ -1,15 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <sstream>
-#include <fstream>
-#include <dirent.h>
 #include "../Request/Request.hpp"
 
 class Response;
@@ -107,7 +97,7 @@ class Cgi
         int                 checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
         int                 IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars);
         int                servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars, std::string uri);
-        bool                generateAutoIndexOnCgi(Request &req);
+        bool                generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req);
         std::string         generateListingDirCgi(Request &req);
         bool                gethasPendingCgi();
         void                sethasPendingCgi(bool pendingcgi);

@@ -65,16 +65,31 @@ std::string handWritingErrorcgi(const std::string& message, int statusCode)
 
     std::string html = "<!DOCTYPE html><html lang=\"en\">";
     html += "<head><meta charset=\"UTF-8\">";
-    html += "<title>Error ";
-    html += _code + "</title>";
+    html += "<title>Error " + _code + "</title>";
     html += "<style>";
-    html += "body { background-color: #f8f9fa; font-family: Arial, sans-serif; text-align: center; padding-top: 100px; }";
-    html += "h1 { font-size: 48px; color: #dc3545; }";
-    html += "p { font-size: 20px; color: #6c757d; }";
+    html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
+            "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
+            "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
+
+    html += ".error-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
+            "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
+            "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
+
+    html += "h1 { font-size: 64px; color: #ffb3b3; margin-bottom: 20px; "
+            "text-shadow: 0 0 10px rgba(255, 179, 179, 0.8); animation: slideDown 0.5s ease-in-out; }\n";
+
+    html += "p { font-size: 20px; color: #ffd6d6; margin-bottom: 0; }\n";
+
+    html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
+    html += "@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } "
+            "to { transform: translateY(0); opacity: 1; } }\n";
+
     html += "</style></head>";
     html += "<body>";
-    html += "<h1>Error " + _code + "</h1>";
+    html += "<div class=\"error-container\">";
+    html += "<h1>🚫 Error " + _code + "</h1>";
     html += "<p>" + message + "</p>";
+    html += "</div>";
     html += "</body></html>";
 
     return html;
@@ -153,8 +168,6 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
         cgiHeader += "Connection: close\r\n\r\n";
         checkConnection = _close;
     }
-
-    
     cgiHeaderSent = 0;
     return false;
 }

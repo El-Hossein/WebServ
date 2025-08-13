@@ -1,10 +1,6 @@
 #pragma once
 
-#include "../AllServer/HttpServer.hpp"
-#include <dirent.h>
 #include "../cgi/cgiHeader.hpp"
-
-
 class Response
 {
     private:
@@ -39,8 +35,8 @@ class Response
         
         void                deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req);
         void                servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req);
-        bool                generateAutoIndexOn(Request	&req);
-        void                getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
+        bool                generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request	&req);
+        void                getResponse(Request	&req, std::vector<ConfigNode> ConfigPars, int e);
         std::string         generateListingDir();
         std::string         deleteResponseSuccess(const std::string& message);
         std::string         getMethod();
@@ -48,7 +44,7 @@ class Response
         std::string         getFinalResponse();
         void                setFinalResponse(std::string _finalResponse);
         std::string         checkContentType(int index);
-        void                moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars);
+        void                moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars, int e);
         int                 getClientFd();
         void                setClientFd(int _clientFd);
         bool                getNextChunk(size_t chunkSize);
