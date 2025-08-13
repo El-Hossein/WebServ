@@ -114,9 +114,9 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcat(envp[10], req.GetHeaderValue("host").c_str());
     //std::cout << envp[10] << std::endl;
     //SERVER_PORT
-    envp[11] = new char[strlen("SERVER_PORT") + strlen(req.GetHeaderValue("").c_str()) + 1];
+    envp[11] = new char[strlen("SERVER_PORT=") + strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
     strcpy(envp[11], "SERVER_PORT=");
-    strcat(envp[11], req.GetHeaderValue("").c_str());
+    strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
     // std::cout << envp[11] << std::endl;
     envp[12] = NULL;
     return envp;
