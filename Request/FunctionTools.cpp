@@ -10,6 +10,14 @@ std::string	RandomString()
 	return Ret;
 }
 
+void	Appender(std::string &Buffer, const std::string &PrevBuffer, const std::string &tmp)
+{
+	Buffer.clear();
+	Buffer.reserve(PrevBuffer.size() + tmp.size());
+	Buffer.append(PrevBuffer.data(), PrevBuffer.size());
+	Buffer.append(tmp.data(), tmp.size());
+}
+
 void	PrintCrlfString(std::string Buffer)
 {
 	std::cout << "|";
