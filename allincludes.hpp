@@ -21,7 +21,7 @@
 #include <arpa/inet.h>
 #include <sys/event.h>
 #include <sys/stat.h>
-#include <csignal>
+#include <dirent.h>
 
 struct	_BoundarySettings
 {

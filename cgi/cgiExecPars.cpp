@@ -1,4 +1,5 @@
 #include "cgiHeader.hpp"
+#include "../AllServer/HttpServer.hpp"
 
 extern int globalKq;
 
@@ -102,12 +103,12 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcpy(envp[8], "CONTENT_TYPE=");
     strcat(envp[8], req.GetHeaderValue("content-type").c_str());
     // std::cout << envp[8] << std::endl;
-    // //CONTENT_LENGTH
+    //CONTENT_LENGTH
     envp[9] = new char[strlen("CONTENT_LENGTH=") + strlen(req.GetHeaderValue("content-length").c_str()) + 1];
     strcpy(envp[9], "CONTENT_LENGTH=");
     strcat(envp[9], req.GetHeaderValue("content-length").c_str());
-    // // std::cout << envp[9] << std::endl;
-    // //SERVER_NAME
+    // std::cout << envp[9] << std::endl;
+    //SERVER_NAME
     envp[10] = new char[strlen("SERVER_NAME=") + strlen(req.GetHeaderValue("host").c_str()) + 1];
     strcpy(envp[10], "SERVER_NAME=");
     strcat(envp[10], req.GetHeaderValue("host").c_str());
@@ -186,10 +187,37 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         //     }
         // }
         cgistatus = CGI_RUNNING;
+        std::cout << "\033[34mCGI PID : " << pid << "\033[0m" << std::endl;
+        // link pid to request context
+        if (req.ctx)
+        {
+            req.ctx->is_cgi = true;
+            req.ctx->its_cgi = true;
+            req.ctx->cgi_pid = pid;
+        }
 
         struct kevent kev;
-        EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        // watch for child exit
+        EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, req.ctx);
+        if (kevent(globalKq, &kev, 1, NULL, 0, NULL) == -1){
+            std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_PROC CGI\033[0m" << std::endl;
+        }
+        else
+        {
+            // record we registered this proc for this context
+            if (req.ctx)
+            {
+                req.ctx->registered_procs.push_back(pid);
+                req.ctx->cgi_pid = pid; // already set but reinforce
+            }
+        }        // add a pid timer with 1s tick for responsive CGI timeout checking
+        EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, req.ctx);
+        if (kevent(globalKq, &kev, 1, NULL, 0, NULL) == -1)
+            std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
+
+		req.SetTimeOut(std::time(NULL));
+        std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true) << " | its_cgi: " << (req.ctx ? req.ctx->its_cgi : true) << std::endl;
+
         return 2;
     }
     return true;
