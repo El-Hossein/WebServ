@@ -308,36 +308,71 @@ std::string Cgi::generateListingDirCgi(Request &req)
     std::string _uri = req.GetFullPath();
     DIR *dirCheck = opendir(_uri.c_str());
     if (!dirCheck)
-        return "<html><body><h1>Cannot open directory</h1></body></html>";
+        return "";
 
-    std::string html = "<!DOCTYPE html>\n";
-    html += "<html>\n<head>\n<title>Index of " + _uri + "</title>\n";
+    std::string html;
+    html += "<!DOCTYPE html>\n<html>\n<head>\n";
+    html += "<meta charset=\"UTF-8\">\n<title>Index of " + _uri + "</title>\n";
     html += "<style>\n"
-            "body { background-color: #f0f4f8; font-family: Arial, sans-serif; color: #333; padding: 40px; }\n"
-            "h1 { color: #2c3e50; }\n"
-            "ul { list-style-type: none; padding-left: 0; }\n"
-            "li { margin: 10px 0; }\n"
-            "a { text-decoration: none; color: #3498db; font-weight: bold; }\n"
-            "a:hover { text-decoration: underline; color: #1abc9c; }\n"
-            ".container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 8px; }\n"
-            "</style>\n"
-            "</head>\n<body>\n<div class=\"container\">\n"
-            "<h1>Index of " + _uri + "</h1>\n<ul>\n";
+            "body { background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e); font-family: 'Segoe UI', sans-serif; color: #e0e0e0; padding: 40px; margin: 0; }\n"
+            ".container { max-width: 950px; margin: auto; background: rgba(0,0,0,0.25); padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n"
+            "h1 { color: #a5d6a7; margin-bottom: 20px; text-shadow: 0 0 10px rgba(165, 214, 167, 0.8); animation: slideDown 0.5s ease-in-out; }\n"
+            "ul { list-style-type: none; padding: 0; margin: 0; }\n"
+            "li { margin: 10px 0; padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.05); display: flex; align-items: center; transform: translateX(-10px); opacity: 0; animation: slideIn 0.4s forwards; }\n"
+            "li:hover { background: rgba(76,175,80,0.25); transform: scale(1.02); transition: all 0.3s ease; }\n"
+            "a { text-decoration: none; color: #80cbc4; font-weight: bold; flex-grow: 1; transition: color 0.3s ease; }\n"
+            "a:hover { color: #b2dfdb; }\n"
+            ".icon { margin-right: 12px; font-size: 20px; }\n"
+
+            /* Upload section */
+            ".upload-section { margin-top: 30px; padding: 25px; background: rgba(0,0,0,0.25); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; color: #c8e6c9; animation: fadeIn 1s ease-in-out; }\n"
+            ".upload-section h2 { margin-bottom: 15px; font-size: 1.3rem; }\n"
+            ".file-input { display: inline-block; padding: 10px 20px; background: #2e7d32; color: #fff; border-radius: 6px; cursor: pointer; transition: background 0.3s ease; }\n"
+            ".file-input:hover { background: #388e3c; }\n"
+            "input[type=file] { display: none; }\n"
+            "input[type=submit] { margin-top: 15px; padding: 10px 20px; background: #43a047; border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; transition: background 0.3s ease; }\n"
+            "input[type=submit]:hover { background: #4caf50; }\n"
+
+            /* Animations */
+            "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n"
+            "@keyframes slideIn { to { opacity: 1; transform: translateX(0); } }\n"
+            "@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }\n"
+            "</style>\n</head>\n<body>\n";
 
     struct dirent *dir;
     while ((dir = readdir(dirCheck)) != NULL)
     {
-        std::string name = pathRequest + (pathRequest[pathRequest.length() - 1] == '/' ? "" : "/") + dir->d_name;
-        html += "<li><a href=\"" + name + "\">" + dir->d_name + "</a></li>\n";
+        std::string name = dir->d_name;
+        if (name[0] == '.' && name != "." && name != "..")
+            continue;
+
+        std::string path = pathRequest + (pathRequest[pathRequest.length() - 1] == '/' ? "" : "/") + name;
+        std::string icon = (dir->d_type == DT_DIR) ? "📁" : "📄";
+        html += "<li><span class=\"icon\">" + icon + "</span><a href=\"" + path + "\">" + name + "</a></li>\n";
     }
     closedir(dirCheck);
-    html += "</ul>\n</div>\n</body>\n</html>\n";
+    html += "</ul>\n";
+
+    // Upload section
+    html += "<div class=\"upload-section\">\n";
+    html += "<h2>⬆️ Upload a File</h2>\n";
+    html += "<form action=\"" + _uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
+    html += "<label class=\"file-input\">Choose File<input type=\"file\" name=\"file\"></label><br>\n";
+    html += "<input type=\"submit\" value=\"Upload\">\n";
+    html += "</form>\n</div>\n";
+
+    html += "</div>\n</body>\n</html>\n";
     return html;
 }
 
-bool Cgi::generateAutoIndexOnCgi(Request &req)
+bool Cgi::generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req)
 {
     statCgiFileBody = generateListingDirCgi(req);
+    if (statCgiFileBody.empty())
+    {
+        responseErrorcgi(403, "Forbidden", ConfigPars, req);
+        return false;
+    }
     statCgiFilePos = 0;
     usingCgiStatFile = true;
 
@@ -375,6 +410,10 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
     std::string autoIndexOn = getInfoConfigcgi(ConfigPars, "autoindex", loc, req);
     std::string index = getInfoConfigcgi(ConfigPars, "index", loc, req);
 
+    struct stat st;
+    stat(uri.c_str(), &st);
+    if (!S_ISDIR(st.st_mode))
+        return 0;
     if (!index.empty())
     {
         std::string htmlFound = uri;
@@ -387,7 +426,7 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             if (S_ISDIR(st.st_mode))
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOnCgi(req);
+                    generateAutoIndexOnCgi(ConfigPars, req);
                 else
                     responseErrorcgi(403, " Forbidden", ConfigPars, req);
                 return -1;
@@ -395,7 +434,7 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             if (access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
-                   generateAutoIndexOnCgi(req);
+                   generateAutoIndexOnCgi(ConfigPars, req);
                 else
                     responseErrorcgi(403, " Forbidden", ConfigPars, req);
                 return -1;
@@ -419,12 +458,12 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
                 return 0;
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOnCgi(req);
+            generateAutoIndexOnCgi(ConfigPars, req);
         else
             responseErrorcgi(403, " Forbidden", ConfigPars, req);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOnCgi(req);
+        generateAutoIndexOnCgi(ConfigPars, req);
     else
         responseErrorcgi(403, " Forbidden", ConfigPars, req);
     return -1;
