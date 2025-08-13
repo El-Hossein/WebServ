@@ -210,9 +210,9 @@ std::string Response::generateListingDir()
     html += "<div class=\"upload-section\">\n";
     html += "<h2>⬆️ Upload a File</h2>\n";
     html += "<form action=\"" + uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
-    html += "<label class=\"file-input\">Choose File<input type=\"file\" name=\"file\"></label><br>\n";
+    html += "<label class=\"file-input\" id=\"fileLabel\">Choose File<input type=\"file\" name=\"file\" id=\"fileInput\"></label><br>\n";
     html += "<input type=\"submit\" value=\"Upload\">\n";
-    html += "</form>\n</div>\n";
+    html += "</form>\n";
 
     html += "</div>\n</body>\n</html>\n";
 
