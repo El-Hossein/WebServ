@@ -356,7 +356,7 @@ std::string Cgi::generateListingDirCgi(Request &req)
     // Upload section
     html += "<div class=\"upload-section\">\n";
     html += "<h2>⬆️ Upload a File</h2>\n";
-    html += "<form action=\"" + _uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
+    html += "<form action=\"" + pathRequest + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
     html += "<label class=\"file-input\">Choose File<input type=\"file\" name=\"file\"></label><br>\n";
     html += "<input type=\"submit\" value=\"Upload\">\n";
     html += "</form>\n</div>\n";

@@ -37,7 +37,7 @@ class Response
         void                servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req);
         bool                generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request	&req);
         void                getResponse(Request	&req, std::vector<ConfigNode> ConfigPars, int e);
-        std::string         generateListingDir();
+        std::string         generateListingDir(Request	&req);
         std::string         deleteResponseSuccess(const std::string& message);
         std::string         getMethod();
         std::string         getUri();

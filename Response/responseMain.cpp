@@ -153,7 +153,7 @@ std::string Response::postResponseSuccess(const std::string& message)
 }
 
 
-std::string Response::generateListingDir()
+std::string Response::generateListingDir(Request &req)
 {
     DIR *dirCheck = opendir(uri.c_str());
     if (!dirCheck)
@@ -209,7 +209,7 @@ std::string Response::generateListingDir()
     // Upload section
     html += "<div class=\"upload-section\">\n";
     html += "<h2>⬆️ Upload a File</h2>\n";
-    html += "<form action=\"" + uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
+    html += "<form action=\"" + req.GetHeaderValue("path") + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
     html += "<label class=\"file-input\" id=\"fileLabel\">Choose File<input type=\"file\" name=\"file\" id=\"fileInput\"></label><br>\n";
     html += "<input type=\"submit\" value=\"Upload\">\n";
     html += "</form>\n";
@@ -239,7 +239,7 @@ std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPar
 
 bool Response::generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request &req)
 {
-    staticFileBody = generateListingDir();
+    staticFileBody = generateListingDir(req);
     if (staticFileBody.empty())
     {
         responseError(403, " Forbidden", ConfigPars, req);
