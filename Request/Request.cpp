@@ -259,19 +259,13 @@ int		Request::HexaToInt(std::string	x)
 	for (size_t i = 0; i < x.size() ; i++)
 	{
 		if (HexaChars.find(x[i]) == std::string::npos)
-		{
-			// std::cout << "Error here:" << x.substr(0, 7) << std::endl;
 			PrintError("Invalide Hexa value 1", *this), throw 400;
-		}
 	}
     stream << x;
     stream >> std::hex >> y;
 
 	if (y < 0)
-	{
-			// std::cout << "Error here:" << x.substr(0, 7) << std::endl;
 			PrintError("Invalide Hexa value 2", *this), throw 400;
-	}
     return y;
 }
 
