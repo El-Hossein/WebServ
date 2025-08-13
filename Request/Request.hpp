@@ -27,7 +27,9 @@ enum	ContentType
 	_Boundary, BinaryOrRaw
 };
 
+class	Cgi;
 class	Post;
+struct	EventContext;
 
 class	Request
 {
@@ -66,6 +68,8 @@ private:
 public:
 	Request(const int	&, ClientStatus, std::vector<ConfigNode>, int &);
 	~Request();
+
+	EventContext* ctx;
 	// ---------		GETTERS 	 	--------- //
 	bool								GetConnection() const;
 	int									GetClientStatus() const;
@@ -88,6 +92,7 @@ public:
 	time_t    							GetTimeOut() const;
 
 	// ---------		SETTERS 	 	--------- //
+    void	SetContext(EventContext* ctx);
 	void	SetFullSystemPath(std::string	&Path);
 	void	SetExtentionsMap();
 	void	SetHeaderValue(std::string, std::string);
@@ -134,3 +139,4 @@ size_t			CrlfCounter(std::string	&str);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
 std::string		RemoveCrlf(std::string BodyContent);
+void			Appender(std::string &Buffer, const std::string &PrevBuffer, const std::string &tmp);
