@@ -41,12 +41,6 @@ enum	_BoundaryStatus
 	Finished
 };
 
-struct	BoundaryFlager
-{
-	bool	BoolStart, BoolEnd, BoolFile;
-	size_t	CrlfCount;
-};
-
 struct	_ServerDetails
 {
 	bool		IsPortExist;

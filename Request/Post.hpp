@@ -3,6 +3,13 @@
 #include "Request.hpp"
 #include "../allincludes.hpp"
 
+/**
+ *
+ *	Handle the Location in request for every path...
+ * 
+ */
+
+
 class Request;
 
 class Post
@@ -10,7 +17,6 @@ class Post
 private:
 	Request	&obj;
 	_BoundarySettings					Boundary;
-	BoundaryFlager						Flager;
 	_BoundaryStatus						BoundaryStatus;
 
 	ChunkVars							Chunk;
