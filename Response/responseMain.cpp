@@ -103,16 +103,16 @@ std::string Response::deleteResponseSuccess(const std::string& message)
     std::string html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">";
     html += "<title>Success</title>";
     html += "<style>";
-    html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
-            "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
+    html += "body { background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e); "
+            "font-family: 'Segoe UI', sans-serif; color: #e0e0e0; margin: 0; padding: 40px; "
             "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
 
     html += ".success-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
             "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
             "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
 
-    html += "h1 { font-size: 48px; color: #b3ffb3; margin-bottom: 20px; "
-            "text-shadow: 0 0 10px rgba(179, 255, 179, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
+    html += "h1 { font-size: 48px; color: #a5d6a7; margin-bottom: 20px; "
+            "text-shadow: 0 0 10px rgba(165, 214, 167, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
 
     html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
     html += "@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } "
@@ -130,16 +130,16 @@ std::string Response::postResponseSuccess(const std::string& message)
     std::string html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">";
     html += "<title>Success</title>";
     html += "<style>";
-    html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
-            "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
+    html += "body { background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e); "
+            "font-family: 'Segoe UI', sans-serif; color: #e0e0e0; margin: 0; padding: 40px; "
             "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
 
     html += ".success-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
             "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
             "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
 
-    html += "h1 { font-size: 48px; color: #b3ffb3; margin-bottom: 20px; "
-            "text-shadow: 0 0 10px rgba(179, 255, 179, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
+    html += "h1 { font-size: 48px; color: #a5d6a7; margin-bottom: 20px; "
+            "text-shadow: 0 0 10px rgba(165, 214, 167, 0.8); animation: slideUp 0.5s ease-in-out; }\n";
 
     html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
     html += "@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } "
@@ -151,6 +151,7 @@ std::string Response::postResponseSuccess(const std::string& message)
 
     return html;
 }
+
 
 std::string Response::generateListingDir()
 {
@@ -209,9 +210,9 @@ std::string Response::generateListingDir()
     html += "<div class=\"upload-section\">\n";
     html += "<h2>⬆️ Upload a File</h2>\n";
     html += "<form action=\"" + uri + "\" method=\"post\" enctype=\"multipart/form-data\">\n";
-    html += "<label class=\"file-input\">Choose File<input type=\"file\" name=\"file\"></label><br>\n";
+    html += "<label class=\"file-input\" id=\"fileLabel\">Choose File<input type=\"file\" name=\"file\" id=\"fileInput\"></label><br>\n";
     html += "<input type=\"submit\" value=\"Upload\">\n";
-    html += "</form>\n</div>\n";
+    html += "</form>\n";
 
     html += "</div>\n</body>\n</html>\n";
 
@@ -346,7 +347,7 @@ void Response::deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req)
         staticFilePos = 0;
         usingStaticFile = true;
         headers = "HTTP/1.1 200 OK\r\n";
-        headers += checkContentType(0);
+        headers += "Content-Type: text/html\r\n";;
         headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
         if (req.GetHeaderValue("connection") == "keep-alive")
         {
@@ -613,7 +614,7 @@ void    Response::getResponse( Request	&req, std::vector<ConfigNode> ConfigPars,
                 case 200: headers = "HTTP/1.1 200 OK\r\n";
                 case 201: headers = "HTTP/1.1 201 Created\r\n";
             }
-            headers += "Content-Type: text/plain\r\n";
+            headers += "Content-Type: text/html\r\n";
             headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
             if (req.GetHeaderValue("connection") == "keep-alive")
             {
