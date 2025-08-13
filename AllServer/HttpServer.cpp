@@ -85,9 +85,18 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 				continue;
 			}
 
+			// Set CLOEXEC on server fd so exec()'d children won't inherit listening sockets
+			int fdflags = fcntl(server_fd, F_GETFD);
+			if (fdflags != -1)
+				fcntl(server_fd, F_SETFD, fdflags | FD_CLOEXEC);
+
+			// Set non-blocking while preserving other flags
+			int fl = fcntl(server_fd, F_GETFL, 0);
+			if (fl != -1)
+				fcntl(server_fd, F_SETFL, fl | O_NONBLOCK);
+
 			int opt = 1;
 			setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-			fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
 			struct sockaddr_in server_addr;
 			SetUpForBind(server_addr, AllPorts[i][j]);
@@ -105,6 +114,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 	std::cout << "------------------------------------------------------------------------------" << std::endl;
 }
 
+
 void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> ConfigPars)
 {
     struct sockaddr_in client_addr;
@@ -120,6 +130,16 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
         return ;
     }
 
+    // Immediately set FD_CLOEXEC so future exec()'d children won't inherit this client socket
+    int fdflags = fcntl(client_fd, F_GETFD);
+    if (fdflags != -1)
+        fcntl(client_fd, F_SETFD, fdflags | FD_CLOEXEC);
+
+    // set non-blocking (preserve existing flags)
+    int fl = fcntl(client_fd, F_GETFL, 0);
+    if (fl != -1)
+        fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
+
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
     int client_port = ntohs(client_addr.sin_port);
@@ -134,8 +154,6 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 
     std::cout << "-----------------------------------------------------------------------------" << std::endl;
     std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
-
-    fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
     Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
