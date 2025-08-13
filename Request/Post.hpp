@@ -21,6 +21,8 @@ private:
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
+	std::string							PreviousBuffer;
+	std::string							PrevBuffer;
 
 	std::string							Dir;
 	std::string							Filename;
@@ -44,7 +46,6 @@ public:
 	void	GetChunks();
 	void	ParseChunked();
 
-	void	SetUnprocessedBuffer();
 	void	IsBodyFullyRead();
 	void	HandlePost();
 };

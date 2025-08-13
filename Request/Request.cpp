@@ -132,6 +132,11 @@ time_t    Request::GetTimeOut() const
 	|#----------------------------------#|
 */
 
+void    Request::SetContext(EventContext* _ctx)
+{
+    this->ctx = _ctx;
+}
+
 void    Request::SetTimeOut(time_t _CurrentTime)
 {
     this->CurrentTime = _CurrentTime;
@@ -210,15 +215,17 @@ void	Request::SetServerDetails()
 	if (Pos == std::string::npos)
 	{
 		ServerDetails.ServerHost = Host;
-		return ;
+		// return ;
 	}
+	else
+	{
+		ServerDetails.IsPortExist = true;
+		ServerDetails.ServerHost = Host.substr(0, Pos);
+		ServerDetails.ServerPort = Host.substr(Pos + 1);
 
-	ServerDetails.IsPortExist = true;
-	ServerDetails.ServerHost = Host.substr(0, Pos);
-	ServerDetails.ServerPort = Host.substr(Pos + 1);
-
-	if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
-		PrintError("Host Error", *this), throw 400;
+		if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
+			PrintError("Host Error", *this), throw 400;
+	}
 	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
 }
 
@@ -252,13 +259,13 @@ int		Request::HexaToInt(std::string	x)
 	for (size_t i = 0; i < x.size() ; i++)
 	{
 		if (HexaChars.find(x[i]) == std::string::npos)
-			PrintError("Invalide Hexa value", *this), throw 400;
+			PrintError("Invalide Hexa value 1", *this), throw 400;
 	}
     stream << x;
     stream >> std::hex >> y;
 
 	if (y < 0)
-			PrintError("Invalide Hexa value", *this), throw 400;
+			PrintError("Invalide Hexa value 2", *this), throw 400;
     return y;
 }
 
@@ -281,7 +288,7 @@ void	Request::CreateDirectory(std::string &FilenameDir)
 void	Request::PrintError(const std::string	&Err, Request	&Obj)
 {
 	std::cerr << Err << std::endl;
-	// Obj.Client = EndReading;
+	Obj.Client = EndReading;
 }
 
 void	Request::CheckIfAllowedMethod()
@@ -306,8 +313,8 @@ void	Request::GetBoundaryFromHeader()
 		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
-	BoundaryAttri.BoundaryStart = "\r\n--" + Boundary;
-	BoundaryAttri.BoundaryEnd = "\r\n--" + Boundary + "--\r\n";
+	BoundaryAttri.BoundaryStart = "--" + Boundary + "\r\n";
+	BoundaryAttri.BoundaryEnd = "--" + Boundary + "--\r\n";
 }
 
 void	Request::HandleQuery()
@@ -508,14 +515,12 @@ void Request::ReadBodyChunk()
         throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
+		std::cout << "\nThere is nothing to read no more!\n";
 		Client = EndReading;
 		return ;
 	}
 	TotalBytesRead += BytesRead;
 	BodyUnprocessedBuffer.assign(buffer, BytesRead);
-
-	if (TotalBytesRead >= ContentLength) // fix here
-		Client = EndReading;
 }
 
 void	Request::ReadRequestHeader()
@@ -535,7 +540,6 @@ void	Request::ReadRequestHeader()
 	}
 
 	HeaderBuffer.append(buffer, BytesRead);
-
 	size_t npos = HeaderBuffer.find("\r\n\r\n");
 	if (npos == std::string::npos)
 	{
@@ -546,12 +550,12 @@ void	Request::ReadRequestHeader()
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 2));
+	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 4));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	if (BodyUnprocessedBuffer.size() == 2)
+	if (BodyUnprocessedBuffer.size() == 0)
 		Client = EndReading;
-	TotalBytesRead += BodyUnprocessedBuffer.size() - 2; // (- 2) For CRLF
+	TotalBytesRead += BodyUnprocessedBuffer.size(); // (- 2) For CRLF
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
@@ -571,7 +575,6 @@ void	Request::SetUpRequest()
 		case	ReadBody	:	ReadBodyChunk();		break ;
 		case	EndReading	:	throw 42 ; // continue to Get || Delete
 	}
-
 	if (Method == POST)
 	{
 		if (!PostObj)
@@ -582,6 +585,3 @@ void	Request::SetUpRequest()
 	else
 		throw 42; // Continue to Get || Delete
 }
-
-// std::vector<std::string> e = ConfigNode::getValuesForKey(RightServer, "allow_methods", "/");
-
