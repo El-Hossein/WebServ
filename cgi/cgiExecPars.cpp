@@ -55,7 +55,7 @@ void     Cgi::parseOutput()
 
 char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    char **envp = new char*[12];
+    char **envp = new char*[13];
 
 
     // REQUEST_METHOD
@@ -117,7 +117,7 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     envp[11] = new char[strlen("SERVER_PORT") + strlen(req.GetHeaderValue("").c_str()) + 1];
     strcpy(envp[11], "SERVER_PORT=");
     strcat(envp[11], req.GetHeaderValue("").c_str());
-    std::cout << envp[11] << std::endl;
+    // std::cout << envp[11] << std::endl;
     envp[12] = NULL;
     return envp;
 }
@@ -170,6 +170,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         std::freopen(outFile.c_str(), "w", stderr);
         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
         execCgi(scriptFile.c_str(), envp);
+        // delete [] envp;
     }
     else
     {
