@@ -55,7 +55,7 @@ void     Cgi::parseOutput()
 
 char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
 {
-    char **envp = new char*[13];
+    char **envp = new char*[14];
 
 
     // REQUEST_METHOD
@@ -118,7 +118,11 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
     strcpy(envp[11], "SERVER_PORT=");
     strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
     // std::cout << envp[11] << std::endl;
-    envp[12] = NULL;
+    envp[12] = new char[strlen("HTTP_COOKIE=") + strlen(req.GetHeaderValue("cookie").c_str()) + 1];
+    strcpy(envp[12], "HTTP_COOKIE=");
+    strcat(envp[12], req.GetHeaderValue("cookie").c_str());
+    // std::cout << envp[12] << std::endl;
+    envp[13] = NULL;
     return envp;
 }
 
@@ -165,9 +169,20 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
        return responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
     else if (pid == 0)
     {
-        std::freopen(inpFile.c_str(), "r", stdin);
-        std::freopen(outFile.c_str(), "w", stdout);
-        std::freopen(outFile.c_str(), "w", stderr);
+        int inFd = open(inpFile.c_str(), O_RDONLY);
+        if (inFd != -1)
+        {
+            dup2(inFd, STDIN_FILENO);
+            close(inFd);
+        }
+
+        int outFd = open(outFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (outFd != -1)
+        {
+            dup2(outFd, STDOUT_FILENO);
+            dup2(outFd, STDERR_FILENO);
+            close(outFd);
+        }
         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
         execCgi(scriptFile.c_str(), envp);
         // delete [] envp;
