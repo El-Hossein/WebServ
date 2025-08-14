@@ -74,8 +74,8 @@ bool	ValidContentLength(const std::string& value)
 	if (value.empty())					return false;
 	for (size_t i = 0; i < value.length(); i++)
 	    if (!std::isdigit(value[i]))	return false;
-	size_t ret = strtod(value.c_str(), NULL);
-	if (ret < 0)						return false;
+	double ret = strtod(value.c_str(), NULL);
+	if (ret < 0 || ret > SIZE_T_MAX)	return false;
 
 	return true;
 }
@@ -106,7 +106,8 @@ bool	ValidBoundary(const std::string	&value)
 		{
 			if (value[i] != '(' && value[i] != ')' && value[i] != '+' && value[i] != '-' &&
 				value[i] != '_'	&& value[i] != ',' && value[i] != '.' && value[i] != ':' &&
-				value[i] != '=' && value[i] != '?')
+				value[i] != '=' && value[i] != '?' && value[i] != ' ' && value[i] != '/' &&
+				value[i] != '\'')
 					return false;
 		}
 	}

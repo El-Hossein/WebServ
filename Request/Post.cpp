@@ -4,7 +4,6 @@
 Post::Post(Request &_obj) : obj(_obj),
 							UnprocessedBuffer(_obj.GetUnprocessedBuffer()),
 							Boundary(obj.GetBoundarySettings()),
-							// MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
 							FirstTime(true),
 							RmvFirstCrlf(false),
 							BodyFullyRead(false)
@@ -36,7 +35,6 @@ Post::~Post()
 
 void Post::IsBodyFullyRead()
 {
-	MaxAllowedBodySize = 1028 * 10; // tmp value = 10280 -> 10MegaBytes
 
 	std::cout << "Content-Length:{" << obj.GetContentLength() << "}" << std::endl;
 	std::cout << "UnprocessedBuffer-Length:{" << UnprocessedBuffer.size() << "}" << std::endl;
