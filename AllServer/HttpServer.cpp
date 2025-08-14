@@ -202,7 +202,7 @@ void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vec
 
 void HttpServer::RemoveClient(int client_fd)
 {
-    std::cout << "\033[31m[-]\033[0m \033[31mClose Client FD : " << client_fd << "\033[0m" << std::endl;
+    // std::cout << "\033[31m[-]\033[0m \033[31mClose Client FD : " << client_fd << "\033[0m" << std::endl;
 
     struct kevent kev;
 
@@ -217,7 +217,7 @@ void HttpServer::RemoveClient(int client_fd)
     if (client_fd >= 0)
     {
         close(client_fd);
-        std::cout << "\033[32m[-]\033[0m RemoveClient : Closed client fd: " << client_fd << std::endl;
+        // std::cout << "\033[32m[-]\033[0m RemoveClient : Closed client fd: " << client_fd << std::endl;
     }
 
     // Find the context for this fd in all_contexts
@@ -289,7 +289,7 @@ void HttpServer::RemoveClient(int client_fd)
 
 void HttpServer::RemoveReqRes(int client_fd)
 {
-    std::cout << "\033[31mReset Request/Response for FD : " << client_fd << "\033[0m" << std::endl;
+    // std::cout << "\033[31mReset Request/Response for FD : " << client_fd << "\033[0m" << std::endl;
 
     for (std::vector<EventContext*>::iterator it = all_contexts.begin(); it != all_contexts.end(); ++it)
     {
@@ -563,7 +563,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             // Treat socket EOF only for actual socket filters (READ/WRITE).
             if ((filter == EVFILT_READ || filter == EVFILT_WRITE) && (flags & EV_EOF))
             {
-                std::cout << "\033[31m[-]\033[0m Enter EOF client" << std::endl;
+                // std::cout << "\033[31m[-]\033[0m Enter EOF client" << std::endl;
                 RemoveClient(ctx->ident);
                 continue;
             }

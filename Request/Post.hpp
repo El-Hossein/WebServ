@@ -33,8 +33,6 @@ private:
 	std::string							Dir;
 	std::string							Filename;
 	std::ofstream						OutFile;
-
-	size_t			MaxAllowedBodySize;
 public:
 	Post(Request	&_obj);
 	~Post();
