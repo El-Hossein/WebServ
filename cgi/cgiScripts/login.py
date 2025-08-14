@@ -100,7 +100,7 @@ def get_login_page(payload, cookie):
     <body>
         <h1>test {payload} , {cookie}</h1>
         <h1>Login Page</h1>
-        <form action="/Desktop/webserv/WebServ/cgi/cgiScripts/login.py" method="POST">
+        <form action="/Desktop/WebServ/cgi/cgiScripts/login.py" method="POST">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required><br><br>
             <label for="password">Password:</label>
