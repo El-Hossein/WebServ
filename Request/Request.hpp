@@ -29,6 +29,7 @@ enum	ContentType
 
 class	Cgi;
 class	Post;
+class	ConfigNode;
 struct	EventContext;
 
 class	Request
@@ -59,6 +60,7 @@ private:
 	std::string					BodyUnprocessedBuffer;
 	std::string					FileExtention;
 
+	size_t						MaxAllowedBodySize;
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
 	bool						KeepAlive;
