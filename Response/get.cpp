@@ -240,7 +240,12 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         nonRedirect(redirectUrl, req, ConfigPars, statusCode);
         return ;
     }
-    staticFileBody.clear();
+    staticFileBody = "<html>\n"
+            "<head><title>301 Moved Permanently</title></head>\n"
+            "<body>\n"
+            "<center><h1>webSERV/1.1</h1></center>\n"
+            "</body>\n"
+            "</html>\n";
     staticFilePos = 0;
     usingStaticFile = true;
     filePos = 0;
@@ -256,9 +261,9 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         case 308: headers += " Permanent Redirect"; break;
     }
     headers += "\r\n";
-    headers += "Content-Type: text/plain\r\n";
+    headers += "Content-Type: text/html\r\n";
     headers += "Location: " + redirectUrl + "\r\n";
-    headers += "Content-Length: 0\r\n";
+    headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
         headers += "Connection: keep-alive\r\n";

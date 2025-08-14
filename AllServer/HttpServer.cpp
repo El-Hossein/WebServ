@@ -189,6 +189,7 @@ void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vec
 		case 505: res->responseError(505, " HTTP Version Not Supported", ConfigPars, *Request); return;
 		case 501: res->responseError(501, " Not Implemented", ConfigPars, *Request); return;
 		case 400: res->responseError(400, " Bad Request", ConfigPars, *Request); return;
+		case 411: res->responseError(411, " Length Required", ConfigPars, *Request); return;
 		case 403: res->responseError(403, " Forbidden", ConfigPars, *Request); return;
 		case 405: res->responseError(405, " Method Not Allowed", ConfigPars, *Request); return;
 		case 413: res->responseError(413, " Content Too Large", ConfigPars, *Request); return;
