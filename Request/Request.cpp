@@ -7,6 +7,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 							PostObj(NULL),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),
+							BodyBuffer(""),
 							ContentLength(0),
 							TotalBytesRead(0),
 							KeepAlive(false),
@@ -15,8 +16,6 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
 	SetExtentionsMap();
-	// MaxAllowedBodySize = std::strtod(ConfigNode::getValuesForKey(GetRightServer(),
-	// 	"client_max_body_size", "NULL")[0].c_str(), NULL);
 }
 
 Request::~Request() {
@@ -55,7 +54,8 @@ std::map<std::string, std::string>	Request::GetHeaders() const
 	return this->Headers;
 }
 
-std::string	Request::GetHeaderValue(std::string	key) const {
+std::string	Request::GetHeaderValue(std::string	key) const
+{
 	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
@@ -84,9 +84,9 @@ std::string	Request::GetFullPath() const
 	return FullSystemPath;
 }
 
-std::string	Request::GetUnprocessedBuffer() const
+std::string	Request::GetBodyBuffer() const
 {
-	return this->BodyUnprocessedBuffer;
+	return this->BodyBuffer;
 }
 
 size_t		Request::GetContentLength() const
@@ -311,7 +311,7 @@ void	Request::GetBoundaryFromHeader()
 		PrintError("Boundary Error", *this), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
-	if (Boundary.length() < 1 || Boundary.length() > 69 || !ValidBoundary(Boundary))
+	if (Boundary.size() < 1 || Boundary.size() > 69 || !ValidBoundary(Boundary))
 		PrintError("Boundary Error", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
@@ -509,6 +509,10 @@ void	Request::PostRequiredHeaders()
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
 		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
+		if (ContentLength > 0 && !TotalBytesRead) // Bytes read from body == 0
+			PrintError("Empty Body", *this), throw 400;
+		if (!ContentLength && TotalBytesRead)
+			PrintError("Malformed Request", *this), throw 400;
 		this->DataType = FixedLength;
 	}
 	
@@ -542,7 +546,7 @@ void	Request::ParseHeaders()
 		PostRequiredHeaders();
 	else
 	{
-		if (BodyUnprocessedBuffer.size() > 0 && Headers.find("content-length") == Headers.end())
+		if (BodyBuffer.size() > 0 && Headers.find("content-length") == Headers.end())
 			PrintError("Length Required", *this), throw 411; // If Body exists and the method is Get or Delete
 	}
 	SetServerDetails(); // Init localhost + port
@@ -570,12 +574,11 @@ void Request::ReadBodyChunk()
         throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
-		std::cout << "\nThere is nothing to read no more!\n";
 		Client = EndReading;
 		return ;
 	}
 	TotalBytesRead += BytesRead;
-	BodyUnprocessedBuffer.assign(buffer, BytesRead);
+	BodyBuffer.assign(buffer, BytesRead);
 }
 
 void	Request::ReadRequestHeader()
@@ -605,12 +608,10 @@ void	Request::ReadRequestHeader()
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 4));
+	BodyBuffer.assign(HeaderBuffer.substr(npos + 4));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	if (BodyUnprocessedBuffer.size() == 0)
-		Client = EndReading;
-	TotalBytesRead += BodyUnprocessedBuffer.size(); // (- 2) For CRLF
+	TotalBytesRead += BodyBuffer.size();
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
