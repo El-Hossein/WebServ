@@ -2,7 +2,7 @@
 #include "Request.hpp"
 
 Post::Post(Request &_obj) : obj(_obj),
-							UnprocessedBuffer(_obj.GetUnprocessedBuffer()),
+							UnprocessedBuffer(_obj.GetBodyBuffer()),
 							Boundary(obj.GetBoundarySettings()),
 							FirstTime(true),
 							RmvFirstCrlf(false),
@@ -375,7 +375,7 @@ void Post::ParseChunkedBoundary()
 
 void Post::HandlePost()
 {
-	UnprocessedBuffer = obj.GetUnprocessedBuffer();
+	UnprocessedBuffer = obj.GetBodyBuffer();
 
 	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << std::endl;
 	switch (obj.GetDataType()) // Chunked || FixedLength
