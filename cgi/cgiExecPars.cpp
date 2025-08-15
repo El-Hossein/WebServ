@@ -196,7 +196,6 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         if (req.ctx)
         {
             req.ctx->is_cgi = true;
-            req.ctx->its_cgi = true;
             req.ctx->cgi_pid = pid;
         }
 

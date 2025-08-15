@@ -183,6 +183,8 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 
 void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vector<ConfigNode> ConfigPars, int &e)
 {
+	if (e != 200 && e != 201 && e != -1 && e != 42)
+		res->setE(e);
 	switch (e)
 	{
 		case 500: res->responseError(500, " Internal Server Error", ConfigPars, *Request); return;
