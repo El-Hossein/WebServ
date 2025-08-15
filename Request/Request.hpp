@@ -63,6 +63,7 @@ private:
 	size_t						MaxAllowedBodySize;
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
+	bool						LimitedBodySize;
 	bool						KeepAlive;
 	bool						RequestNotComplete;
 	time_t						CurrentTime;
@@ -73,6 +74,7 @@ public:
 
 	EventContext* ctx;
 	// ---------		GETTERS 	 	--------- //
+	bool								GetLimitedBodySize() const;
 	bool								GetConnection() const;
 	int									GetClientStatus() const;
 	int									GetClientFd() const;
@@ -119,7 +121,7 @@ public:
 	void	ParseHeaders();
 
 	void	CheckIfAllowedMethod();
-	bool	CheckForCgi()
+	bool	CheckForCgi();
 	void	HandleQuery();
 	void	HandlePath();
 	void	SplitURI();
