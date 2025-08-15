@@ -11,6 +11,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 							ContentLength(0),
 							TotalBytesRead(0),
 							KeepAlive(false),
+							LimitedBodySize(true),
 							RequestNotComplete(true)
 {
 	ServerDetails.IsPortExist = false;
@@ -31,6 +32,11 @@ Request::~Request() {
 int		Request::GetClientFd() const
 {
 	return this->ClientFd;
+}
+
+bool	Request::GetLimitedBodySize() const
+{
+	return this->LimitedBodySize;
 }
 
 int		Request::GetClientStatus() const
@@ -587,11 +593,15 @@ void	Request::ParseHeaders()
 	SetServerDetails(); // Init localhost + port
 	ParseURI();
 	CheckIfAllowedMethod();
-	MaxAllowedBodySize = std::strtod(ConfigNode::getValuesForKey(GetRightServer(),
-		"client_max_body_size", "NULL")[0].c_str(), NULL);
+
+	std::vector<std::string> Vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "NULL");
+	if (Vec.empty())
+		LimitedBodySize = false;
+	if (LimitedBodySize)
+		MaxAllowedBodySize = std::strtod(Vec[0].c_str(), NULL);
 
 	std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
-	if (ContentLength > MaxAllowedBodySize)
+	if (LimitedBodySize && ContentLength > MaxAllowedBodySize)
 		PrintError("Request Entity Too Large", *this), throw 413;
 }
 
