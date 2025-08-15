@@ -119,6 +119,7 @@ public:
 	void	ParseHeaders();
 
 	void	CheckIfAllowedMethod();
+	bool	CheckForCgi()
 	void	HandleQuery();
 	void	HandlePath();
 	void	SplitURI();
