@@ -1,26 +1,49 @@
 #include "cgiHeader.hpp"
 
-bool Cgi::formatHttpResponse(std::string cgiFilePath, Request &req)
+bool Cgi::prepareFileResponseCgi(Request &req)
 {
     file.open(outFile.c_str(), std::ios::binary);
     if (!file.is_open())
         return false;
-    
+
     cgiFilePos = 0;
     usingCgi = true;
-
-
     std::string httpResponse;
     if (cgiHeader.find("Status") == std::string::npos)
         httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
     switch (cgiStatusCode)
     {
+        case 100: httpResponse += " Continue"; break;
+        case 101: httpResponse += " Switching Protocols"; break;
+        case 102: httpResponse += " Processing"; break;
         case 200: httpResponse += " OK"; break;
-        case 302: httpResponse += " Found"; break;
+        case 201: httpResponse += " Created"; break;
+        case 202: httpResponse += " Accepted"; break;
+        case 203: httpResponse += " Non-Authoritative Information"; break;
+        case 204: httpResponse += " No Content"; break;
+        case 205: httpResponse += " Reset Content"; break;
+        case 206: httpResponse += " Partial Content"; break;
+        case 400: httpResponse += " Bad Request"; break;
+        case 401: httpResponse += " Unauthorized"; break;
+        case 402: httpResponse += " Payment Required"; break;
         case 403: httpResponse += " Forbidden"; break;
         case 404: httpResponse += " Not Found"; break;
+        case 405: httpResponse += " Method Not Allowed"; break;
+        case 406: httpResponse += " Not Acceptable"; break;
+        case 408: httpResponse += " Request Timeout"; break;
+        case 409: httpResponse += " Conflict"; break;
+        case 410: httpResponse += " Gone"; break;
+        case 411: httpResponse += " Length Required"; break;
+        case 413: httpResponse += " Payload Too Large"; break;
+        case 414: httpResponse += " URI Too Long"; break;
+        case 415: httpResponse += " Unsupported Media Type"; break;
+        case 429: httpResponse += " Too Many Requests"; break;
         case 500: httpResponse += " Internal Server Error"; break;
-        case 501: httpResponse += " Method not implemented"; break;
+        case 501: httpResponse += " Not Implemented"; break;
+        case 502: httpResponse += " Bad Gateway"; break;
+        case 503: httpResponse += " Service Unavailable"; break;
+        case 504: httpResponse += " Gateway Timeout"; break;
+        case 505: httpResponse += " HTTP Version Not Supported"; break;
     }
     httpResponse += "\r\n";
     httpResponse += cgiHeader;
@@ -44,22 +67,10 @@ bool Cgi::formatHttpResponse(std::string cgiFilePath, Request &req)
     }
     cgiHeader = httpResponse;
     cgiHeaderSent = 0;
-    
     return true;
 }
 
-std::string readFileToStringcgi(const std::string& path)
-{
-    std::ifstream file(path.c_str(), std::ios::binary);
-    if (!file)
-        return ""; // if not found need to give the ones that are saved
-    std::ostringstream contents;
-    contents << file.rdbuf();
-    file.close();
-    return contents.str();
-}
-
-std::string handWritingErrorcgi(const std::string& message, int statusCode)
+std::string handWritingErrorcgi(std::string message, int statusCode)
 {
     std::string _code = intToString(statusCode);
 
@@ -70,20 +81,15 @@ std::string handWritingErrorcgi(const std::string& message, int statusCode)
     html += "body { background: linear-gradient(to bottom, #7C0A02, #5A0000, #7C0A02); "
             "font-family: 'Segoe UI', sans-serif; color: #f8e1e1; margin: 0; padding: 40px; "
             "display: flex; justify-content: center; align-items: center; height: 100vh; }\n";
-
     html += ".error-container { max-width: 600px; background: rgba(0,0,0,0.25); padding: 30px; "
             "border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; "
             "backdrop-filter: blur(10px); animation: fadeIn 0.6s ease-in-out; }\n";
-
     html += "h1 { font-size: 64px; color: #ffb3b3; margin-bottom: 20px; "
             "text-shadow: 0 0 10px rgba(255, 179, 179, 0.8); animation: slideDown 0.5s ease-in-out; }\n";
-
     html += "p { font-size: 20px; color: #ffd6d6; margin-bottom: 0; }\n";
-
     html += "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }\n";
     html += "@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } "
             "to { transform: translateY(0); opacity: 1; } }\n";
-
     html += "</style></head>";
     html += "<body>";
     html += "<div class=\"error-container\">";
@@ -91,11 +97,10 @@ std::string handWritingErrorcgi(const std::string& message, int statusCode)
     html += "<p>" + message + "</p>";
     html += "</div>";
     html += "</body></html>";
-
     return html;
 }
 
-std::string readFileToStringCgi(const std::string& path)
+std::string readFileToStringCgi(std::string path)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
     if (!file)
@@ -106,21 +111,11 @@ std::string readFileToStringCgi(const std::string& path)
     return contents.str();
 }
 
-std::string Cgi::getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
-{
-    ConfigNode a = req.GetRightServer();
-
-    std::vector<std::string> temp = a.getValuesForKey(a, what, location);
-    if (!temp.empty())
-        return temp[0];
-	return "";
-}
-
 bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req)
 {
-    std::string body;
-    std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::string root = getInfoConfigCgi(ConfigPars, "root", loc, req);
+    std::string     body;
+    std::string	    loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
+    std::string     root = getInfoConfigCgi(ConfigPars, "root", loc, req);
     std::vector<std::string> error_page = getInfoConfigMultipleCgi(ConfigPars, "error_page", loc, req);
     for (size_t i = 0; i + 1 < error_page.size(); i += 2)
 	{
@@ -139,8 +134,6 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
     statCgiFileBody = body;
     statCgiFilePos = 0;
     usingCgiStatFile = true;
-
-
     cgiHeader = "HTTP/1.1 " + intToString(statusCode);
     switch (statusCode)
     {
