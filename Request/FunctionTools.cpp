@@ -72,10 +72,10 @@ void	PrintHeaders(std::map<std::string, std::string> Headers)
 bool	ValidContentLength(const std::string& value)
 {
 	if (value.empty())					return false;
-	for (size_t i = 0; i < value.length(); i++)
+	for (size_t i = 0; i < value.size(); i++)
 	    if (!std::isdigit(value[i]))	return false;
-	size_t ret = strtod(value.c_str(), NULL);
-	if (ret < 0)						return false;
+	double ret = strtod(value.c_str(), NULL);
+	if (ret < 0 || ret > SIZE_T_MAX)	return false;
 
 	return true;
 }
@@ -98,15 +98,20 @@ bool	ValidFieldValue(const std::string& value)
     return true;
 }
 
-bool	ValidBoundary(const std::string	&value)
+bool	ValidBoundary(std::string	&value)
 {
-	for (size_t	i = 0; i < value.length(); i++)
+	const std::string	&BChars = "\'()+_,-./:=? ";
+
+	if (value.size() > 2 && (value.front() == '"' && value.back() == '"'))
 	{
-		if (!std::isalnum(value[i]) || !std::isprint(value[i]))
+		value.erase(0, 1);
+		value.pop_back();
+	}
+	for (size_t	i = 0; i < value.size(); i++)
+	{
+		if (!std::isalnum(value[i]))
 		{
-			if (value[i] != '(' && value[i] != ')' && value[i] != '+' && value[i] != '-' &&
-				value[i] != '_'	&& value[i] != ',' && value[i] != '.' && value[i] != ':' &&
-				value[i] != '=' && value[i] != '?')
+			if (BChars.find(value[i]) == std::string::npos)
 					return false;
 		}
 	}
@@ -117,10 +122,10 @@ void	TrimSpaces(std::string& str)
 {
     size_t start = 0;
 
-    while (start < str.length() && std::isspace(static_cast<unsigned char>(str[start])))
+    while (start < str.size() && std::isspace(static_cast<unsigned char>(str[start])))
         ++start;
 
-    size_t end = str.length();
+    size_t end = str.size();
 
     while (end > start && std::isspace(static_cast<unsigned char>(str[end - 1])))
         --end;
@@ -137,7 +142,7 @@ size_t	CrlfCounter(std::string	&str)
 	
 	while ((Pos = str.find(CRLF, Pos))!= std::string::npos)
 	{
-		Pos += CRLF.length();
+		Pos += CRLF.size();
 		Count++;
 	}
 	return Count;

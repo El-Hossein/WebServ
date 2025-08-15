@@ -29,6 +29,7 @@ enum	ContentType
 
 class	Cgi;
 class	Post;
+class	ConfigNode;
 struct	EventContext;
 
 class	Request
@@ -56,9 +57,10 @@ private:
 
 	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
-	std::string					BodyUnprocessedBuffer;
+	std::string					BodyBuffer;
 	std::string					FileExtention;
 
+	size_t						MaxAllowedBodySize;
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
 	bool						KeepAlive;
@@ -78,10 +80,11 @@ public:
 	int									GetContentType() const;
 	size_t								GetContentLength() const;
 	size_t								GetTotatlBytesRead() const;
+	size_t    							GetMaxAllowedBodySize() const;
 	std::string							GetFullPath() const;
 	std::string							GetFileExtention();
 	std::string							GetHeaderValue(std::string) const;
-	std::string							GetUnprocessedBuffer() const;
+	std::string							GetBodyBuffer() const;
 	std::string							GetHeaderBuffer() const;
 	std::vector<std::string>			GetPathParts() const;
 	std::map<std::string, std::string>	GetHeaders() const;
@@ -134,7 +137,7 @@ void			PrintHeaders(std::map<std::string, std::string> Headers);
 bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
-bool			ValidBoundary(const std::string	&value);
+bool			ValidBoundary(std::string	&value);
 size_t			CrlfCounter(std::string	&str);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
