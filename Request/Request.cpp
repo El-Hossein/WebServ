@@ -288,16 +288,16 @@ void	Request::CreateDirectory(std::string &FilenameDir)
 	}
 }
 
-/*	|#----------------------------------#|
-	|#			MEMBER FUNCTIONS    	#|
-	|#----------------------------------#|
-*/
-
 void	Request::PrintError(const std::string	&Err, Request	&Obj)
 {
 	std::cerr << Err << std::endl;
 	Obj.Client = EndReading;
 }
+
+/*	|#----------------------------------#|
+	|#			MEMBER FUNCTIONS    	#|
+	|#----------------------------------#|
+*/
 
 void	Request::CheckIfAllowedMethod()
 {
@@ -305,6 +305,41 @@ void	Request::CheckIfAllowedMethod()
 
 	if (std::find(AllowedMethods.begin(), AllowedMethods.end(), GetHeaderValue("method")) == AllowedMethods.end())
 		PrintError("Method Not Allowed", *this), throw 405;
+}
+
+bool	Request::CheckForCgi()
+{
+	std::string	uri = ""; // what should i init URI with ??
+	std::string	ScriptFile;
+	struct stat	stt, st;
+	size_t		index = uri.find("/cgiScripts/");
+	if (index == std::string::npos)
+	    return false;
+
+	std::string	PathBeforeFolder = uri.substr(0, index + 11);
+	if (stat(PathBeforeFolder.c_str(), &stt) == 0)
+	{
+		if (!S_ISDIR(stt.st_mode))
+			return false;
+	}
+	std::string PathAfterFolder = uri.substr(index + 12);
+	if (PathAfterFolder.empty())
+	    return false;
+	size_t FirstSlash = PathAfterFolder.find("/");
+	if (FirstSlash != std::string::npos)
+	    ScriptFile = PathAfterFolder.substr(0, FirstSlash);
+	else
+	    ScriptFile = PathAfterFolder;
+
+	if (stat(uri.c_str(), &st) == 0)
+	{
+	    if (S_ISDIR(st.st_mode))
+	        return false;
+	}
+	if (ScriptFile.find(".cgi") != std::string::npos || ScriptFile.find(".py") != std::string::npos
+	    || ScriptFile.find(".php") != std::string::npos)
+	    return true;
+	return false;
 }
 
 void	Request::GetBoundaryFromHeader()
