@@ -29,7 +29,8 @@ Post::~Post()
 
 void Post::FindFileName(std::string &Buffer, std::string &Filename)
 {
-	size_t FilenamePos = 0, FilenameEndPos = 0;
+	struct	stat	Tmp;
+	size_t	FilenamePos = 0, FilenameEndPos = 0;
 
 	FilenamePos = Buffer.find("filename=\"", 0);
 	FilenameEndPos = Buffer.find("\"\r\n", FilenamePos + 10);
@@ -40,8 +41,9 @@ void Post::FindFileName(std::string &Buffer, std::string &Filename)
 	}
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 
-	obj.CreateDirectory(Dir);
-	Filename = Dir + "/" + Filename; // "/Users/zderfouf/goinfre/ServerUploads" --- Uploads
+	if (stat(Dir.c_str(), &Tmp) == 0) // Check for directory existance 
+		obj.PrintError("Not Found", obj), throw 404;
+	Filename = Dir + "/" + Filename; // "/Users/zderfouf/goinfre/ServerUploads" + "/" + "file.txt"
 
 	OutFile.open(Filename.c_str(), std::ios::binary); // std::ios::app => to append
 	if (!OutFile.is_open())
@@ -135,7 +137,7 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			if (BoundaryStatus == GotBodyEnd) break ;
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
-			OutFile.close(), BoundaryStatus = None;
+			OutFile.close(), FirstTime = true, BoundaryStatus = None;
 		if (BoundaryStatus == Finished)
 		{
 			obj.SetClientStatus(EndReading);
@@ -165,7 +167,7 @@ void Post::ParseBirnaryOrRaw()
 
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
-		OutFile.close();
+		OutFile.close(), FirstTime = true;
 		obj.SetClientStatus(EndReading);
 		std::cout << "File Uploaded!" << std::endl, throw 201;
 	}
@@ -180,7 +182,6 @@ void Post::WriteChunkToFile(std::string &BodyContent)
 {
 	if (FirstTime)
 	{
-		obj.CreateDirectory(Dir);
 		OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary), FirstTime = false;
 		if (!OutFile.is_open())
 			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
@@ -266,7 +267,7 @@ void Post::GetChunks()
 			}
 			case ChunkVars::Finished:
 			{
-				this->OutFile.close();
+				this->OutFile.close(), FirstTime = true;
 				obj.SetClientStatus(EndReading);
 				std::cout << "File Uploaded!" << std::endl, throw 201;
 			}
@@ -354,15 +355,40 @@ void Post::ParseChunkedBoundary()
 }
 
 /*	|#----------------------------------#|
+	|#				HandleCGI		    #|
+	|#----------------------------------#|
+*/
+
+void	Post::HandleCGI()
+{
+	if (FirstTime)
+	{
+		OutFile.open("/tmp/" + RandomString(), std::ios::binary), FirstTime = false;
+		if (!OutFile.is_open())
+			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
+	}
+	OutFile.write(UnprocessedBuffer.c_str(), UnprocessedBuffer.size());
+
+	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
+	{
+		obj.SetClientStatus(EndReading);
+		std::cout << "File Uploaded!" << std::endl, throw 201;
+	}
+}
+
+/*	|#----------------------------------#|
 	|#			ParsingMenu		    	#|
 	|#----------------------------------#|
 */
 
-void Post::HandlePost()
+void	Post::HandlePost()
 {
 	UnprocessedBuffer = obj.GetBodyBuffer();
 
 	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << "/" << obj.GetContentLength() << std::endl;
+
+	if (obj.GetIsCGI())
+		return HandleCGI();
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength:
