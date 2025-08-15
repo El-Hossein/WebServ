@@ -2,9 +2,8 @@
 #include "Request.hpp"
 
 Post::Post(Request &_obj) : obj(_obj),
-							UnprocessedBuffer(_obj.GetUnprocessedBuffer()),
+							UnprocessedBuffer(_obj.GetBodyBuffer()),
 							Boundary(obj.GetBoundarySettings()),
-							// MaxAllowedBodySize(std::strtod(ConfigNode::getValuesForKey(_obj.GetRightServer(), "client_max_body_size", "NULL")[0].c_str(), NULL)), // [0] First element -> "10M"
 							FirstTime(true),
 							RmvFirstCrlf(false),
 							BodyFullyRead(false)
@@ -26,23 +25,6 @@ Post::Post(Request &_obj) : obj(_obj),
 Post::~Post()
 {
 	OutFile.close();
-}
-
-/**
- * @brief check the required headers for the Post method
- * the absence of Content-Type Header -> default Content type is "text/plain; charset=US-ASCII"
- *
- */
-
-void Post::IsBodyFullyRead()
-{
-	MaxAllowedBodySize = 1028 * 10; // tmp value = 10280 -> 10MegaBytes
-
-	std::cout << "Content-Length:{" << obj.GetContentLength() << "}" << std::endl;
-	std::cout << "UnprocessedBuffer-Length:{" << UnprocessedBuffer.size() << "}" << std::endl;
-
-	// if (obj.GetTotatlBytesRead() > this->MaxAllowedBodySize)
-	// 	throw "413 Request Entity Too Large";
 }
 
 void Post::FindFileName(std::string &Buffer, std::string &Filename)
@@ -150,6 +132,7 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			pos = Buffer.find(Boundary.BoundaryEnd);
 			if (pos != std::string::npos)
 				BoundaryStatus = Finished;
+			if (BoundaryStatus == GotBodyEnd) break ;
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
 			OutFile.close(), BoundaryStatus = None;
@@ -249,7 +232,7 @@ void Post::GetChunks()
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize;
 				break;
 			}
-			case ChunkVars::GotHexaSize: // Fix the overflow here
+			case ChunkVars::GotHexaSize:
 			{
 				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
 				WriteChunkToFile(BodyContent);
@@ -377,13 +360,15 @@ void Post::ParseChunkedBoundary()
 
 void Post::HandlePost()
 {
-	UnprocessedBuffer = obj.GetUnprocessedBuffer();
+	UnprocessedBuffer = obj.GetBodyBuffer();
 
-	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << std::endl;
+	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << "/" << obj.GetContentLength() << std::endl;
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength:
 		{
+			if (obj.GetTotatlBytesRead() > obj.GetContentLength())
+				obj.PrintError("Malformed Request", obj), throw 400;
 			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
 				return ParseBoundary();
 			if (obj.GetContentType() == BinaryOrRaw)
@@ -391,6 +376,8 @@ void Post::HandlePost()
 		}
 		case Chunked:
 		{
+			if (obj.GetTotatlBytesRead() > obj.GetMaxAllowedBodySize())
+				obj.PrintError("Request Entity Too Large", obj), throw 413;
 			if (obj.GetContentType() == _Boundary)
 				return ParseChunkedBoundary();
 			if (obj.GetContentType() == BinaryOrRaw)

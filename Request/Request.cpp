@@ -7,6 +7,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 							PostObj(NULL),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),
+							BodyBuffer(""),
 							ContentLength(0),
 							TotalBytesRead(0),
 							KeepAlive(false),
@@ -53,7 +54,8 @@ std::map<std::string, std::string>	Request::GetHeaders() const
 	return this->Headers;
 }
 
-std::string	Request::GetHeaderValue(std::string	key) const {
+std::string	Request::GetHeaderValue(std::string	key) const
+{
 	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
@@ -77,14 +79,20 @@ bool	Request::GetConnection() const
 	return this->KeepAlive;
 }
 
+size_t    	Request::GetMaxAllowedBodySize() const
+{
+	return this->MaxAllowedBodySize;
+}
+
+
 std::string	Request::GetFullPath() const
 {
 	return FullSystemPath;
 }
 
-std::string	Request::GetUnprocessedBuffer() const
+std::string	Request::GetBodyBuffer() const
 {
-	return this->BodyUnprocessedBuffer;
+	return this->BodyBuffer;
 }
 
 size_t		Request::GetContentLength() const
@@ -246,7 +254,7 @@ void	Request::DecodeHexaToChar(std::string	&str)
 			pos += 1; // 1 -> size d charachter
 		}
 		else
-			PrintError("Query invalid percent-encoding", *this), throw 400;
+			PrintError("URI invalid percent-encoding", *this), throw 400;
     }
 }
 
@@ -306,11 +314,11 @@ void	Request::GetBoundaryFromHeader()
 
 	size_t	pos = it->second.find("=");
 	if (pos == std::string::npos)
-		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
+		PrintError("Boundary Error", *this), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
-	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
+	if (Boundary.size() < 1 || Boundary.size() > 69 || !ValidBoundary(Boundary))
+		PrintError("Boundary Error", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "--" + Boundary + "\r\n";
@@ -319,13 +327,28 @@ void	Request::GetBoundaryFromHeader()
 
 void	Request::HandleQuery()
 {
-	size_t pos = 0;
-	std::string	Query = GetHeaderValue("query");
+	size_t			pos = 0;
+	std::string		GenDelims = ":/?#[]@";
+	std::string		SubDelims = "!$&\'()*+,;=";
+	std::string		Reserved = GenDelims + SubDelims;
+	std::string		Unreserved = "-_.~";
+	std::string		Query = GetHeaderValue("query");
 
-	// ---------		Decode Query 	 	--------- //
-	DecodeHexaToChar(Query);
-	for (size_t	i = 0; i < Query.length(); i++) // replacing each '+' with ' '
+	for (size_t i = 0; i < Query.size(); i++) // if not alpha || digit -> check if Allowed character
+	{
 		if (Query[i] == '+')	Query[i] = ' ';
+		if (!std::isalpha(Query[i]) && !std::isdigit(Query[i]))
+		{
+			if (Query[i] == '%' && i + 2 <= Query.size())
+			{
+				i += 2;
+				continue;
+			}
+			if (Reserved.find(Query[i]) == std::string::npos && Unreserved.find(Query[i]) == std::string::npos)
+				PrintError("Invalide Query", *this), throw 400;
+		}
+	}
+	DecodeHexaToChar(Query);
 	SetHeaderValue("query", Query);
 
 	// ---------	Split && Save Query Params	 	--------- //
@@ -349,13 +372,33 @@ void	Request::HandleQuery()
 
 void   Request::HandlePath()
 {
-	std::string					UriPath = GetHeaderValue("path");
+	std::string		GenDelims = ":/?#[]@";
+	std::string		SubDelims = "!$&\'()*+,;=";
+	std::string		Reserved = GenDelims + SubDelims;
+	std::string		Unreserved = "-_.~";
+	std::string		UriPath = GetHeaderValue("path");
+
+	for (size_t i = 0; i < UriPath.size(); i++) // if not alpha || digit -> check if Allowed character
+	{
+		if (!std::isalpha(UriPath[i]) && !std::isdigit(UriPath[i]))
+		{
+			if (UriPath[i] == '%' && i + 2 <= UriPath.size())
+			{
+				i += 2;
+				continue;
+			}
+			if (Reserved.find(UriPath[i]) == std::string::npos && Unreserved.find(UriPath[i]) == std::string::npos)
+				PrintError("Invalide Path", *this), throw 400;
+		}
+	}
+	DecodeHexaToChar(UriPath);
+	SetHeaderValue("path", UriPath);
+
 	Location = RightServer.GetRightLocation(UriPath); // {/}
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
 
-	if (ConfigPath.empty())
-		return ;
-	this->FullSystemPath = ConfigPath[0] + UriPath;
+	ConfigPath.empty() ? FullSystemPath = "/Users/eel-ghal" + UriPath
+		: FullSystemPath = ConfigPath[0] + UriPath;
 
 	std::istringstream	stream(FullSystemPath);
 	std::string			part;
@@ -397,7 +440,7 @@ void	Request::SplitURI()
 void	Request::ParseURI()
 {
 	std::string URI = Headers["uri"];
-	if (URI.length() > 2048)
+	if (URI.length() > 255)
 		PrintError("Request-URI too long", *this), throw 414;
 
 	SplitURI();
@@ -420,13 +463,13 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	else if (method == "POST")		this->Method = POST;
 	else if (method == "DELETE")	this->Method = DELETE;	
 	else							PrintError("Invalide request method", *this), throw 400;
-		
+
 	Headers["method"] = method;
 
 	Headers["uri"] = URI;
 
 	if (protocol != "HTTP/1.1")
-		PrintError("Invalide request protocol", *this), throw 505;
+		PrintError("HTTP Version Not Supported", *this), throw 505;
 	Headers["protocol"] =  protocol;
 }
 
@@ -465,7 +508,11 @@ void	Request::PostRequiredHeaders()
 	{
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
-		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
+		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
+		if (ContentLength > 0 && !TotalBytesRead) // Bytes read from body == 0
+			PrintError("Empty Body", *this), throw 400;
+		if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
+			PrintError("Malformed Request", *this), throw 400;
 		this->DataType = FixedLength;
 	}
 	
@@ -496,12 +543,21 @@ void	Request::ParseHeaders()
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	if (Method == POST)
-	{
 		PostRequiredHeaders();
+	else
+	{
+		if (BodyBuffer.size() > 0 && Headers.find("content-length") == Headers.end())
+			PrintError("Length Required", *this), throw 411; // If Body exists and the method is Get or Delete
 	}
 	SetServerDetails(); // Init localhost + port
 	ParseURI();
 	CheckIfAllowedMethod();
+	MaxAllowedBodySize = std::strtod(ConfigNode::getValuesForKey(GetRightServer(),
+		"client_max_body_size", "NULL")[0].c_str(), NULL);
+
+	std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
+	if (ContentLength > MaxAllowedBodySize)
+		PrintError("Request Entity Too Large", *this), throw 413;
 }
 
 void Request::ReadBodyChunk()
@@ -515,12 +571,11 @@ void Request::ReadBodyChunk()
         throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
-		std::cout << "\nThere is nothing to read no more!\n";
 		Client = EndReading;
 		return ;
 	}
 	TotalBytesRead += BytesRead;
-	BodyUnprocessedBuffer.assign(buffer, BytesRead);
+	BodyBuffer.assign(buffer, BytesRead);
 }
 
 void	Request::ReadRequestHeader()
@@ -544,18 +599,16 @@ void	Request::ReadRequestHeader()
 	if (npos == std::string::npos)
 	{
 		if (HeaderBuffer.size() > MAX_HEADER_SIZE)
-			PrintError("Header too long.", *this), throw 400;
+			PrintError("Header too long", *this), throw 400;
 		throw -1; // didn't end yet
 	}
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 4));
+	BodyBuffer.assign(HeaderBuffer.substr(npos + 4));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	if (BodyUnprocessedBuffer.size() == 0)
-		Client = EndReading;
-	TotalBytesRead += BodyUnprocessedBuffer.size(); // (- 2) For CRLF
+	TotalBytesRead += BodyBuffer.size();
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
@@ -583,5 +636,8 @@ void	Request::SetUpRequest()
 		throw -1;
 	}
 	else
+	{
+		Client = EndReading; // Ila madrtch hadi ayhangi server
 		throw 42; // Continue to Get || Delete
+	}
 }
