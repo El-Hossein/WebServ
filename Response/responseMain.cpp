@@ -22,6 +22,16 @@ Response::~Response()
 
 }
 
+void    Response::setE(int _e)
+{
+    _E = _e;
+}
+
+int     Response::getE()
+{
+    return _E;
+}
+
 std::string Response::getChunk()
 {
     return chunk;
@@ -143,6 +153,7 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
         case 400: headers += " Bad Request"; break;
         case 413: headers += " Content Too Large"; break;
         case 414: headers += " URI Too Long"; break;
+        case 411: headers += " Length Required"; break;
         case 415: headers += " Unsupported Media Type"; break;
         case 505: headers += " HTTP Version Not Supported"; break;
         case 504: headers += " Gateway Timeout"; break;

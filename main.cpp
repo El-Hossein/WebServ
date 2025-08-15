@@ -3,8 +3,6 @@
 
 
 
-int Printall = 0;
-
 
 int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
@@ -13,15 +11,15 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 		if (ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
 	        throw std::runtime_error("Error: Config file does not have the correct extension. {.conf}");
 		StructConf(ConfigFilePath, ConfigPars);
-		if(Printall == 1)
-		{
-			std::cout << "--------------------------------------------------------------------|" << std::endl;
-			for (size_t i = 0; i < ConfigPars.size(); i++)
-			{
-				ConfigPars[i].print();
-				std::cout << "--------------------------------------------------------------------|" << std::endl;
-			}
-		}
+		// if(Printall == 1)
+		// {
+		// 	std::cout << "--------------------------------------------------------------------|" << std::endl;
+		// 	for (size_t i = 0; i < ConfigPars.size(); i++)
+		// 	{
+		// 		ConfigPars[i].print();
+		// 		std::cout << "--------------------------------------------------------------------|" << std::endl;
+		// 	}
+		// }
 	}
 	catch (const std::exception &e)
 	{
@@ -50,13 +48,17 @@ int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 
 int main(int argc, char **argv)
 {
-	if (argc != 2)
+	if (argc > 2)
 	{
 		std::cerr << "./webserv [configuration file]" << std::endl;
 		return (1);
 	}
 	signal(SIGPIPE, SIG_IGN);
-	std::string ConfigFilePath = argv[1];
+	std::string ConfigFilePath;
+	if (argc == 2)
+		ConfigFilePath = argv[1];
+	else
+		ConfigFilePath = "./Defualt/defualt.conf";
 	std::vector<ConfigNode> ConfigPars;
 	ConfigNode obj;
 	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
