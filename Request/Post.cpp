@@ -27,22 +27,6 @@ Post::~Post()
 	OutFile.close();
 }
 
-/**
- * @brief check the required headers for the Post method
- * the absence of Content-Type Header -> default Content type is "text/plain; charset=US-ASCII"
- *
- */
-
-void Post::IsBodyFullyRead()
-{
-
-	std::cout << "Content-Length:{" << obj.GetContentLength() << "}" << std::endl;
-	std::cout << "UnprocessedBuffer-Length:{" << UnprocessedBuffer.size() << "}" << std::endl;
-
-	// if (obj.GetTotatlBytesRead() > this->MaxAllowedBodySize)
-	// 	throw "413 Request Entity Too Large";
-}
-
 void Post::FindFileName(std::string &Buffer, std::string &Filename)
 {
 	size_t FilenamePos = 0, FilenameEndPos = 0;
@@ -148,6 +132,7 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			pos = Buffer.find(Boundary.BoundaryEnd);
 			if (pos != std::string::npos)
 				BoundaryStatus = Finished;
+			if (BoundaryStatus == GotBodyEnd) break ;
 		}
 		if (BoundaryStatus == GotBoundaryEnd)
 			OutFile.close(), BoundaryStatus = None;
@@ -247,7 +232,7 @@ void Post::GetChunks()
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize;
 				break;
 			}
-			case ChunkVars::GotHexaSize: // Fix the overflow here
+			case ChunkVars::GotHexaSize:
 			{
 				BodyContent = UnprocessedBuffer.substr(0, Chunk.BodySize);
 				WriteChunkToFile(BodyContent);
@@ -377,11 +362,13 @@ void Post::HandlePost()
 {
 	UnprocessedBuffer = obj.GetBodyBuffer();
 
-	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << std::endl;
+	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << "/" << obj.GetContentLength() << std::endl;
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength:
 		{
+			if (obj.GetTotatlBytesRead() > obj.GetContentLength())
+				obj.PrintError("Malformed Request", obj), throw 400;
 			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
 				return ParseBoundary();
 			if (obj.GetContentType() == BinaryOrRaw)
