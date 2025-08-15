@@ -493,12 +493,6 @@ void	Request::ReadHeaders(std::string Header)
 	}
 }
 
-/**
- * 
- * If Both the Transfer-encoding && Content-Length are present, ignore the Content-length
- * 
- */
-
 void	Request::PostRequiredHeaders()
 {
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
@@ -511,7 +505,7 @@ void	Request::PostRequiredHeaders()
 		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
 		if (ContentLength > 0 && !TotalBytesRead) // Bytes read from body == 0
 			PrintError("Empty Body", *this), throw 400;
-		if (!ContentLength && TotalBytesRead)
+		if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
 			PrintError("Malformed Request", *this), throw 400;
 		this->DataType = FixedLength;
 	}
@@ -557,10 +551,13 @@ void	Request::ParseHeaders()
 
 	// std::vector<std::string> vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "NULL");
 	// std::cout << vec[0] << std::endl;
+	// std::cout << vec[1] << std::endl;
 	// MaxAllowedBodySize = std::strtod(vec[0].c_str(), NULL);
 	// std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
 	// if (ContentLength > MaxAllowedBodySize)
 	// 	PrintError("Request Entity Too Large", *this), throw 413;
+	
+	// exit(1);	
 }
 
 void Request::ReadBodyChunk()
