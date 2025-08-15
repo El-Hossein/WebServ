@@ -22,6 +22,16 @@ Response::~Response()
 
 }
 
+void    Response::setE(int _e)
+{
+    _E = _e;
+}
+
+int     Response::getE()
+{
+    return _E;
+}
+
 std::string Response::getChunk()
 {
     return chunk;
