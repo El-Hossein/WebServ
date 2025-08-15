@@ -240,29 +240,34 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         nonRedirect(redirectUrl, req, ConfigPars, statusCode);
         return ;
     }
-    staticFileBody = "<html>\n"
-            "<head><title>301 Moved Permanently</title></head>\n"
-            "<body>\n"
-            "<center><h1>webSERV/1.1</h1></center>\n"
-            "</body>\n"
-            "</html>\n";
     staticFilePos = 0;
     usingStaticFile = true;
     filePos = 0;
     headers = "HTTP/1.1 " + intToString(statusCode);
+    std::string mess;
     switch (statusCode)
     {
-        case 300: headers += " Multiple Choices"; break;
-        case 301: headers += " Moved Permanently"; break;
-        case 302: headers += " Found"; break;
-        case 303: headers += " See Other"; break;
-        case 304: headers += " Not Modified"; break;
-        case 307: headers += " Temporary Redirect"; break;
-        case 308: headers += " Permanent Redirect"; break;
+        case 301: headers += " Moved Permanently"; mess = " Moved Permanently";break;
+        case 302: headers += " Moved Temporarily"; mess = " Found"; break;
+        case 303: headers += " See Other"; mess = " See Other";break;
+        case 304: headers += " Not Modified"; mess = " Not Modified";break;
+        case 307: headers += " Temporary Redirect"; mess = " Temporary Redirect";break;
+        case 308: headers += " Permanent Redirect"; mess = " Permanent Redirect";break;
     }
+    staticFileBody = "<html>\n"
+            "<head><title>" + intToString(statusCode) + mess + "</title></head>\n"
+            "<body>\n"
+            "<center><h1>" + intToString(statusCode) + mess + "</h1></center>\n"
+            "<center><h1>webSERV/1.1</h1></center>\n"
+            "</body>\n"
+            "</html>\n";
+
     headers += "\r\n";
     headers += "Content-Type: text/html\r\n";
     headers += "Location: " + redirectUrl + "\r\n";
+    if (statusCode == 304 || (statusCode != 301 && statusCode != 302 && statusCode != 303 
+        && statusCode != 307 && statusCode != 308))
+        staticFileBody.clear();
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
