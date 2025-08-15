@@ -284,8 +284,35 @@ void HttpServer::RemoveClient(int client_fd)
     }
 }
 
+void HttpServer::RemoveReqRes(int client_fd)
+{
+    // std::cout << "\033[31mReset Request/Response for FD : " << client_fd << "\033[0m" << std::endl;
+
+    for (std::vector<EventContext*>::iterator it = all_contexts.begin(); it != all_contexts.end(); ++it)
+    {
+        EventContext* ctx = *it;
+        if (ctx->ident == client_fd)
+        {
+            if (ctx->req)
+            {
+                delete ctx->req;
+                ctx->req = NULL;
+            }
+            if (ctx->res)
+            {
+                delete ctx->res;
+                ctx->res = NULL;
+            }
+            ctx->is_cgi = false;
+            return;
+        }
+    }
+}
+
 void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vector<ConfigNode> ConfigPars, int &e)
 {
+	if (e != 200 && e != 201 && e != -1 && e != 42)
+		res->setE(e);
 	switch (e)
 	{
 		case 500: res->responseError(500, " Internal Server Error", ConfigPars, *Request); return;
@@ -340,6 +367,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 	if (response->getChunk().empty() || response->getBytesSent() >= response->getChunk().size())
 	{
 		response->setHasMore(response->getNextChunk(8192));
+		response->setHasMore(response->getNextChunk(8192));
 			response->setBytesSent(0);
 	}
 	if (!response->getChunk().empty())
@@ -363,7 +391,8 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 		response->_cgi.setCgiHeaderSent(0);
 		
 		struct kevent ev;
-		if (response->_cgi.getCheckConnection() == keepAlive)
+			
+		if (response->_cgi.getCheckConnection() == keepAlive && response->getE() == 200 && response->getE() == 201 && response->getE() == -1 && response->getE() == 42)
 		{
 			// std::cout << "\033[32m[+]\033[0m keep-alive" << std::endl;
 			int fd = ctx->ident;
@@ -392,6 +421,29 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 		}
 	}
 
+}
+
+void HttpServer::handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars)
+{
+
+	if (!ctx || !ctx->req || !ctx->res)
+	{
+		// std::cout << "handle_timeout: null ctx/req/res -> removing client if possible\n";
+		if (ctx) RemoveClient(ctx->ident);
+		return;
+	}
+
+	if (ctx->cgi_pid != 0 && ctx->is_cgi == true)
+	{
+		std::cout << "\033[31m[-]\033[0m timeout but CGI - skipping client timeout handling" << std::endl;
+		return;
+	}
+
+	// std::cout << "\033[32m[+]\033[0m TIMES IS UP FOR: " << ctx->ident << std::endl;
+	time_t currentTime = time(NULL);
+	// std::cout << "--cur: " << currentTime << "  my: " << request.GetTimeOut() << std::endl;
+	if(currentTime - request.GetTimeOut() >= 30)
+		RemoveClient(ctx->ident);
 }
 
 void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
