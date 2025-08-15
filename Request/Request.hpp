@@ -80,6 +80,7 @@ public:
 	int									GetContentType() const;
 	size_t								GetContentLength() const;
 	size_t								GetTotatlBytesRead() const;
+	size_t    							GetMaxAllowedBodySize() const;
 	std::string							GetFullPath() const;
 	std::string							GetFileExtention();
 	std::string							GetHeaderValue(std::string) const;
