@@ -16,7 +16,7 @@ int Response::prepareFileResponse(std::string filepath, std::string contentType,
     
     headers = "HTTP/1.1 200 OK\r\n";
     headers += contentType;
-    if (contentType == "video/mp4\r\n" == 0)
+    if (contentType == "Content-Type: video/mp4\r\n")
         headers += "Accept-Ranges: bytes\r\n";
     headers += "Content-Length: " + intToString(fileSize) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
