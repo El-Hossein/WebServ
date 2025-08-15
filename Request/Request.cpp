@@ -29,6 +29,11 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
+bool	Request::GetIsCGI() const
+{
+	return this->IsCGI;
+}
+
 int		Request::GetClientFd() const
 {
 	return this->ClientFd;
@@ -283,17 +288,6 @@ int		Request::HexaToInt(std::string	x)
     return y;
 }
 
-void	Request::CreateDirectory(std::string &FilenameDir)
-{
-	struct stat	Tmp;
-
-	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
-	{
-		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
-			PrintError("Could't open Directory", *this), throw 400;
-	}
-}
-
 void	Request::PrintError(const std::string	&Err, Request	&Obj)
 {
 	std::cerr << Err << std::endl;
@@ -315,20 +309,21 @@ void	Request::CheckIfAllowedMethod()
 
 bool	Request::CheckForCgi()
 {
-	std::string	uri = ""; // what should i init URI with ??
 	std::string	ScriptFile;
 	struct stat	stt, st;
-	size_t		index = uri.find("/cgiScripts/");
+
+	size_t		index = FullSystemPath.find("/cgiScripts/");
 	if (index == std::string::npos)
 	    return false;
 
-	std::string	PathBeforeFolder = uri.substr(0, index + 11);
+	std::string	PathBeforeFolder = FullSystemPath.substr(0, index + 11);
 	if (stat(PathBeforeFolder.c_str(), &stt) == 0)
 	{
 		if (!S_ISDIR(stt.st_mode))
 			return false;
 	}
-	std::string PathAfterFolder = uri.substr(index + 12);
+
+	std::string PathAfterFolder = FullSystemPath.substr(index + 12);
 	if (PathAfterFolder.empty())
 	    return false;
 	size_t FirstSlash = PathAfterFolder.find("/");
@@ -337,13 +332,13 @@ bool	Request::CheckForCgi()
 	else
 	    ScriptFile = PathAfterFolder;
 
-	if (stat(uri.c_str(), &st) == 0)
+	if (stat(FullSystemPath.c_str(), &st) == 0)
 	{
 	    if (S_ISDIR(st.st_mode))
 	        return false;
 	}
 	if (ScriptFile.find(".cgi") != std::string::npos || ScriptFile.find(".py") != std::string::npos
-	    || ScriptFile.find(".php") != std::string::npos)
+		||	ScriptFile.find(".php") != std::string::npos)
 	    return true;
 	return false;
 }
@@ -411,6 +406,17 @@ void	Request::HandleQuery()
 	// std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
 }
 
+void	Request::CheckFileExistance()
+{
+	struct stat FileStat;
+
+	std::cout << "-->" << FullSystemPath << std::endl;
+    if (stat(FullSystemPath.c_str(), &FileStat) != 0)
+        PrintError("Not Found here", *this), throw 404;
+    if (access(FullSystemPath.c_str(), W_OK) != 0)
+        PrintError("Forbiden", *this), throw 403;
+}
+
 void   Request::HandlePath()
 {
 	std::string		GenDelims = ":/?#[]@";
@@ -456,6 +462,8 @@ void   Request::HandlePath()
 			this->FullSystemPath += part;
 		}
 	}
+	CheckFileExistance();
+	IsCGI = CheckForCgi();
 }
 
 void	Request::SplitURI()
@@ -600,7 +608,6 @@ void	Request::ParseHeaders()
 	if (LimitedBodySize)
 		MaxAllowedBodySize = std::strtod(Vec[0].c_str(), NULL);
 
-	std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
 	if (LimitedBodySize && ContentLength > MaxAllowedBodySize)
 		PrintError("Request Entity Too Large", *this), throw 413;
 }

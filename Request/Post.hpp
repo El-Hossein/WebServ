@@ -51,5 +51,6 @@ public:
 	void	ParseChunked();
 
 	void	IsBodyFullyRead();
+	void	HandleCGI();
 	void	HandlePost();
 };

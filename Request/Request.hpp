@@ -63,6 +63,7 @@ private:
 	size_t						MaxAllowedBodySize;
 	size_t						TotalBytesRead;
 	size_t						ContentLength;
+	bool						IsCGI;
 	bool						LimitedBodySize;
 	bool						KeepAlive;
 	bool						RequestNotComplete;
@@ -74,6 +75,7 @@ public:
 
 	EventContext* ctx;
 	// ---------		GETTERS 	 	--------- //
+	bool								GetIsCGI() const;
 	bool								GetLimitedBodySize() const;
 	bool								GetConnection() const;
 	int									GetClientStatus() const;
@@ -109,7 +111,6 @@ public:
 	// ---------	MEMBER FUNCTIONS 	--------- //
 
 	static	void	PrintError(const std::string &Err, Request &Obj);
-	void			CreateDirectory(std::string &FilenameDir);
 	int				HexaToInt(std::string	x);
 	void			DecodeHexaToChar(std::string	&str);
 	
@@ -120,6 +121,7 @@ public:
 
 	void	ParseHeaders();
 
+	void	CheckFileExistance();
 	void	CheckIfAllowedMethod();
 	bool	CheckForCgi();
 	void	HandleQuery();
