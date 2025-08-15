@@ -287,8 +287,11 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
     while (start < num_str.length() && num_str[start] == '0')
         ++start;
     num_str = num_str.substr(start);
-    if (num_str.empty())    
-        words[1] = "0"; return;
+    if (num_str.empty())
+    {
+        words[1] = "0";
+        return;
+    }
     // Prevent overly large inputs
     if (num_str.length() >= 20)
         throw std::runtime_error("client_max_body_size is too large");
