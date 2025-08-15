@@ -79,6 +79,12 @@ bool	Request::GetConnection() const
 	return this->KeepAlive;
 }
 
+size_t    	Request::GetMaxAllowedBodySize() const
+{
+	return this->MaxAllowedBodySize;
+}
+
+
 std::string	Request::GetFullPath() const
 {
 	return FullSystemPath;
@@ -546,18 +552,12 @@ void	Request::ParseHeaders()
 	SetServerDetails(); // Init localhost + port
 	ParseURI();
 	CheckIfAllowedMethod();
+	MaxAllowedBodySize = std::strtod(ConfigNode::getValuesForKey(GetRightServer(),
+		"client_max_body_size", "NULL")[0].c_str(), NULL);
 
-	// NEED TO HANDLE THIS:
-
-	// std::vector<std::string> vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "NULL");
-	// std::cout << vec[0] << std::endl;
-	// std::cout << vec[1] << std::endl;
-	// MaxAllowedBodySize = std::strtod(vec[0].c_str(), NULL);
-	// std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
-	// if (ContentLength > MaxAllowedBodySize)
-	// 	PrintError("Request Entity Too Large", *this), throw 413;
-	
-	// exit(1);	
+	std::cout << "{" << ContentLength << "---" << MaxAllowedBodySize << "}\n";
+	if (ContentLength > MaxAllowedBodySize)
+		PrintError("Request Entity Too Large", *this), throw 413;
 }
 
 void Request::ReadBodyChunk()

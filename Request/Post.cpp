@@ -376,6 +376,8 @@ void Post::HandlePost()
 		}
 		case Chunked:
 		{
+			if (obj.GetTotatlBytesRead() > obj.GetMaxAllowedBodySize())
+				obj.PrintError("Request Entity Too Large", obj), throw 413;
 			if (obj.GetContentType() == _Boundary)
 				return ParseChunkedBoundary();
 			if (obj.GetContentType() == BinaryOrRaw)
