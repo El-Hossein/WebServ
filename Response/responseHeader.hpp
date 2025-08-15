@@ -5,6 +5,7 @@
 class Response
 {
     private:
+        int                            _E;
         std::string                    uri;
         std::string                    index;
         std::string                    chunk;
@@ -32,6 +33,14 @@ class Response
         Response(Request &req, int _clientFd);
         ~Response();
         
+        bool    sendBody(size_t chunkSize);
+        bool    sendFile(size_t chunkSize);
+        bool    sendHeaders(size_t chunkSize);
+        bool    sendCgiScript(size_t chunkSize);
+
+        void    setE(int _e);
+        int     getE();
+
         std::string                    getChunk();
         bool                           getHasMore();
         int                            getClientFd();

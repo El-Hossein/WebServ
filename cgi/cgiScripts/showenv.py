@@ -2,7 +2,7 @@
 import os
 
 # CGI scripts must print headers first
-print("Content-Type: text/plain\r\n")
+print("Content-Type: text/html\r\n")
 
 # The environment variables you defined
 vars_to_check = [
