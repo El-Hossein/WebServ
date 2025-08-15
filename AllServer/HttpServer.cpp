@@ -319,7 +319,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 
 	if (response->getChunk().empty() || response->getBytesSent() >= response->getChunk().size())
 	{
-		response->setHasMore(response->getNextChunk(100000));
+		response->setHasMore(response->getNextChunk(8192));
 			response->setBytesSent(0);
 	}
 	if (!response->getChunk().empty())
