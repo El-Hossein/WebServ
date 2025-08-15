@@ -196,7 +196,6 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         if (req.ctx)
         {
             req.ctx->is_cgi = true;
-            req.ctx->its_cgi = true;
             req.ctx->cgi_pid = pid;
         }
 
@@ -220,7 +219,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
 
 		req.SetTimeOut(std::time(NULL));
-        std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true) << " | its_cgi: " << (req.ctx ? req.ctx->its_cgi : true) << std::endl;
+        std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true)  << std::endl;
 
         return 2;
     }

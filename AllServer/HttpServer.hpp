@@ -17,14 +17,13 @@ struct EventContext {
     Request* req;
     Response* res;
     bool is_cgi;
-    bool its_cgi;
 	bool marked_for_deletion;
 	bool registered_read;
 	bool registered_write;
 	bool registered_timer;
 	std::vector<pid_t> registered_procs; // pids for which EVFILT_PROC/EVFILT_TIMER were registered // <- new
     EventContext() : ident(-1), req(NULL), res(NULL), cgi_pid(0),
-                 is_cgi(false), its_cgi(false), marked_for_deletion(false),
+                 is_cgi(false), marked_for_deletion(false),
                  registered_read(false), registered_write(false),
                  registered_timer(false) {}
 };
@@ -51,6 +50,7 @@ class HttpServer{
 		void AddToKqueue(struct kevent &event, int kq, intptr_t ident, int filter, int flags, void *udata, int fflags, intptr_t data);
 		void handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars);
 		std::vector<EventContext*> all_contexts;
+		void FreeContexts();
 	private:
 		std::map<int, EventContext*> proc_map; 
    		struct kevent events[BACKLOG];
