@@ -431,8 +431,18 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 }
 
 // process the closing brace
-void processClosingBrace(std::vector<ConfigNode*> &nodeStack)
+int onlyspace(std::string &text)
 {
+    for (int i = 0; text[i]; i++) {
+        if(!std::isspace(text[i]))
+            return 1;
+    }
+    return 0;
+}
+void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
+{
+    if (onlyspace(text) == 1)
+        throw std::runtime_error("Error: unexpected data before '}'");
     if (!nodeStack.empty())
         nodeStack.pop_back();
     else
@@ -500,7 +510,7 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
             }
             processOpeningBrace(text, nodeStack, isRootNameSet, pos);
         }
-        else if (delimiter == "}") processClosingBrace(nodeStack);
+        else if (delimiter == "}") processClosingBrace(text,nodeStack);
         else if (delimiter == ";") processSemicolon(text, nodeStack);
         pos = delimiterPos + 1;
     }
