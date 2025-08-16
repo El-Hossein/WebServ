@@ -82,7 +82,7 @@ bool Cgi::prepareFileResponseCgi(Request &req)
         httpResponse += "Content-Type: text/plain\r\n";
     if (cgiHeader.find("Content-Length") == std::string::npos)
     {
-        if (cgiContentLength > cgiFileSize)
+        if (cgiContentLength > cgiFileSize || cgiContentLength < 0)
             httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
         else
             httpResponse += "Content-Length: " + intToString(cgiContentLength) + "\r\n";
