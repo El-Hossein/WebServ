@@ -177,9 +177,10 @@ void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector
     headers = "HTTP/1.1 " + intToString(statusCode);
     switch (statusCode)
     {
-        case 100: headers += " Continue"; break;
+        case 100: headers += " Continue"; staticFileBody = ""; redirectUrl.clear(); break;
         case 101: headers += " Switching Protocols"; break;
         case 102: headers += " Processing"; break;
+        case 103: headers += " Early Hints"; break;
         case 200: headers += " OK"; break;
         case 201: headers += " Created"; break;
         case 202: headers += " Accepted"; break;
@@ -187,6 +188,9 @@ void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector
         case 204: headers += " No Content"; staticFileBody = ""; redirectUrl.clear(); break;
         case 205: headers += " Reset Content"; break;
         case 206: headers += " Partial Content"; break;
+        case 207: headers += " Multi-Status"; break;
+        case 208: headers += " Already Reported"; break;
+        case 226: headers += " IM Used"; break;
         case 400: headers += " Bad Request"; break;
         case 401: headers += " Unauthorized"; break;
         case 402: headers += " Payment Required"; break;
@@ -194,20 +198,40 @@ void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector
         case 404: headers += " Not Found"; break;
         case 405: headers += " Method Not Allowed"; break;
         case 406: headers += " Not Acceptable"; break;
+        case 407: headers += " Proxy Authentication Required"; break;
         case 408: headers += " Request Timeout"; break;
         case 409: headers += " Conflict"; break;
         case 410: headers += " Gone"; break;
         case 411: headers += " Length Required"; break;
+        case 412: headers += " Precondition Failed"; break;
         case 413: headers += " Payload Too Large"; break;
         case 414: headers += " URI Too Long"; break;
         case 415: headers += " Unsupported Media Type"; break;
+        case 416: headers += " Range Not Satisfiable"; break;
+        case 417: headers += " Expectation Failed"; break;
+        case 418: headers += " I'm a teapot"; break;
+        case 421: headers += " Misdirected Request"; break;
+        case 422: headers += " Unprocessable Entity"; break;
+        case 423: headers += " Locked"; break;
+        case 424: headers += " Failed Dependency"; break;
+        case 425: headers += " Too Early"; break;
+        case 426: headers += " Upgrade Required"; break;
+        case 428: headers += " Precondition Required"; break;
         case 429: headers += " Too Many Requests"; break;
+        case 431: headers += " Request Header Fields Too Large"; break;
+        case 451: headers += " Unavailable For Legal Reasons"; break;
         case 500: headers += " Internal Server Error"; break;
         case 501: headers += " Not Implemented"; break;
         case 502: headers += " Bad Gateway"; break;
         case 503: headers += " Service Unavailable"; break;
         case 504: headers += " Gateway Timeout"; break;
         case 505: headers += " HTTP Version Not Supported"; break;
+        case 506: headers += " Variant Also Negotiates"; break;
+        case 507: headers += " Insufficient Storage"; break;
+        case 508: headers += " Loop Detected"; break;
+        case 510: headers += " Not Extended"; break; 
+        case 511: headers += " Network Authentication Required"; break;
+        default:  headers = "HTTP/1.1 500"; headers += " Internal Server Error"; break;
     }
     headers += "\r\n";
     headers += "Content-Type: text/html\r\n";
@@ -235,7 +259,7 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         redirectUrl = redirect[1];
     else
         redirectUrl = "";
-    if (statusCode < 301 || statusCode > 599)
+    if (statusCode < 300 || statusCode > 308)
     {
         nonRedirect(redirectUrl, req, ConfigPars, statusCode);
         return ;
@@ -247,6 +271,7 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
     std::string mess;
     switch (statusCode)
     {
+        case 300: headers += " Multiple Choices"; mess = " Multiple Choices"; break;
         case 301: headers += " Moved Permanently"; mess = " Moved Permanently";break;
         case 302: headers += " Moved Temporarily"; mess = " Found"; break;
         case 303: headers += " See Other"; mess = " See Other";break;
