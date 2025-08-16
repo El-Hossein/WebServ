@@ -152,17 +152,21 @@ void    execCgi(const char *scriptPath, char **envp)
         execve("/usr/bin/php", argv, envp);
     }
     perror("execve failed");
+    if (envp)
+    {
+        for (int i = 0; envp[i]; i++)
+            delete[] envp[i];
+        delete[] envp;
+    }
     exit(1);
 }
 
 
 int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
 {
-    std::ostringstream inp;
     std::ostringstream out;
-    inp << "/tmp/ismail";
     out << "/tmp/cgiOutput_" << uniq;
-    inpFile = inp.str();
+    inpFile = req.GetCgiFileName();
     outFile = out.str();
     pid = fork();
     if (pid == -1)
@@ -175,7 +179,6 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
             dup2(inFd, STDIN_FILENO);
             close(inFd);
         }
-
         int outFd = open(outFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (outFd != -1)
         {
@@ -185,7 +188,6 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
         }
         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
         execCgi(scriptFile.c_str(), envp);
-        // delete [] envp;
     }
     else
     {

@@ -124,7 +124,7 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
     std::string root = getInfoConfig(ConfigPars, "root", loc, req);
     std::vector<std::string> errorPage = getInfoConfigMultiple(ConfigPars, "error_page", loc, req);
-
+    errorP = "";
     for (size_t i = 0; i + 1 < errorPage.size(); i += 2)
 	{
 		if (std::atoi(errorPage[i].c_str()) == statusCode)
@@ -134,6 +134,7 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
 				errorPath += "/";
 			errorPath += errorPage[i + 1];
 			body = readFileToString(errorPath);
+            errorP = checkContentType(2);
 			break;
 		}
 	}
@@ -160,7 +161,10 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
         case 405: headers += " Method Not Allowed"; break;
     }
     headers += "\r\n";
-    headers += "Content-Type: text/html\r\n";
+    if (!errorP.empty())
+        headers += errorP;
+    else
+        headers += "Content-Type: text/html\r\n";
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
@@ -197,6 +201,8 @@ std::string Response::checkContentType(int index)
     std::string exte;
     if (index == 1)
         exte = htmlFound;
+    else if (index == 2)
+        exte = errorP;
     else
         exte = uri;
     size_t dotPos = exte.find_last_of(".");
