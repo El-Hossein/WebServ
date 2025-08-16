@@ -16,6 +16,7 @@ bool Cgi::prepareFileResponseCgi(Request &req)
         case 100: httpResponse += " Continue"; break;
         case 101: httpResponse += " Switching Protocols"; break;
         case 102: httpResponse += " Processing"; break;
+        case 103: httpResponse += " Early Hints"; break;
         case 200: httpResponse += " OK"; break;
         case 201: httpResponse += " Created"; break;
         case 202: httpResponse += " Accepted"; break;
@@ -23,6 +24,16 @@ bool Cgi::prepareFileResponseCgi(Request &req)
         case 204: httpResponse += " No Content"; break;
         case 205: httpResponse += " Reset Content"; break;
         case 206: httpResponse += " Partial Content"; break;
+        case 207: httpResponse += " Multi-Status"; break;
+        case 208: httpResponse += " Already Reported"; break;
+        case 226: httpResponse += " IM Used"; break;
+        case 300: httpResponse += " Multiple Choices"; break;
+        case 301: httpResponse += " Moved Permanently"; break;
+        case 302: httpResponse += " Moved Temporarily"; break;
+        case 303: httpResponse += " See Other"; break;
+        case 304: httpResponse += " Not Modified"; break;
+        case 307: httpResponse += " Temporary Redirect"; break;
+        case 308: httpResponse += " Permanent Redirect"; break;
         case 400: httpResponse += " Bad Request"; break;
         case 401: httpResponse += " Unauthorized"; break;
         case 402: httpResponse += " Payment Required"; break;
@@ -30,25 +41,45 @@ bool Cgi::prepareFileResponseCgi(Request &req)
         case 404: httpResponse += " Not Found"; break;
         case 405: httpResponse += " Method Not Allowed"; break;
         case 406: httpResponse += " Not Acceptable"; break;
+        case 407: httpResponse += " Proxy Authentication Required"; break;
         case 408: httpResponse += " Request Timeout"; break;
         case 409: httpResponse += " Conflict"; break;
         case 410: httpResponse += " Gone"; break;
         case 411: httpResponse += " Length Required"; break;
+        case 412: httpResponse += " Precondition Failed"; break;
         case 413: httpResponse += " Payload Too Large"; break;
         case 414: httpResponse += " URI Too Long"; break;
         case 415: httpResponse += " Unsupported Media Type"; break;
+        case 416: httpResponse += " Range Not Satisfiable"; break;
+        case 417: httpResponse += " Expectation Failed"; break;
+        case 418: httpResponse += " I'm a teapot"; break;
+        case 421: httpResponse += " Misdirected Request"; break;
+        case 422: httpResponse += " Unprocessable Entity"; break;
+        case 423: httpResponse += " Locked"; break;
+        case 424: httpResponse += " Failed Dependency"; break;
+        case 425: httpResponse += " Too Early"; break;
+        case 426: httpResponse += " Upgrade Required"; break;
+        case 428: httpResponse += " Precondition Required"; break;
         case 429: httpResponse += " Too Many Requests"; break;
+        case 431: httpResponse += " Request Header Fields Too Large"; break;
+        case 451: httpResponse += " Unavailable For Legal Reasons"; break;
         case 500: httpResponse += " Internal Server Error"; break;
         case 501: httpResponse += " Not Implemented"; break;
         case 502: httpResponse += " Bad Gateway"; break;
         case 503: httpResponse += " Service Unavailable"; break;
         case 504: httpResponse += " Gateway Timeout"; break;
         case 505: httpResponse += " HTTP Version Not Supported"; break;
+        case 506: httpResponse += " Variant Also Negotiates"; break;
+        case 507: httpResponse += " Insufficient Storage"; break;
+        case 508: httpResponse += " Loop Detected"; break;
+        case 510: httpResponse += " Not Extended"; break; 
+        case 511: httpResponse += " Network Authentication Required"; break;
+        default : httpResponse = "HTTP/1.1 500"; httpResponse += " Internal Server Error"; break;
     }
     httpResponse += "\r\n";
     httpResponse += cgiHeader;
     if (cgiHeader.find("Content-Type") == std::string::npos)
-        httpResponse += "Content-Type: text/html\r\n";
+        httpResponse += "Content-Type: text/plain\r\n";
     if (cgiHeader.find("Content-Length") == std::string::npos)
         httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
     if (cgiHeader.find("Connection") == std::string::npos)
