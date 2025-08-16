@@ -410,9 +410,8 @@ void	Request::CheckFileExistance()
 {
 	struct stat FileStat;
 
-	std::cout << "-->" << FullSystemPath << std::endl;
     if (stat(FullSystemPath.c_str(), &FileStat) != 0)
-        PrintError("Not Found here", *this), throw 404;
+        PrintError("Not Found", *this), throw 404;
     if (access(FullSystemPath.c_str(), W_OK) != 0)
         PrintError("Forbiden", *this), throw 403;
 }
