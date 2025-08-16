@@ -59,6 +59,10 @@ std::string	Request::GetFileExtention()
 	return this->FileExtention;
 }
 
+std::string	Request::GetCgiFileName() const
+{
+	return this->cgiFileName;
+}
 
 std::map<std::string, std::string>	Request::GetHeaders() const
 {
@@ -171,6 +175,11 @@ void	Request::SetFullSystemPath(std::string	&Path)
 	this->FullSystemPath = Path;
 }
 
+void	Request::setCgiFileName(std::string _cgiFileName)
+{
+	this->cgiFileName = _cgiFileName;
+}
+
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
 	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
@@ -179,6 +188,7 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 			return it->second = NewValue, (void)0;
 	}
 }
+
 
 void	Request::SetExtentionsMap(void)
 {
