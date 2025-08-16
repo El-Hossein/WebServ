@@ -141,7 +141,6 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
 	}
     if (body.empty())
         body = handWritingError(message, statusCode);
-
     staticFileBody = body;
     staticFilePos = 0;
     usingStaticFile = true;
@@ -163,10 +162,7 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
     }
     headers += "\r\n";
     if (!errorP.empty())
-    {
-        std::cout << "asdas = " << errorP << std::endl;
         headers += errorP;
-    }
     else
         headers += "Content-Type: text/html\r\n";
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
