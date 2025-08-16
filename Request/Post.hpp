@@ -32,6 +32,7 @@ private:
 
 	std::string							Dir;
 	std::string							Filename;
+	std::string							cgiFileName;
 	std::ofstream						OutFile;
 public:
 	Post(Request	&_obj);
