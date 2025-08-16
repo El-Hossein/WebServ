@@ -160,7 +160,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
 {
     std::ostringstream inp;
     std::ostringstream out;
-    inp << "/tmp/cgiInput_" << uniq;
+    inp << "/tmp/ismail" << uniq;
     out << "/tmp/cgiOutput_" << uniq;
     inpFile = inp.str();
     outFile = out.str();
