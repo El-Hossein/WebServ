@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -7,431 +7,170 @@ import json
 import secrets
 from datetime import datetime, timezone
 import fcntl
+import hashlib
+from urllib.parse import parse_qs
 
-def send(content, content_type="text/html", token=None, cookie=None):
+# ---------------- Send pages ----------------
+def send(content, set_cookie_value=None):
     """Send HTTP response with optional Set-Cookie header and content."""
-    print(f"Content-Type: {content_type}")
-    if token:
-        print(f"Set-Cookie: token={token}; Path=/; HttpOnly; SameSite=Strict")
-    elif cookie:
-        print(f"Cookie: {cookie}")
-    print(f"Content-Length: {len(content)}")
+    body_bytes = content.encode("utf-8")
+    print("Content-Type: text/html; charset=utf-8")
+    if set_cookie_value is not None:
+        # Only servers send Set-Cookie; never send a "Cookie" header in responses
+        # Add secure-ish attributes as appropriate for your environment (add 'Secure' if HTTPS)
+        print(f"Set-Cookie: token={set_cookie_value}; Path=/; HttpOnly; SameSite=Strict")
+    print(f"Content-Length: {len(body_bytes)}")
     print()
-    print(content)
+    # Write bytes to avoid accidental encoding issues with large bodies
+    sys.stdout.flush()
+    sys.stdout.buffer.write(body_bytes)
 
-def base64url_encode(data):
-    """Encode data to base64url format."""
-    if isinstance(data, str):
-        data = data.encode('ascii')
-    return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
-
-def base64url_decode(data):
-    """Decode base64url data."""
-    padding = '=' * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data + padding)
-
-def get_current_time():
-    """Get current UTC timestamp."""
-    return int(datetime.now(timezone.utc).timestamp())
-
-def jwt_creator(userid):
-    """Create a JWT-like token with userid and expiration."""
-    expiration = get_current_time() + 3600  # 1 hour expiration
-    payload = {
-        'userid': str(userid),
-        'expired': expiration
-    }
-    payload_encoded = base64url_encode(json.dumps(payload))
-    return f"{payload_encoded}"
-
-def get_next_userid():
-    """Get the next available user ID from CookiesData.txt."""
-    try:
-        with open('CookiesData.txt', 'r') as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-            lines = f.readlines()
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-            if not lines:
-                return 1
-            last_line = lines[-1].strip()
-            if not last_line:
-                return 1
-            user_id, _ = last_line.split(",", 1)
-            return int(user_id) + 1
-    except (FileNotFoundError, ValueError, OSError):
-        return 1
-
-def store_token(userid, token):
-    """Store user ID and token in CookiesData.txt."""
-    with open('CookiesData.txt', 'a') as f:
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-        f.write(f"{userid},{token}\n")
-        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-def validate_token(token):
-    """Validate JWT token and return payload if valid."""
-    try:
-        payload_data = json.loads(base64url_decode(token))
-        if int(payload_data['expired']) < get_current_time():
-            return None
-        return payload_data
-    except Exception:
-        return None
-
-def check_cookie(cookie):
-    """Check if the cookie contains a valid token."""
-    if not cookie:
-        return None
-    try:
-        token = cookie.split('token=')[1].split(';')[0]
-        # print
-        return validate_token(token)
-    except IndexError:
-        return None
-
-def get_login_page(payload, cookie):
-    """Return the HTML login page."""
+# ---------------- HTML pages ----------------
+def get_login_page(cookie_payload, cookie_header):
     return f"""<!DOCTYPE html>
     <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Login</title>
-    </head>
+    <head><meta charset="utf-8"><title>Login</title></head>
     <body>
-        <h1>test {payload} , {cookie}</h1>
-        <h1>Login Page</h1>
-        <form action="/Desktop/WebServ/cgi/cgiScripts/login.py" method="POST">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required><br><br>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required><br><br>
-            <input type="submit" value="Login">
-        </form>
+    <h1>Login Page</h1>
+    <form action="/Desktop/WebServ/cgi/cgiScripts/login.py" method="POST">
+    <label>Username: <input type="text" name="username" required></label><br><br>
+    <label>Password: <input type="password" name="password" required></label><br><br>
+    <input type="submit" value="Login">
+    </form>
+    <p>Debug: cookie_payload={cookie_payload}, cookie_header={cookie_header}</p>
     </body>
     </html>"""
 
-def main():
-    cookie = os.environ.get("HTTP_COOKIE", None)
-    method = os.environ.get("REQUEST_METHOD", "GET")
+# ---------------- Post data ----------------
+def get_post_body():
+    """Read exact bytes from stdin as given by CONTENT_LENGTH."""
+    clen = os.environ.get('CONTENT_LENGTH', '')
+    try:
+        length = int(clen) if clen else 0
+    except ValueError:
+        length = 0
+    if length > 0:
+        return sys.stdin.read(length)
+    return ''
 
-    # Handle login form submission
-    post_data = "username:test,password:test"
+# ------------------ Hash password ---------------
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def base64url_encode(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
+
+def base64url_decode(data):
+    padding = '=' * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+def token_create(username):
+    """Create a simple unsigned token containing the username (base64url of JSON)."""
+    payload = {'username': str(username)}
+    return base64url_encode(json.dumps(payload))
+
+def store_token(username, password_hash, token_value):
+    """Append 'username,password_hash,token' to CookiesData.txt with a lock."""
+    with open('CookiesData.txt', 'a') as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        f.write(f"{username},{password_hash},{token_value}\n")
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+def file_read_lines_locked():
+    try:
+        with open("CookiesData.txt", 'r') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            lines = f.readlines()
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            return [ln.rstrip('\n') for ln in lines]
+    except FileNotFoundError:
+        return []
+
+def token_parse(token):
+    """Return payload dict or None on error."""
+    try:
+        decoded = base64url_decode(token)
+        return json.loads(decoded)
+    except Exception:
+        return None
+
+def validate_token(token):
+    """Return line 'username,password_hash,token' if token exists and parses, else None."""
+    payload = token_parse(token)
+    if not payload or 'username' not in payload:
+        return None
+    for ln in file_read_lines_locked():
+        # Strict token match in the 3rd CSV field
+        parts = ln.split(",", 2)
+        if len(parts) == 3 and parts[2] == token:
+            return ln
+    return None
+
+def extract_token_from_cookie(cookie_header):
+    """Extract 'token' value from HTTP_COOKIE header."""
+    if not cookie_header:
+        return None
+    # Split on ';' and strip spaces
+    for part in cookie_header.split(';'):
+        part = part.strip()
+        if part.startswith('token='):
+            return part[len('token='):]
+    return None
+
+def find_user_by_username(username):
+    """Return (username, password_hash, token) or None."""
+    for ln in file_read_lines_locked():
+        parts = ln.split(",", 2)
+        if len(parts) == 3 and parts[0] == username:
+            return tuple(parts)
+    return None
+
+def main():
+    cookie_header = os.environ.get("HTTP_COOKIE", "")
+    method = os.environ.get("REQUEST_METHOD", "GET").upper()
+
     if method == "POST":
-        if "username" in post_data and "password" in post_data:
-            userid = get_next_userid()
-            token = jwt_creator(userid)
-            store_token(userid, token)
-            send(f"<html><body><h1>Login successful! Welcome, user {userid}</h1></body></html>", token=token)
+        raw_body = get_post_body()
+        parsed = parse_qs(raw_body, keep_blank_values=True)
+        username = parsed.get('username', [''])[0]
+        password = parsed.get('password', [''])[0]
+
+        if not username or not password:
+            send("<html><body><h1>Missing username or password</h1></body></html>")
+            return
+
+        found = find_user_by_username(username)
+        if found:
+            # Existing user
+            userna, stored_pwd_hash, existing_token = found
+            if hash_password(password) == stored_pwd_hash:
+                # Valid login; refresh cookie (optional) by re-setting it
+                send(f"<html><body><h1>Welcome back, user {userna}</h1></body></html>", set_cookie_value=existing_token)
+            else:
+                send(f"<html><body><h1>Incorrect password for user {userna}</h1></body></html>")
+            return
         else:
-            send(f"<html><body><h1>Invalid login credentials</h1></body></html>")
+            # New user: create account and set cookie
+            token = token_create(username)
+            store_token(username, hash_password(password), token)
+            send(f"<html><body><h1>Login successful! Welcome, new user {username}</h1></body></html>", set_cookie_value=token)
+            return
+
+    # GET
+    token = extract_token_from_cookie(cookie_header)
+    valid_line = validate_token(token) if token else None
+    if valid_line:
+        user, pswd_hash, tok = valid_line.split(",", 2)
+        # Already authenticated; no need to send Set-Cookie again unless you want to refresh expiry
+        send(f"<html><body><h1>Welcome back, user {user}</h1></body></html>")
         return
 
-# Check for existing valid cookie
-    payload = check_cookie(cookie)
-    if payload:
-        send(f"<html><body><h1>Welcome back, user {payload['userid']}</h1></body></html>")
-    else:
-        # Serve login page if no valid cookie
-        login_page = get_login_page(payload, cookie)
-        send(login_page)
+    # Not authenticated: show login page
+    login_page = get_login_page(cookie_payload=token_parse(token) if token else None,
+                                cookie_header=cookie_header)
+    send(login_page)
 
 if __name__ == "__main__":
     main()
-
-
-
-
-# #!/usr/bin/env python
-
-# import os
-# import sys
-# import base64
-# import json
-# import secrets
-# from datetime import datetime, timezone
-# import fcntl
-
-# def send(content, content_type="text/html", token=None, cookie=None):
-#     """Send HTTP response with optional Set-Cookie header and content."""
-#     print(f"Content-Type: {content_type}")
-#     if token:
-#         print(f"Set-Cookie: token={token}; Path=/; HttpOnly; SameSite=Strict")
-#     elif cookie:
-#         print(f"Cookie: {cookie}")
-#     print(f"Content-Length: {len(content)}")
-#     print()
-#     print(content)
-
-# def base64url_encode(data):
-#     """Encode data to base64url format."""
-#     if isinstance(data, str):
-#         data = data.encode('ascii')
-#     return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
-
-# def base64url_decode(data):
-#     """Decode base64url data."""
-#     padding = '=' * (-len(data) % 4)
-#     return base64.urlsafe_b64decode(data + padding)
-
-# def get_current_time():
-#     """Get current UTC timestamp."""
-#     return int(datetime.now(timezone.utc).timestamp())
-
-# def jwt_creator(userid):
-#     """Create a JWT-like token with userid and expiration."""
-#     expiration = get_current_time() + 3600  # 1 hour expiration
-#     payload = {
-#         'userid': str(userid),
-#         'expired': expiration
-#     }
-#     payload_encoded = base64url_encode(json.dumps(payload))
-#     return f"{payload_encoded}"
-
-# def get_next_userid():
-#     """Get the next available user ID from CookiesData.txt."""
-#     try:
-#         with open('CookiesData.txt', 'r') as f:
-#             fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-#             lines = f.readlines()
-#             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-#             if not lines:
-#                 return 1
-#             last_line = lines[-1].strip()
-#             if not last_line:
-#                 return 1
-#             user_id, _ = last_line.split(",", 1)
-#             return int(user_id) + 1
-#     except (FileNotFoundError, ValueError, OSError):
-#         return 1
-
-# def store_token(userid, token):
-#     """Store user ID and token in CookiesData.txt."""
-#     with open('CookiesData.txt', 'a') as f:
-#         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-#         f.write(f"{userid},{token}\n")
-#         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-# def validate_token(token):
-#     """Validate JWT token and return payload if valid."""
-#     try:
-#         payload_data = json.loads(base64url_decode(token))
-#         if int(payload_data['expired']) < get_current_time():
-#             return None
-#         return payload_data
-#     except Exception:
-#         return None
-
-# def check_cookie(cookie):
-#     """Check if the cookie contains a valid token."""
-#     if not cookie:
-#         return None
-#     try:
-#         token = cookie.split('token=')[1].split(';')[0]
-#         # print
-#         return validate_token(token)
-#     except IndexError:
-#         return None
-
-# def get_login_page():
-#     """Return the HTML login page."""
-#     return """<!DOCTYPE html>
-#     <html lang="en">
-#     <head>
-#         <meta charset="UTF-8">
-#         <title>Login</title>
-#     </head>
-#     <body>
-#         <h1>Login Page</h1>
-#         <form action="/Desktop/webserv/WebServ/cgi/cgiScripts/login.py" method="POST">
-#             <label for="username">Username:</label>
-#             <input type="text" id="username" name="username" required><br><br>
-#             <label for="password">Password:</label>
-#             <input type="password" id="password" name="password" required><br><br>
-#             <input type="submit" value="Login">
-#         </form>
-#     </body>
-#     </html>"""
-
-# def main():
-#     cookie = os.environ.get("HTTP_COOKIE", None)
-#     method = os.environ.get("REQUEST_METHOD", "GET")
-
-#     if method == "POST":
-#         # Handle login form submission
-#         post_data = "username:test,password:test"
-#         if "username" in post_data and "password" in post_data:
-#             userid = get_next_userid()
-#             token = jwt_creator(userid)
-#             store_token(userid, token)
-#             send(f"<html><body><h1>Login successful! Welcome, user {userid}</h1></body></html>", token=token)
-#         else:
-#             send(f"<html><body><h1>Invalid login credentials</h1></body></html>")
-#         return
-
-#     # Check for existing valid cookie
-#     payload = check_cookie(cookie)
-#     if payload:
-#         send(f"<html><body><h1>Welcome back, user {payload['userid']}</h1></body></html>")
-#     else:
-#         # Serve login page if no valid cookie
-#         login_page = get_login_page()
-#         send(login_page)
-
-# if __name__ == "__main__":
-#     main()
-
-
-
-# #!/usr/bin/env python
-
-# import os
-# import sys
-# import base64
-# import json
-# import secrets
-# from datetime import datetime, timezone
-# import fcntl
-# import hmac
-# import hashlib
-
-# def send(content, content_type="text/html", token=None, cookie=None):
-#     """Send HTTP response with optional Set-Cookie header and content."""
-#     print(f"Content-Type: {content_type}")
-#     if token:
-#         print(f"Set-Cookie: token={token}; Path=/; HttpOnly; SameSite=Strict")
-#     elif cookie:
-#         print(f"Cookie: {cookie}")
-#     print(f"Content-Length: {len(content)}")
-#     print()
-#     print(content)
-
-# def base64url_encode(data):
-#     """Encode data to base64url format."""
-#     if isinstance(data, str):
-#         data = data.encode('ascii')
-#     return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
-
-# def base64url_decode(data):
-#     """Decode base64url data."""
-#     padding = '=' * (4 - (len(data) % 4))
-#     return base64.urlsafe_b64decode(data + padding)
-
-# def get_current_time():
-#     """Get current UTC timestamp."""
-#     return int(datetime.now(timezone.utc).timestamp())
-
-# def jwt_creator(userid):
-#     """Create a JWT-like token with userid and expiration."""
-#     expiration = get_current_time() + 3600  # 1 hour expiration
-#     payload = {
-#         'userid': str(userid),
-#         'expired': expiration
-#     }
-#     payload_encoded = base64url_encode(json.dumps(payload))
-#     return f{payload_encoded}"
-
-
-# def get_next_userid():
-#     """Get the next available user ID from CookiesData.txt."""
-#     try:
-#         with open('CookiesData.txt', 'r') as f:
-#             fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-#             lines = f.readlines()
-#             if not lines:
-#                 return 1
-#             last_line = lines[-1].strip()
-#             if not last_line:
-#                 return 1
-#             user_id, _ = last_line.split(",", 1)
-#             return int(user_id) + 1
-#     except (FileNotFoundError, ValueError, OSError):
-#         return 1
-
-# def store_token(userid, token):
-#     """Store user ID and token in CookiesData.txt."""
-#     with open('CookiesData.txt', 'a') as f:
-#         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-#         f.write(f"{userid},{token}\n")
-
-# # def validate_token(token):
-# #     """Validate JWT token and return payload if valid."""
-# #     try:
-# #         payload = token.split('.')
-# #         # print("header: ", header, " payload: ", payload, " signature: ", signature)
-# #         # secret_key = "DonDoIt"  # Same as in jwt_creator
-# #         # expected_signature = base64url_encode(
-# #         #     hmac.new(secret_key.encode('utf-8'), f"{header}.{payload}".encode('utf-8'), hashlib.sha256).digest()
-# #         # )
-# #         # if signature != expected_signature:
-# #         #     return None
-# #         # print("bypass signature")
-# #         payload_data = json.loads(base64url_decode(payload))
-# #         if int(payload_data['expired']) < get_current_time():
-# #             return None
-# #         # print("bypass expired")
-# #         return payload_data
-# #     except Exception:
-# #         return None
-
-# # def check_cookie(cookie):
-# #     """Check if the cookie contains a valid token."""
-# #     if not cookie:
-# #         return None
-# #     try:
-# #         token = cookie.split('token=')[1].split(';')[0]
-# #         print(token)
-# #         return validate_token(token)
-# #     except IndexError:
-# #         return None
-
-# def get_login_page():
-#     """Return the HTML login page."""
-#     return """<!DOCTYPE html>
-#     <html lang="en">
-#     <head>
-#         <meta charset="UTF-8">
-#         <title>Login</title>
-#     </head>
-#     <body>
-#         <h1>Login Page</h1>
-#         <form action="/Desktop/webserv/WebServ/cgi/cgiScripts/login.py" method="POST">
-#             <label for="username">Username:</label>
-#             <input type="text" id="username" name="username" required><br><br>
-#             <label for="password">Password:</label>
-#             <input type="password" id="password" name="password" required><br><br>
-#             <input type="submit" value="Login">
-#         </form>
-#     </body>
-#     </html>"""
-
-# def main():
-#     cookie = os.environ.get("HTTP_COOKIE", None)
-#     method = os.environ.get("REQUEST_METHOD", "GET")
-
-#     if method == "POST":
-#         # Handle login form submission
-#         # content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-#         # post_data = sys.stdin.read(content_length)
-#         # Simple username/password check (replace with actual auth logic)
-#         post_data = "username:test,password:test"
-#         if "username" in post_data and "password" in post_data:
-#             userid = get_next_userid()
-#             token = jwt_creator(userid)
-#             store_token(userid, token)
-#             send(f"<html><body><h1>Login successful! Welcome, user {userid}</h1></body></html>", token=token)
-#         else:
-#             send(f"<html><body><h1>Invalid login credentials</h1></body></html>")
-#         return
-
-#     # Check for existing valid cookie
-#     payload = None #check_cookie(cookie)
-#     if payload:
-#         send(f"<html><body><h1>Welcome back, user {payload['userid']}</h1></body></html>")
-#     else:
-#         # Serve login page if no valid cookie
-#         login_page = get_login_page()
-#         send(login_page)
-
-# if __name__ == "__main__":
-#     main()
-
