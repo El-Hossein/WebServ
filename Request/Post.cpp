@@ -363,7 +363,8 @@ void	Post::HandleCGI()
 {
 	if (FirstTime)
 	{
-		OutFile.open("/tmp/" + RandomString(), std::ios::binary), FirstTime = false;
+		cgiFileName = "/tmp/" + RandomString();
+		OutFile.open(cgiFileName, std::ios::binary), FirstTime = false;
 		if (!OutFile.is_open())
 			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
 	}
@@ -372,6 +373,8 @@ void	Post::HandleCGI()
 	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
 	{
 		obj.SetClientStatus(EndReading);
+		obj.setCgiFileName(cgiFileName);
+		OutFile.close();
 		std::cout << "File Uploaded!" << std::endl, throw 201;
 	}
 }
