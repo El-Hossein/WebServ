@@ -186,6 +186,15 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
             dup2(outFd, STDERR_FILENO);
             close(outFd);
         }
+        std::string scriptDir = scriptFile.substr(0, scriptFile.find_last_of("/"));
+        if (!scriptDir.empty())
+        {
+            if (chdir(scriptDir.c_str()) == -1)
+            {
+                perror("chdir failed");
+                exit(1);
+            }
+        }
         envp = cgiEnvVariables(req, ConfigPars, pathInfo);
         execCgi(scriptFile.c_str(), envp);
     }
