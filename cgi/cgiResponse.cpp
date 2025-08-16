@@ -81,7 +81,13 @@ bool Cgi::prepareFileResponseCgi(Request &req)
     if (cgiHeader.find("Content-Type") == std::string::npos)
         httpResponse += "Content-Type: text/plain\r\n";
     if (cgiHeader.find("Content-Length") == std::string::npos)
-        httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+    {
+        if (cgiContentLength > cgiFileSize)
+            httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+        else
+            httpResponse += "Content-Length: " + intToString(cgiContentLength) + "\r\n";
+
+    }
     if (cgiHeader.find("Connection") == std::string::npos)
     {
         if (req.GetHeaderValue("connection") == "keep-alive")

@@ -13,11 +13,22 @@ Cgi::Cgi()
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
     checkConnection = _Empty;
+    cgiContentLength = -1;
 }
 
 Cgi::~Cgi()
 {
 
+}
+
+void    Cgi::setCgiCL(long _cgiCL)
+{
+    cgiContentLength = _cgiCL;
+}
+
+long     Cgi::getCgiCL()
+{
+    return cgiContentLength;
 }
 
 void    Cgi::sethasPendingCgi(bool pendingcgi)

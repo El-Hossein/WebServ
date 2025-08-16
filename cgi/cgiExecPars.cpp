@@ -33,7 +33,9 @@ void     Cgi::parseOutput()
                 while (!headerValue.empty() && (headerValue[headerValue.size() - 1] == '\r' || headerValue[headerValue.size() - 1] == '\n'))
                     headerValue.erase(headerValue.size() - 1);
                 if (headerName == "Status")
-                    cgiStatusCode = atoi(headerValue.c_str());
+                    cgiStatusCode = std::atoi(headerValue.c_str());
+                if (headerName == "Content-Length")
+                    cgiContentLength = std::atoi(headerValue.c_str());
                 else
                     cgiHeader += line + "\r\n";
             }
@@ -47,10 +49,8 @@ void     Cgi::parseOutput()
             cgiBody += line + "\n";
     }
     cgiFileSize = cgiBody.size();
-
     if (cgiHeader.find("Content-Type:") == std::string::npos)
-        cgiHeader = "Content-Type: text/html\r\n" + cgiHeader;
-    
+        cgiHeader += "Content-Type: text/html\r\n";
 }
 
 char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)

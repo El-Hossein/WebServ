@@ -48,14 +48,18 @@ class Cgi
         std::string         statCgiFileBody;
         int                 checkConnection;
         bool                usingCgiStatFile;
+        long                cgiContentLength;
 
 
     public :
         Cgi();
         ~Cgi();
         
+
         std::ifstream&              getFile();
         time_t                      gettime();
+        long                        getCgiCL();
+        void                        setCgiCL(long _cgiCL);
         pid_t                       getpid_1();
         std::string                 getinfile();
         std::string                 getoutfile();
