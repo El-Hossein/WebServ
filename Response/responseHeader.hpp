@@ -26,6 +26,7 @@ class Response
         std::string                    finalResponse;
         std::string                    pathRequested;
         std::string                    staticFileBody;
+        std::string                    errorP;
 
     public :
         Cgi                            _cgi;

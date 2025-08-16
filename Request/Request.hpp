@@ -59,6 +59,7 @@ private:
 	std::string					HeaderBuffer;
 	std::string					BodyBuffer;
 	std::string					FileExtention;
+	std::string					cgiFileName;
 
 	size_t						MaxAllowedBodySize;
 	size_t						TotalBytesRead;
@@ -90,6 +91,7 @@ public:
 	std::string							GetHeaderValue(std::string) const;
 	std::string							GetBodyBuffer() const;
 	std::string							GetHeaderBuffer() const;
+	std::string							GetCgiFileName() const;
 	std::vector<std::string>			GetPathParts() const;
 	std::map<std::string, std::string>	GetHeaders() const;
 	std::map<std::string, std::string>	GetQueryParams() const;
@@ -107,6 +109,7 @@ public:
 	void	SetClientStatus(ClientStatus	Status);
 	void	SetServerDetails();
 	void    SetTimeOut(time_t CurrentTime);
+	void	setCgiFileName(std::string _cgiFileName);
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
 
