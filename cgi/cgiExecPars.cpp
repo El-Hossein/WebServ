@@ -34,7 +34,7 @@ void     Cgi::parseOutput()
                     headerValue.erase(headerValue.size() - 1);
                 if (headerName == "Status")
                     cgiStatusCode = std::atoi(headerValue.c_str());
-                if (headerName == "Content-Length")
+                else if (headerName == "Content-Length")
                     cgiContentLength = std::atoi(headerValue.c_str());
                 else
                     cgiHeader += line + "\r\n";

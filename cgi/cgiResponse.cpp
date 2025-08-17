@@ -9,8 +9,7 @@ bool Cgi::prepareFileResponseCgi(Request &req)
     cgiFilePos = 0;
     usingCgi = true;
     std::string httpResponse;
-    if (cgiHeader.find("Status") == std::string::npos)
-        httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
+    httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
     switch (cgiStatusCode)
     {
         case 100: httpResponse += " Continue"; break;
@@ -100,7 +99,6 @@ bool Cgi::prepareFileResponseCgi(Request &req)
             httpResponse += "Connection: close\r\n\r\n";
             checkConnection = _close;
         }
-
     }
     cgiHeader = httpResponse;
     cgiHeaderSent = 0;
