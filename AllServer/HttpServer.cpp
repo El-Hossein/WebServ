@@ -67,7 +67,7 @@ void HttpServer::AddToKqueue(struct kevent &event, int kq, intptr_t ident, int f
 //done with the server setup
 void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 {
-    std::cout << "\033[34mSetting up server...\033[0m" << std::endl;
+    // std::cout << "\033[34mSetting up server...\033[0m" << std::endl;
     int kq = kqueue();
     if (kq == -1)
         throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
@@ -128,7 +128,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
-            std::cout << "\033[31m[-]\033[0m \033[31mAccept failed on server_fd " << server_fd << ": " << strerror(errno) << "\033[0m" << std::endl;
+            // std::cout << "\033[31m[-]\033[0m \033[31mAccept failed on server_fd " << server_fd << ": " << strerror(errno) << "\033[0m" << std::endl;
         }
         return ;
     }
@@ -155,8 +155,8 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     inet_ntop(AF_INET, &server_addr.sin_addr, server_ip, INET_ADDRSTRLEN);
     int server_port = ntohs(server_addr.sin_port);
 
-    std::cout << "-----------------------------------------------------------------------------" << std::endl;
-    std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
+    // std::cout << "-----------------------------------------------------------------------------" << std::endl;
+    // std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
 
     Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
@@ -210,7 +210,7 @@ void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vec
 
 void HttpServer::RemoveClient(int client_fd)
 {
-    std::cout << "\033[31m[-]\033[0m \033[31mClose Client FD : " << client_fd << "\033[0m" << std::endl;
+    // std::cout << "\033[31m[-]\033[0m \033[31mClose Client FD : " << client_fd << "\033[0m" << std::endl;
 
     struct kevent kev;
 
@@ -225,7 +225,7 @@ void HttpServer::RemoveClient(int client_fd)
     if (client_fd >= 0)
     {
         close(client_fd);
-        std::cout << "\033[32m[-]\033[0m RemoveClient : Closed client fd: " << client_fd << std::endl;
+        // std::cout << "\033[32m[-]\033[0m RemoveClient : Closed client fd: " << client_fd << std::endl;
     }
 
     // Find the context for this fd in all_contexts
@@ -237,18 +237,18 @@ void HttpServer::RemoveClient(int client_fd)
             // 1) Deregister any process/timer we recorded in ctx->registered_procs
             if (!ctx->registered_procs.empty())
             {
-                std::cout << "\033[32m[-]\033[0m RemoveClient: deregistering EVFILT_PROC/EVFILT_TIMER for pids:";
+                // std::cout << "\033[32m[-]\033[0m RemoveClient: deregistering EVFILT_PROC/EVFILT_TIMER for pids:";
                 for (size_t pi = 0; pi < ctx->registered_procs.size(); ++pi)
                 {
                     pid_t p = ctx->registered_procs[pi];
                     if (p <= 0) continue;
-                    std::cout << " " << p;
+                    // std::cout << " " << p;
                     EV_SET(&kev, p, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
                     kevent(globalKq, &kev, 1, NULL, 0, NULL);
                     EV_SET(&kev, p, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
                     kevent(globalKq, &kev, 1, NULL, 0, NULL);
                 }
-                std::cout << std::endl;
+                // std::cout << std::endl;
                 ctx->registered_procs.clear();
             }
             else
@@ -262,7 +262,7 @@ void HttpServer::RemoveClient(int client_fd)
                 }
                 if (proc_pid > 0)
                 {
-                    std::cout << "RemoveClient: deregistering EVFILT_PROC/EVFILT_TIMER for pid "<< proc_pid << std::endl;
+                    // std::cout << "RemoveClient: deregistering EVFILT_PROC/EVFILT_TIMER for pid "<< proc_pid << std::endl;
                     EV_SET(&kev, proc_pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
                     kevent(globalKq, &kev, 1, NULL, 0, NULL);
                     EV_SET(&kev, proc_pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
@@ -297,7 +297,7 @@ void HttpServer::RemoveClient(int client_fd)
 
 void HttpServer::RemoveReqRes(int client_fd)
 {
-    std::cout << "\033[31mReset Request/Response for FD : " << client_fd << "\033[0m" << std::endl;
+    // std::cout << "\033[31mReset Request/Response for FD : " << client_fd << "\033[0m" << std::endl;
 
     for (std::vector<EventContext*>::iterator it = all_contexts.begin(); it != all_contexts.end(); ++it)
     {
@@ -441,44 +441,23 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
 {
 	if (ctx->cgi_pid != 0)
 	{
-		time_t currentTime = time(NULL);
-		time_t cgiStart = response._cgi.gettime();
-		// std::cout << "Cur: " << currentTime << " | cgistarttime: " << cgiStart <<  std::endl;
-		if (currentTime - cgiStart >= 10)
-		{
-			pid_t pid = response._cgi.getpid_1();
-			
-			struct kevent kev;
-			EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-			kevent(globalKq, &kev, 1, NULL, 0, NULL);
-			
-			kill(pid, SIGTERM);
-			usleep(100000);
-			
-			int status;
-			int result = waitpid(pid, &status, WNOHANG);
-			if (result == 0)
-			{
-				kill(pid, SIGKILL);
-				usleep(100000);
-				waitpid(pid, &status, 0);
-			}
-			ctx->cgi_pid = 0;
-			ctx->is_cgi = false;
-			response._cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, request);
-			response._cgi.setcgistatus(CGI_ERROR);
-			response._cgi.sethasPendingCgi(false);
-
-			request.SetTimeOut(std::time(NULL));
-
-			struct kevent ev;
-			int client_fd = response.getClientFd();
-			AddToKqueue(ev, globalKq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
-			AddToKqueue(ev, globalKq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
-			// AddToKqueue(ev, globalKq, client_fd, EVFILT_TIMER, EV_DISABLE, ctx, 0, 0);
-			return;
-			
-		}
+        pid_t pid = response._cgi.getpid_1();
+        struct kevent kev;
+        EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        kill(pid, SIGTERM);
+        ctx->cgi_pid = 0;
+        ctx->is_cgi = false;
+        response._cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, request);
+        response._cgi.setcgistatus(CGI_ERROR);
+        response._cgi.sethasPendingCgi(false);
+        request.SetTimeOut(std::time(NULL));
+        struct kevent ev;
+        int client_fd = response.getClientFd();
+        AddToKqueue(ev, globalKq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
+        AddToKqueue(ev, globalKq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
+        // AddToKqueue(ev, globalKq, client_fd, EVFILT_TIMER, EV_DISABLE, ctx, 0, 0);
+        return;
 	}
 }
 
@@ -515,7 +494,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
         if (nev < 0)
         {
             if (errno == EINTR) continue; // interrupted by signal, safe to retry
-            std::cout << "\033[31mkevent error: " << strerror(errno) << "\033[0m" << std::endl;
+            // std::cout << "\033[31mkevent error: " << strerror(errno) << "\033[0m" << std::endl;
             continue;
         }
 
@@ -527,7 +506,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             {
                 if (server_fds[j] == events[i].ident)
                 {
-                    std::cout << "\033[34mserver FD : " << events[i].ident << "\033[0m" << std::endl;
+                    // std::cout << "\033[34mserver FD : " << events[i].ident << "\033[0m" << std::endl;
                     accept_new_client_fd(static_cast<int>(events[i].ident), ConfigPars);
                     isServerSocket = true;
                     break;
@@ -542,11 +521,11 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             intptr_t ident = events[i].ident;
 
             EventContext* ctx = static_cast<EventContext*>(events[i].udata);
-            std::cout << "client fd: " << ident << " | filter: " << filter << std::endl;
+            // std::cout << "client fd: " << ident << " | filter: " << filter << std::endl;
 
             if (ctx == NULL)
             {
-                std::cout << "\033[31mWarning: event with NULL udata for ident " << ident << " - skipping\033[0m" << std::endl;
+                // std::cout << "\033[31mWarning: event with NULL udata for ident " << ident << " - skipping\033[0m" << std::endl;
                 continue;
             }
 			if (ctx->marked_for_deletion)
@@ -555,14 +534,14 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 				continue;
 			}
 
-            std::cout << "\033[32m[+]\033[0m CLIENT -> CTX: CLIENT: " << ctx->ident << " | CGI ID: " << ctx->cgi_pid << " | is_cgi : " << ctx->is_cgi  << std::endl;
+            // std::cout << "\033[32m[+]\033[0m CLIENT -> CTX: CLIENT: " << ctx->ident << " | CGI ID: " << ctx->cgi_pid << " | is_cgi : " << ctx->is_cgi  << std::endl;
 
             if (filter == EVFILT_PROC)
             {
                 // process/child events (CGI)
                 if (fflags & NOTE_EXIT)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_exit(ctx, ctx->req, ctx->res, ConfigPars);
                     continue;
                 }
@@ -571,14 +550,14 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             // Treat socket EOF only for actual socket filters (READ/WRITE).
             if ((filter == EVFILT_READ || filter == EVFILT_WRITE) && (flags & EV_EOF))
             {
-                std::cout << "\033[31m[-]\033[0m Enter EOF client" << std::endl;
+                // std::cout << "\033[31m[-]\033[0m Enter EOF client" << std::endl;
                 RemoveClient(ctx->ident);
                 continue;
             }
 
             if (flags & EV_ERROR)
             {
-                std::cout << "\033[31mkevent error on fd " << ctx->ident << " : fflags=" << fflags << "\033[0m" << std::endl;
+                // std::cout << "\033[31mkevent error on fd " << ctx->ident << " : fflags=" << fflags << "\033[0m" << std::endl;
                 RemoveClient(ctx->ident);
                 continue;
             }
@@ -588,17 +567,17 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             {
                 if (filter == EVFILT_READ)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_read(ctx, ctx->req, ctx->res, ConfigPars);
                 }
                 else if (filter == EVFILT_WRITE)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter Write client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Write client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_write(ctx, ctx->req, ctx->res, ConfigPars);
                 }
                 else if (filter == EVFILT_TIMER)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
                 }
             }
@@ -606,7 +585,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             {
                 if (filter == EVFILT_TIMER)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
                 }
             }

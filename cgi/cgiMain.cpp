@@ -278,7 +278,8 @@ int Cgi::IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> Con
         scriptFile = pathAfterCgi.substr(0, firstSlash);
     else
         scriptFile = pathAfterCgi;
-    if (scriptFile.find(".cgi") != std::string::npos || scriptFile.find(".py") != std::string::npos || scriptFile.find(".php") != std::string::npos)
+    if (scriptFile.find(".cgi") != std::string::npos || scriptFile.find(".py") != std::string::npos 
+        || scriptFile.find(".php") != std::string::npos)
         return 1;
     return 0;
 }
