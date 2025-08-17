@@ -23,7 +23,6 @@ private:
 
 	bool								FirstTime;
 	bool								BodyFullyRead;
-	bool								RmvFirstCrlf;
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
