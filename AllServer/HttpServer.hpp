@@ -52,6 +52,7 @@ class HttpServer{
 		std::vector<EventContext*> all_contexts;
 		void FreeContexts();
 	private:
+		int kq;
 		std::map<int, EventContext*> proc_map; 
    		struct kevent events[BACKLOG];
 		std::vector<EventContext*> pending_deletions;
