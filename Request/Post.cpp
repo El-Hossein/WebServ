@@ -161,7 +161,17 @@ void Post::ParseBoundary()
 void Post::ParseBirnaryOrRaw()
 {
 	if (FirstTime)
-		OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary), FirstTime = false;
+	{
+		FirstTime = false;
+		if (obj.GetIsCGI())
+		{
+			cgiFileName = "/tmp/" + RandomString() + obj.GetFileExtention();
+			obj.setCgiFileName(cgiFileName);
+			OutFile.open(cgiFileName, std::ios::binary);
+		}
+		else
+			OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary);
+	}
 
 	OutFile.write(UnprocessedBuffer.c_str(), UnprocessedBuffer.size());
 
@@ -182,7 +192,15 @@ void Post::WriteChunkToFile(std::string &BodyContent)
 {
 	if (FirstTime)
 	{
-		OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary), FirstTime = false;
+		FirstTime = false;
+		if (obj.GetIsCGI())
+		{
+			cgiFileName = "/tmp/" + RandomString() + obj.GetFileExtention();
+			obj.setCgiFileName(cgiFileName);
+			OutFile.open(cgiFileName, std::ios::binary);
+		}
+		else
+			OutFile.open(Dir + "/" + RandomString() + obj.GetFileExtention(), std::ios::binary);
 		if (!OutFile.is_open())
 			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
 	}
@@ -190,27 +208,12 @@ void Post::WriteChunkToFile(std::string &BodyContent)
 	OutFile.write(BodyContent.c_str(), BodyContent.size());
 }
 
-void Post::GetChunks()
+
+void Post::ParseChunked()
 {
 	size_t start = 0, end = 0;
 	std::string BodyContent;
 
-	// switch (Chunk.ChunkStatus)
-	// {
-	// 	case ChunkVars::None:
-	// 		std::cout << "Status[None]" << std::endl;
-	// 		break;
-	// 	case ChunkVars::GotHexaSize:
-	// 		std::cout << "Status[GotHexaSize]" << std::endl;
-	// 		break;
-	// 	case ChunkVars::GotFullBody:
-	// 		std::cout << "Status[GotFullBody]" << std::endl;
-	// 		break;
-	// 	case ChunkVars::Finished:
-	// 		std::cout << "Status[Finished]" << std::endl;
-	// 		break;
-	// }
-	// std::cout << "---->UnprocessedBuffer:{" << UnprocessedBuffer << "}\n" << std::endl;
 	while (true)
 	{
 		switch (Chunk.ChunkStatus)
@@ -273,11 +276,6 @@ void Post::GetChunks()
 			}
 		}
 	}
-}
-
-void Post::ParseChunked()
-{
-	GetChunks();
 }
 
 /*	|#----------------------------------#|
@@ -364,19 +362,17 @@ void	Post::HandleCGI()
 	if (FirstTime)
 	{
 		cgiFileName = "/tmp/" + RandomString();
+		obj.setCgiFileName(cgiFileName);
 		OutFile.open(cgiFileName, std::ios::binary), FirstTime = false;
 		if (!OutFile.is_open())
 			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
 	}
-	OutFile.write(UnprocessedBuffer.c_str(), UnprocessedBuffer.size());
-
-	if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
-	{
-		obj.SetClientStatus(EndReading);
-		obj.setCgiFileName(cgiFileName);
-		OutFile.close();
-		std::cout << "File Uploaded!" << std::endl, throw 201;
-	}
+	// if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
+	// {
+	// 	obj.SetClientStatus(EndReading);
+	// 	OutFile.close();
+	// 	std::cout << "File Uploaded!" << std::endl, throw 201;
+	// }
 }
 
 /*	|#----------------------------------#|
@@ -390,27 +386,29 @@ void	Post::HandlePost()
 
 	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << "/" << obj.GetContentLength() << std::endl;
 
-	if (obj.GetIsCGI())
-		return HandleCGI();
+	// if (obj.GetIsCGI())
+	// 	HandleCGI();
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength:
 		{
 			if (obj.GetTotatlBytesRead() > obj.GetContentLength())
 				obj.PrintError("Malformed Request", obj), throw 400;
-			if (obj.GetContentType() == _Boundary) // To not have a conflict with the (std::string Boundary)
-				return ParseBoundary();
-			if (obj.GetContentType() == BinaryOrRaw)
-				return ParseBirnaryOrRaw();
+			switch (obj.GetContentType())
+			{
+				case	_Boundary	:	return ParseBoundary();
+				case	BinaryOrRaw	:	return ParseBirnaryOrRaw();
+			}
 		}
 		case Chunked:
 		{
 			if (obj.GetLimitedBodySize() && obj.GetTotatlBytesRead() > obj.GetMaxAllowedBodySize())
 				obj.PrintError("Request Entity Too Large", obj), throw 413;
-			if (obj.GetContentType() == _Boundary)
-				return ParseChunkedBoundary();
-			if (obj.GetContentType() == BinaryOrRaw)
-				return ParseChunked();
+			switch (obj.GetContentType())
+			{
+				case	_Boundary	:	return ParseChunkedBoundary();
+				case	BinaryOrRaw	:	return ParseChunked();
+			}
 		}
 	}
 }
