@@ -4,6 +4,7 @@ Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _Co
 						:	ClientFd(fd),
 							Client(ReadHeader),
 							DataType(FixedLength),
+							ContentType(BinaryOrRaw),
 							PostObj(NULL),
 							Servers(_ConfigPars),
 							HeaderBuffer(""),

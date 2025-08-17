@@ -397,6 +397,21 @@ void	Post::HandlePost()
 
 	// if (obj.GetIsCGI())
 	// 	HandleCGI();
+
+
+	std::cout << "DataType----->";
+	switch (obj.GetDataType())
+	{
+		case FixedLength:  { std::cout << "FixedLength!\n"; break ; }
+		case Chunked:  { std::cout << "Chunked!\n"; break ; }
+	}
+	std::cout << "ContentType----->";
+	switch (obj.GetContentType())
+	{
+		case _Boundary:  { std::cout << "_Boundary!\n"; break ; }
+		case BinaryOrRaw:  { std::cout << "BinaryOrRaw!\n"; break ; }
+	}
+
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
 		case FixedLength:
