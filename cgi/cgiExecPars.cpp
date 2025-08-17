@@ -202,7 +202,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
     {
         startTime = time(NULL);
         cgistatus = CGI_RUNNING;
-        std::cout << "\033[34mCGI PID : " << pid << "\033[0m" << std::endl;
+        // std::cout << "\033[34mCGI PID : " << pid << "\033[0m" << std::endl;
         // link pid to request context
         if (req.ctx)
         {
@@ -225,12 +225,12 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
                 req.ctx->cgi_pid = pid; // already set but reinforce
             }
         }        // add a pid timer with 1s tick for responsive CGI timeout checking
-        EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, req.ctx);
+        EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
         if (kevent(globalKq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
 
 		req.SetTimeOut(std::time(NULL));
-        std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true)  << std::endl;
+        // std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true)  << std::endl;
 
         return 2;
     }
