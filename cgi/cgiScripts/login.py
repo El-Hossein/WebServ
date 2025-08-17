@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import fcntl
 import hashlib
 from urllib.parse import parse_qs
-
+import re
 # ---------------- Send pages ----------------
 def send(content, set_cookie_value=None):
     """Send HTTP response with optional Set-Cookie header and content."""
@@ -127,6 +127,10 @@ def find_user_by_username(username):
             return tuple(parts)
     return None
 
+def is_alphanumeric(s: str) -> bool:
+    """Return True if the string contains only alphanumeric characters."""
+    return s.isalnum()
+
 def main():
     cookie_header = os.environ.get("HTTP_COOKIE", "")
     method = os.environ.get("REQUEST_METHOD", "GET").upper()
@@ -140,7 +144,9 @@ def main():
         if not username or not password:
             send("<html><body><h1>Missing username or password</h1></body></html>")
             return
-
+        if not (is_alphanumeric(username)):
+            send("<html><body><h1>Username  must be alphanumeric only</h1></body></html>")
+            return
         found = find_user_by_username(username)
         if found:
             # Existing user
@@ -163,7 +169,6 @@ def main():
     valid_line = validate_token(token) if token else None
     if valid_line:
         user, pswd_hash, tok = valid_line.split(",", 2)
-        # Already authenticated; no need to send Set-Cookie again unless you want to refresh expiry
         send(f"<html><body><h1>Welcome back, user {user}</h1></body></html>")
         return
 
