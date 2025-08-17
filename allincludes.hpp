@@ -28,6 +28,7 @@ struct	_BoundarySettings
 	std::string	Boundary;
 	std::string	BoundaryStart;
 	std::string	BoundaryEnd;
+	size_t		CrlfCount;
 };
 
 enum	_BoundaryStatus
