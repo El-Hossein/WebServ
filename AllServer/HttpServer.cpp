@@ -450,6 +450,10 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
         ctx->is_cgi = false;
         response._cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, request);
         response._cgi.setcgistatus(CGI_ERROR);
+        if (!response._cgi.getinfile().empty())
+            unlink(response._cgi.getinfile().c_str());
+        if (!response._cgi.getoutfile().empty())   
+            unlink(response._cgi.getoutfile().c_str());
         response._cgi.sethasPendingCgi(false);
         request.SetTimeOut(std::time(NULL));
         struct kevent ev;
