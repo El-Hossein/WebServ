@@ -57,71 +57,45 @@ char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std:
 {
     char **envp = new char*[14];
 
-
-    // REQUEST_METHOD
     envp[0] = new char[strlen("REQUEST_METHOD=") + strlen(req.GetHeaderValue("method").c_str()) + 1];
     strcpy(envp[0], "REQUEST_METHOD=");
     strcat(envp[0], req.GetHeaderValue("method").c_str());
-    // std::cout << envp[0] << std::endl;
-    //SCRIPT_NAME
     envp[1] = new char[strlen("SCRIPT_NAME=") + strlen(req.GetHeaderValue("path").c_str()) + 1];
     strcpy(envp[1], "SCRIPT_NAME=");
-    strcat(envp[1], req.GetHeaderValue("path").c_str()); 
-    // std::cout << envp[1] << std::endl;
-    //SCRIPT_FILENAME
+    strcat(envp[1], req.GetHeaderValue("path").c_str());
     envp[2] = new char[strlen("SCRIPT_FILENAME=") + strlen(req.GetFullPath().c_str()) + 1];
     strcpy(envp[2], "SCRIPT_FILENAME=");
     strcat(envp[2], req.GetFullPath().c_str());
-    // std::cout << envp[2] << std::endl;
-    //QUERY_STRING
     envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1];
     strcpy(envp[3], "QUERY_STRING=");
     strcat(envp[3], req.GetHeaderValue("query").c_str());
-    // std::cout << envp[3] << std::endl;
-    //SERVER_PROTOCOL
     envp[4] = new char[strlen("SERVER_PROTOCOL=") + strlen("HTTP/1.1") + 1];
     strcpy(envp[4], "SERVER_PROTOCOL=");
     strcat(envp[4], "HTTP/1.1");
-    // std::cout << envp[4] << std::endl;
-    //GATEWAY_INTERFACE
     envp[5] = new char[strlen("GATEWAY_INTERFACE=") + strlen("CGI/1.1") + 1];
     strcpy(envp[5], "GATEWAY_INTERFACE=");
     strcat(envp[5], "CGI/1.1");
-    // std::cout << envp[5] << std::endl;
-    //SERVER_SOFTWARE
     envp[6] = new char[strlen("SERVER_SOFTWARE=") + strlen("webSERV/1.0") + 1];
     strcpy(envp[6], "SERVER_SOFTWARE=");
     strcat(envp[6], "webSERV/1.0");
-    // std::cout << envp[6] << std::endl;
-    //PATH_INFO
     envp[7] = new char[strlen("PATH_INFO=") + strlen(_pathInfo.c_str()) + 1];
     strcpy(envp[7], "PATH_INFO=");
     strcat(envp[7], _pathInfo.c_str());
-    // std::cout << envp[7] << std::endl;
-    //CONTENT_TYPE
     envp[8] = new char[strlen("CONTENT_TYPE=") + strlen(req.GetHeaderValue("content-type").c_str()) + 1];
     strcpy(envp[8], "CONTENT_TYPE=");
     strcat(envp[8], req.GetHeaderValue("content-type").c_str());
-    // std::cout << envp[8] << std::endl;
-    //CONTENT_LENGTH
     envp[9] = new char[strlen("CONTENT_LENGTH=") + strlen(req.GetHeaderValue("content-length").c_str()) + 1];
     strcpy(envp[9], "CONTENT_LENGTH=");
     strcat(envp[9], req.GetHeaderValue("content-length").c_str());
-    // std::cout << envp[9] << std::endl;
-    //SERVER_NAME
     envp[10] = new char[strlen("SERVER_NAME=") + strlen(req.GetHeaderValue("host").c_str()) + 1];
     strcpy(envp[10], "SERVER_NAME=");
     strcat(envp[10], req.GetHeaderValue("host").c_str());
-    //std::cout << envp[10] << std::endl;
-    //SERVER_PORT
     envp[11] = new char[strlen("SERVER_PORT=") + strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
     strcpy(envp[11], "SERVER_PORT=");
     strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
-    // std::cout << envp[11] << std::endl;
     envp[12] = new char[strlen("HTTP_COOKIE=") + strlen(req.GetHeaderValue("cookie").c_str()) + 1];
     strcpy(envp[12], "HTTP_COOKIE=");
     strcat(envp[12], req.GetHeaderValue("cookie").c_str());
-    // std::cout << envp[12] << std::endl;
     envp[13] = NULL;
     return envp;
 }
