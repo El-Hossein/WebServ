@@ -340,11 +340,13 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
     {
         int CheckNono = 0;
         int CheckOthers = 0;
-        for (std::vector<std::string>::iterator it = words.begin(); it != words.end(); ++it) {
+        for (std::vector<std::string>::iterator it = words.begin()+ 1; it != words.end(); ++it) {
             if (*it == "GET" || *it == "POST" || *it == "DELETE")
                 CheckOthers = 1;
             else if (*it == "NONE")
                 CheckNono = 1;
+            else 
+                throw std::runtime_error("Error: allow_methods are GET POST DELETE NONE");
         }
         if (CheckNono == 1 && CheckOthers == 1)
             throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
@@ -421,6 +423,14 @@ void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (onlyspace(text) == 1)
         throw std::runtime_error("Error: unexpected data before '}'");
+    ConfigNode &lastOne = *nodeStack.back();
+    std::vector<std::string> a = lastOne.getValuesForKey(lastOne, "allow_methods", "");
+    for (std::vector<std::string>::iterator it = a.begin(); it != a.end(); ++it)
+    {
+        if (*it == "POST")
+            if(lastOne.getValuesForKey(lastOne, "upload_store", "").empty())
+               throw std::runtime_error("Error: you need upload_store when u have POST in allow_methods");
+    }
     if (!nodeStack.empty())
         nodeStack.pop_back();
     else
