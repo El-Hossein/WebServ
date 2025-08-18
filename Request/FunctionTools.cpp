@@ -135,15 +135,14 @@ void	TrimSpaces(std::string& str)
 
 // --------------#	COUNTERS	 #-------------- //
 
-size_t	CrlfCounter(std::string	&str)
+size_t	CrlfCounter(std::string	&str, size_t pos)
 {
-	std::string	CRLF("\n\r");
-	size_t Pos = 0, Count = 0;
-	
-	while ((Pos = str.find(CRLF, Pos))!= std::string::npos)
+	size_t Count = 0;
+
+	for (size_t i = 0; i + 1 < pos; i++)
 	{
-		Pos += CRLF.size();
-		Count++;
+		if (str[i] == '\r' && str[i + 1] == '\n')
+			Count++;
 	}
 	return Count;
 }
