@@ -1,4 +1,6 @@
 #include "config.hpp"
+#include <string>
+#include <vector>
 
 ConfigNode::ConfigNode(){}
 
@@ -38,13 +40,12 @@ std::vector<std::string> ConfigNode::   getValuesForKey(ConfigNode& ConfNode, co
 {
     std::vector<std::string> emptyResult;
     std::vector<std::string> arr ;
-    //loop through the confnode check if the key is present
-    if (del == "NULL")
+
+    if (del.empty())
     {
         std::map<std::string, std::vector<std::string> > keys = ConfNode.getValues();
-        for (std::map<std::string, std::vector<std::string> >::const_iterator it = keys.begin(); it != keys.end(); ++it)
+        for (std::map<std::string, std::vector<std::string> >::iterator it = keys.begin(); it != keys.end(); ++it)
         {
-            // std::cout << "keys: " << it->first << std::endl;
             if (it->first == key)
                 return it->second;
         }
@@ -55,37 +56,29 @@ std::vector<std::string> ConfigNode::   getValuesForKey(ConfigNode& ConfNode, co
             arr = split(ConfNode.children[i].getName());
             if (arr[1] == del)
             {
-                std::vector<std::string> a = getValuesForKey(ConfNode.children[i], key, "NULL");
+                std::vector<std::string> a = getValuesForKey(ConfNode.children[i], key, "");
                 if (!a.empty())
                     return a;
                 else
-                    return getValuesForKey(ConfNode, key, "NULL");
+                    return getValuesForKey(ConfNode, key, "");
             }
         }
     }
     return emptyResult;
 }
+
 std::vector<std::string> ConfigNode::   ConfgetValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     std::vector<std::string> emptyResult;
     std::vector<std::string> arr ;
-    //loop through the confnode check if the key is present
+
     if (del == "NULL")
     {
         std::map<std::string, std::vector<std::string> > keys = ConfNode.getValues();
         for (std::map<std::string, std::vector<std::string> >::const_iterator it = keys.begin(); it != keys.end(); ++it)
         {
-            // std::cout << "keys: " << it->first << std::endl;
             if (it->first == key)
                 return it->second;
-        }
-    }
-    else {
-        for (size_t i = 0; i < ConfNode.children.size(); i++)
-        {
-            arr = split(ConfNode.children[i].getName());
-            if (arr[1] == del)
-                return ConfgetValuesForKey(ConfNode.children[i], key, "NULL");
         }
     }
     return emptyResult;
@@ -170,23 +163,6 @@ void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, siz
     }
 }
 
-void checkAliasRoot(const std::string& key, ConfigNode& ConfNode)
-{
-    if (key == "alias")
-    {
-        std::vector<std::string> root = ConfNode.ConfgetValuesForKey(ConfNode, "root", "NULL");
-        if (!root.empty())
-            throw std::runtime_error("Error: Alias and Root cant be in the same location");
-        return;
-    }
-    if (key == "root")
-    {
-        std::vector<std::string> alias = ConfNode.ConfgetValuesForKey(ConfNode, "alias", "NULL");
-        if (!alias.empty())
-            throw std::runtime_error("Error: Alias and Root cant be in the same location");
-    }
-}
-
 void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigNode& ConfNode, int max, int mult) {
     int count = 0;
     (void)ConfNode;
@@ -226,7 +202,6 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
         CheckAllError(KV, "autoindex", ConfNode, 1, 1);
         CheckAllError(KV, "return", ConfNode, 2, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
-        CheckAllError(KV, "alias", ConfNode, 1, 1);
         CheckAllError(KV, "index", ConfNode, 1, -1);
         CheckAllError(KV, "upload_store", ConfNode, 1, 1);
         CheckAllError(KV, "allow_cgi", ConfNode, 3, 1);
@@ -327,7 +302,7 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
     words[1] = result.str();
 }
 
-void CheckListen(std::vector<std::string>& words)
+void CheckListen(std::vector<std::string>& words, ConfigNode &ConfNode)
 {
     int is = 0;
     for (std::vector<std::string>::iterator it = words.begin(); it != words.end(); ++it)
@@ -348,6 +323,15 @@ void CheckListen(std::vector<std::string>& words)
         int a = std::atoi(port.c_str());
         if (a > 65535)
             throw std::runtime_error("listen port should be > 0 and < 65535.");
+        std::vector<std::string> confPorts = ConfNode.getValuesForKey(ConfNode, "listen", "");
+        if (!confPorts.empty())
+        {
+            for (std::vector<std::string>::iterator Confoneport = confPorts.begin(); Confoneport != confPorts.end(); ++Confoneport) {
+                std::string ConPo = Confoneport->c_str();
+                if (ConPo == port)
+                    throw std::runtime_error("duplicate port in the same server");
+            }
+        }
     }
 }
 
@@ -355,8 +339,6 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
 {
     if (words[0] == "client_max_body_size")
         MaxBodySizeToBytes(words);
-    else if (words[0] == "alias" || words[0] == "root")
-        checkAliasRoot(words[0], ConfNode);
     else if (words[0] == "allow_methods")
     {
         int CheckNono = 0;
@@ -376,7 +358,7 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
             throw std::runtime_error("Error: antoindex take only on or off");
     }
     else if (words[0] == "listen")
-        CheckListen(words);
+        CheckListen(words, ConfNode);
 }
 
 // add key-value pair to the node
@@ -405,7 +387,6 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         LOCATION_VALID_KEYS.push_back("index");
         LOCATION_VALID_KEYS.push_back("allow_cgi");
         LOCATION_VALID_KEYS.push_back("upload_store");
-        LOCATION_VALID_KEYS.push_back("alias");
 
         initialized = true;
     }
@@ -660,7 +641,7 @@ std::string ConfigNode::GetRightLocation(std::string path)
 {
     std::vector<ConfigNode> locations = getChildren();
 
-    std::string RightLocation;
+    std::string RightLocation = "";
     for (std::vector<ConfigNode>::iterator Alllocations = locations.begin(); Alllocations != locations.end(); ++Alllocations)
     {
         std::vector<std::string> tokens = split(Alllocations->name.c_str());
