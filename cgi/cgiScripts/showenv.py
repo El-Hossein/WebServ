@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 import os
 
-# CGI scripts must print headers first
-print("Content-Type: text/plain\r\n")
 
-# The environment variables you defined
+print("Content-Type: text/plain\r\n\r", end="")
+
 vars_to_check = [
     "REQUEST_METHOD",
     "SCRIPT_NAME",
