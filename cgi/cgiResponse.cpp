@@ -9,8 +9,7 @@ bool Cgi::prepareFileResponseCgi(Request &req)
     cgiFilePos = 0;
     usingCgi = true;
     std::string httpResponse;
-    if (cgiHeader.find("Status") == std::string::npos)
-        httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
+    httpResponse = "HTTP/1.1 " + intToString(cgiStatusCode);
     switch (cgiStatusCode)
     {
         case 100: httpResponse += " Continue"; break;
@@ -81,7 +80,13 @@ bool Cgi::prepareFileResponseCgi(Request &req)
     if (cgiHeader.find("Content-Type") == std::string::npos)
         httpResponse += "Content-Type: text/plain\r\n";
     if (cgiHeader.find("Content-Length") == std::string::npos)
-        httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+    {
+        if (cgiContentLength > cgiFileSize || cgiContentLength < 0)
+            httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+        else
+            httpResponse += "Content-Length: " + intToString(cgiContentLength) + "\r\n";
+
+    }
     if (cgiHeader.find("Connection") == std::string::npos)
     {
         if (req.GetHeaderValue("connection") == "keep-alive")
@@ -94,7 +99,6 @@ bool Cgi::prepareFileResponseCgi(Request &req)
             httpResponse += "Connection: close\r\n\r\n";
             checkConnection = _close;
         }
-
     }
     cgiHeader = httpResponse;
     cgiHeaderSent = 0;

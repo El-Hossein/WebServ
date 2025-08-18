@@ -134,13 +134,13 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
 				errorPath += "/";
 			errorPath += errorPage[i + 1];
 			body = readFileToString(errorPath);
-            errorP = checkContentType(2);
+            if (!body.empty())
+                errorP = checkContentType(2);
 			break;
 		}
 	}
     if (body.empty())
         body = handWritingError(message, statusCode);
-
     staticFileBody = body;
     staticFilePos = 0;
     usingStaticFile = true;
