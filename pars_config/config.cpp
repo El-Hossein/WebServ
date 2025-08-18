@@ -26,7 +26,7 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, const std::string& key, size_t index) 
+std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, size_t index) 
 {
     if (index > ConfNode.children.size())
         return "";
