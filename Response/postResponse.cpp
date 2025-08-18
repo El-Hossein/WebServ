@@ -57,21 +57,21 @@ void    Response::postMethod(Request &req, int e)
 {
     if (checkLocation(req, "POST", "allow_methods") == -1)
             return ;
-        _cgi.setcgiHeader("");
-        int checkCode = _cgi.IsCgiRequest(uri.c_str(), req);
-        if (checkCode == 1)
+    _cgi.setcgiHeader("");
+    int checkCode = _cgi.IsCgiRequest(uri.c_str(), req);
+    if (checkCode == 1)
+    {
+        _cgi.handleCgiRequest(req);
+        if (_cgi.getcgistatus() == CGI_RUNNING)
         {
-            _cgi.handleCgiRequest(req);
-            if (_cgi.getcgistatus() == CGI_RUNNING)
-            {
-                _cgi.sethasPendingCgi(true);
-                return;
-            }
-            _cgi.sethasPendingCgi(false);
-            return ;
+            _cgi.sethasPendingCgi(true);
+            return;
         }
-        else if (checkCode == -1)
-            return ;
-        else
-            postResponse(req, e);
+        _cgi.sethasPendingCgi(false);
+        return ;
+    }
+    else if (checkCode == -1)
+        return ;
+    else
+        postResponse(req, e);
 }
