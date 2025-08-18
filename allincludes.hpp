@@ -22,6 +22,7 @@
 #include <sys/event.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <set>
 
 struct	_BoundarySettings
 {
