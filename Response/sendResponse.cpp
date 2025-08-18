@@ -31,7 +31,6 @@ bool    Response::sendBody(size_t chunkSize)
             size_t left = _cgi.getStatCgiFileBody().size() - _cgi.getStatCgiFilePos();
             size_t sendNow = std::min(chunkSize, left);
             chunk = _cgi.getStatCgiFileBody().substr(_cgi.getStatCgiFilePos(), sendNow);
-            staticFilePos += sendNow;
             _cgi.setStatCgiFilePos(_cgi.getStatCgiFilePos() + sendNow);
             return _cgi.getStatCgiFilePos() < _cgi.getStatCgiFileBody().size();
         }
@@ -157,7 +156,7 @@ bool Response::getNextChunk(size_t chunkSize)
     return false;
 }
 
-bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req) 
+bool Response::checkPendingCgi(Request &req) 
 {
     if (!_cgi.gethasPendingCgi())
         return false;
@@ -181,13 +180,13 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req)
             }
             else
             {
-                _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
+                _cgi.responseErrorcgi(500, " Internal Server Error", req);
                 _cgi.setcgistatus(CGI_ERROR);
             }
         }
         else
         {
-            _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
+            _cgi.responseErrorcgi(500, " Internal Server Error", req);
             _cgi.setcgistatus(CGI_ERROR);
         }
         if (!_cgi.getinfile().empty())
@@ -202,7 +201,7 @@ bool Response::checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req)
         struct kevent kev;
         EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
         kevent(globalKq, &kev, 1, NULL, 0, NULL);
-        _cgi.responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
+        _cgi.responseErrorcgi(500, " Internal Server Error", req);
         _cgi.setcgistatus(CGI_ERROR);
         _cgi.sethasPendingCgi(false);
 
