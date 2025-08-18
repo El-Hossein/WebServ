@@ -55,7 +55,7 @@ void     Cgi::parseOutput()
 
 char    **cgiEnvVariables(Request &req, std::string _pathInfo)
 {
-    char **envp = new char*[14];
+    char **envp = new char*[15];
 
     envp[0] = new char[strlen("REQUEST_METHOD=") + strlen(req.GetHeaderValue("method").c_str()) + 1];
     strcpy(envp[0], "REQUEST_METHOD=");
@@ -96,7 +96,10 @@ char    **cgiEnvVariables(Request &req, std::string _pathInfo)
     envp[12] = new char[strlen("HTTP_COOKIE=") + strlen(req.GetHeaderValue("cookie").c_str()) + 1];
     strcpy(envp[12], "HTTP_COOKIE=");
     strcat(envp[12], req.GetHeaderValue("cookie").c_str());
-    envp[13] = NULL;
+    envp[13] = new char[strlen("REDIRECT_STATUS=") + 4];
+    strcpy(envp[13], "REDIRECT_STATUS=");
+    strcat(envp[13], "200");
+    envp[14] = NULL;
     return envp;
 }
 
