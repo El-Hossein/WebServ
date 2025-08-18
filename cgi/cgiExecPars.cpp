@@ -138,10 +138,8 @@ void    execCgi(const char *scriptPath, char **envp)
 
 void Cgi::executeCgiScript(Request &req)
 {
-    std::ostringstream out;
-    out << "/tmp/cgiOutput_" << uniq;
+    outFile = "/tmp/cgiOutput_" + uniq;
     inpFile = req.GetCgiFileName();
-    outFile = out.str();
     pid = fork();
     if (pid == -1)
     {
