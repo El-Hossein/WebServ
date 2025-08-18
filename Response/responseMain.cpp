@@ -5,8 +5,9 @@ Response::Response()
     
 }
 
-Response::Response(int _clientFd)
+Response::Response(int _clientFd, int _kq)
 {
+    kq = _kq;
     clientFd = _clientFd;
     filePos = 0;
     fileSize = 0;
@@ -15,6 +16,7 @@ Response::Response(int _clientFd)
     usingStaticFile = false;
     bytesSent = 0;
     _cgi.sethasPendingCgi(false);
+    _cgi.setKq(kq);
 }
 
 Response::~Response()

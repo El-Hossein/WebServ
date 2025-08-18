@@ -1,5 +1,5 @@
 <?php
-easd
+addslashes
 
-asd
+asdas
 ?>
