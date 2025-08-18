@@ -71,12 +71,12 @@ std::string Cgi::generateListingDirCgi(Request &req)
     return html;
 }
 
-bool Cgi::generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req)
+bool Cgi::generateAutoIndexOnCgi(Request &req)
 {
     statCgiFileBody = generateListingDirCgi(req);
     if (statCgiFileBody.empty())
     {
-        responseErrorcgi(403, "Forbidden", ConfigPars, req);
+        responseErrorcgi(403, "Forbidden", req);
         return false;
     }
     statCgiFilePos = 0;
@@ -98,11 +98,11 @@ bool Cgi::generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &re
     return true;
 }
 
-int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars, std::string uri)
+int    Cgi::servListingDirenCgi(Request &req, std::string uri)
 {
     std::string	loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::string autoIndexOn = getInfoConfigCgi(ConfigPars, "autoindex", loc, req);
-    std::string index = getInfoConfigCgi(ConfigPars, "index", loc, req);
+    std::string autoIndexOn = getInfoConfigCgi("autoindex", loc, req);
+    std::string index = getInfoConfigCgi("index", loc, req);
 
     struct stat st;
     stat(uri.c_str(), &st);
@@ -120,17 +120,17 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
             if (S_ISDIR(st.st_mode) || access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOnCgi(ConfigPars, req);
+                    generateAutoIndexOnCgi(req);
                 else
-                    responseErrorcgi(403, " Forbidden", ConfigPars, req);
+                    responseErrorcgi(403, " Forbidden", req);
                 return -1;
             }
             cgiHeader = "";
-            int checkCode = IsCgiRequest(htmlFound, req, ConfigPars);
+            int checkCode = IsCgiRequest(htmlFound, req);
             if (checkCode == 1)
             {
                 req.SetFullSystemPath(htmlFound);
-                handleCgiRequest(req, ConfigPars);
+                handleCgiRequest(req);
                 req.SetFullSystemPath(uri);
                 if (getcgistatus() == CGI_RUNNING)
                 {
@@ -144,13 +144,13 @@ int    Cgi::servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars
                 return 0;
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOnCgi(ConfigPars, req);
+            generateAutoIndexOnCgi(req);
         else
-            responseErrorcgi(403, " Forbidden", ConfigPars, req);
+            responseErrorcgi(403, " Forbidden", req);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOnCgi(ConfigPars, req);
+        generateAutoIndexOnCgi(req);
     else
-        responseErrorcgi(403, " Forbidden", ConfigPars, req);
+        responseErrorcgi(403, " Forbidden", req);
     return -1;
 }
