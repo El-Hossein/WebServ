@@ -146,7 +146,7 @@ bool			ValidContentLength(const std::string& value);
 bool			ValidFieldName(const std::string& name);
 bool			ValidFieldValue(const std::string& value);
 bool			ValidBoundary(std::string	&value);
-size_t			CrlfCounter(std::string	&str);
+size_t			CrlfCounter(std::string	&str, size_t pos);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
 std::string		RemoveCrlf(std::string BodyContent);
