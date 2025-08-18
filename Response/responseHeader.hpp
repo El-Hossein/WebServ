@@ -38,6 +38,7 @@ class Response
         bool    sendFile(size_t chunkSize);
         bool    sendHeaders(size_t chunkSize);
         bool    sendCgiScript(size_t chunkSize);
+        bool    readAccordingToCL(size_t chunkSize, std::ifstream &f);
 
         void    setE(int _e);
         int     getE();
