@@ -67,19 +67,16 @@ std::vector<std::string> ConfigNode::   getValuesForKey(ConfigNode& ConfNode, co
     return emptyResult;
 }
 
-std::vector<std::string> ConfigNode::   ConfgetValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
+std::vector<std::string> ConfigNode::ConfgetValuesForKey(ConfigNode& ConfNode, const std::string& key) 
 {
     std::vector<std::string> emptyResult;
     std::vector<std::string> arr ;
 
-    if (del == "NULL")
+    std::map<std::string, std::vector<std::string> > keys = ConfNode.getValues();
+    for (std::map<std::string, std::vector<std::string> >::const_iterator it = keys.begin(); it != keys.end(); ++it)
     {
-        std::map<std::string, std::vector<std::string> > keys = ConfNode.getValues();
-        for (std::map<std::string, std::vector<std::string> >::const_iterator it = keys.begin(); it != keys.end(); ++it)
-        {
-            if (it->first == key)
-                return it->second;
-        }
+        if (it->first == key)
+            return it->second;
     }
     return emptyResult;
 }
@@ -169,7 +166,7 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
     count = KV.size() - 1;
     if (key != KV[0]) return;
     
-    std::vector<std::string> helo = ConfNode.ConfgetValuesForKey(ConfNode, key, "NULL");
+    std::vector<std::string> helo = ConfNode.ConfgetValuesForKey(ConfNode, key);
     if (!helo.empty())
     {
         if (key == "return")
@@ -536,7 +533,7 @@ ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string ReqPortH
 {
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
-        std::vector<std::string> ValuesOfPortOrHost = ConfigNode::ConfgetValuesForKey(ConfigPars[i], PortOrHostInConfig, "NULL");
+        std::vector<std::string> ValuesOfPortOrHost = ConfigNode::ConfgetValuesForKey(ConfigPars[i], PortOrHostInConfig);
         if (!ValuesOfPortOrHost.empty())
         {
             for (std::vector<std::string>::iterator it = ValuesOfPortOrHost.begin(); it != ValuesOfPortOrHost.end(); ++it)
