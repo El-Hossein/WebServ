@@ -14,13 +14,13 @@ import re
 def send(content, set_cookie_value=None):
     """Send HTTP response with optional Set-Cookie header and content."""
     body_bytes = content.encode("utf-8")
-    print("Content-Type: text/html; charset=utf-8")
+    print("Content-Type: text/html; charset=utf-8\r")
     if set_cookie_value is not None:
         # Only servers send Set-Cookie; never send a "Cookie" header in responses
         # Add secure-ish attributes as appropriate for your environment (add 'Secure' if HTTPS)
-        print(f"Set-Cookie: token={set_cookie_value}; Path=/; HttpOnly; SameSite=Strict")
-    print(f"Content-Length: {len(body_bytes)}")
-    print()
+        print(f"Set-Cookie: token={set_cookie_value}; Path=/; HttpOnly; SameSite=Strict\r")
+    print(f"Content-Length: {len(body_bytes)}\r\n\r", end="")
+    # print()
     # Write bytes to avoid accidental encoding issues with large bodies
     sys.stdout.flush()
     sys.stdout.buffer.write(body_bytes)
@@ -32,7 +32,7 @@ def get_login_page(cookie_payload, cookie_header):
     <head><meta charset="utf-8"><title>Login</title></head>
     <body>
     <h1>Login Page</h1>
-    <form action="/cgi/cgiScripts/login.py" method="POST">
+    <form action="" method="POST">
     <label>Username: <input type="text" name="username" required></label><br><br>
     <label>Password: <input type="password" name="password" required></label><br><br>
     <input type="submit" value="Login">

@@ -1,8 +1,6 @@
 #include "cgiHeader.hpp"
 #include "../AllServer/HttpServer.hpp"
 
-extern int globalKq;
-
 void     Cgi::parseOutput()
 {
     cgiStatusCode = 200;
@@ -12,13 +10,13 @@ void     Cgi::parseOutput()
     cgiHeader = "";
     cgiBody = "";
 
-    while (std::getline(file, line))
+    while (std::getline(file, line, '\r'))
     {
-        if (!line.empty() && line[line.size()-1] == '\r')
-            line.erase(line.size() - 1);
+        if (!line.empty() && line[0] == '\n')
+            line.erase(0, 1);
         if (readHeader)
         {
-            if (line.empty() || line == "\r")
+            if (line.empty())
             {
                 readHeader = false;
                 continue;
@@ -28,10 +26,6 @@ void     Cgi::parseOutput()
             {
                 std::string headerName = line.substr(0, colonPos);
                 std::string headerValue = line.substr(colonPos + 1);
-                while (!headerValue.empty() && (headerValue[0] == ' ' || headerValue[0] == '\t'))
-                    headerValue.erase(0, 1);
-                while (!headerValue.empty() && (headerValue[headerValue.size() - 1] == '\r' || headerValue[headerValue.size() - 1] == '\n'))
-                    headerValue.erase(headerValue.size() - 1);
                 if (headerName == "Status")
                     cgiStatusCode = std::atoi(headerValue.c_str());
                 else if (headerName == "Content-Length")
@@ -42,11 +36,11 @@ void     Cgi::parseOutput()
             else
             {
                 readHeader = false;
-                cgiBody += line + "\n";
+                cgiBody += line;
             }
         }
         else
-            cgiBody += line + "\n";
+            cgiBody += line;
     }
     cgiFileSize = cgiBody.size();
     if (cgiHeader.find("Content-Type:") == std::string::npos)
@@ -191,7 +185,7 @@ void Cgi::executeCgiScript(Request &req)
         struct kevent kev;
         // watch for child exit
         EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, req.ctx);
-        if (kevent(globalKq, &kev, 1, NULL, 0, NULL) == -1){
+        if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1){
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_PROC CGI\033[0m" << std::endl;
         }
         else
@@ -204,7 +198,8 @@ void Cgi::executeCgiScript(Request &req)
             }
         }        // add a pid timer with 1s tick for responsive CGI timeout checking
         EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
-        if (kevent(globalKq, &kev, 1, NULL, 0, NULL) == -1)
+        std::cout << kq << std::endl;
+        if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
 
 		req.SetTimeOut(std::time(NULL));

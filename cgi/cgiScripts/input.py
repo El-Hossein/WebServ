@@ -2,8 +2,8 @@
 import sys
 import os
 
-print("Content-Type: text/html")
-print()
+print("Content-Type: text/html\r\n\r", end="")
+
 print("<html><body>")
 print("<h1>Hello CGI</h1>")
 print("Method: ", os.environ.get('REQUEST_METHOD'))

@@ -86,10 +86,10 @@ bool    Response::sendCgiScript(size_t chunkSize)
     if (_cgi.getFilePos() == 0)
     {
         std::string line;
-        while (std::getline(f, line))
+        while (std::getline(f, line, '\r'))
         {
-            if (!line.empty() && line[line.size() - 1] == '\n')
-                line.erase(line.size() - 1);
+            if (!line.empty() && line[0] == '\n')
+                line.erase(0, 1);
             if (line.empty())
                 break;
         }
@@ -168,7 +168,7 @@ bool Response::checkPendingCgi(Request &req)
     {
         struct kevent kev;
         EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        kevent(kq, &kev, 1, NULL, 0, NULL);
         if (WIFEXITED(status)) // returns non zero if child terminates normally
         {
             int exCode = WEXITSTATUS(status); // Extracts the exit code that the child exited with
@@ -200,7 +200,7 @@ bool Response::checkPendingCgi(Request &req)
     {
         struct kevent kev;
         EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(globalKq, &kev, 1, NULL, 0, NULL);
+        kevent(kq, &kev, 1, NULL, 0, NULL);
         _cgi.responseErrorcgi(500, " Internal Server Error", req);
         _cgi.setcgistatus(CGI_ERROR);
         _cgi.sethasPendingCgi(false);
