@@ -51,9 +51,9 @@ private:
 	std::map<std::string, std::string>	Headers;
 	std::map<std::string, std::string>	QueryParams;
 	std::string							FullSystemPath;
+	std::string							UploadPath;
 	std::string							Location;
 	std::vector<std::string>			AllowedMethods;
-	std::vector<std::string>			PathParts;
 
 	_BoundarySettings			BoundaryAttri;
 	std::string					HeaderBuffer;
@@ -76,6 +76,7 @@ public:
 
 	EventContext* ctx;
 	// ---------		GETTERS 	 	--------- //
+	std::string							GetUploadPath() const;
 	bool								GetIsCGI() const;
 	bool								GetLimitedBodySize() const;
 	bool								GetConnection() const;
@@ -86,13 +87,13 @@ public:
 	size_t								GetContentLength() const;
 	size_t								GetTotatlBytesRead() const;
 	size_t    							GetMaxAllowedBodySize() const;
+	std::string							GetLocation() const;
 	std::string							GetFullPath() const;
 	std::string							GetFileExtention();
 	std::string							GetHeaderValue(std::string) const;
 	std::string							GetBodyBuffer() const;
 	std::string							GetHeaderBuffer() const;
 	std::string							GetCgiFileName() const;
-	std::vector<std::string>			GetPathParts() const;
 	std::map<std::string, std::string>	GetHeaders() const;
 	std::map<std::string, std::string>	GetQueryParams() const;
 	ConfigNode							&GetRightServer();
