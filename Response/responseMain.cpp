@@ -5,9 +5,8 @@ Response::Response()
     
 }
 
-Response::Response(Request	&req, int _clientFd)
+Response::Response(int _clientFd)
 {
-    (void)req;
     clientFd = _clientFd;
     filePos = 0;
     fileSize = 0;
