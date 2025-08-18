@@ -57,7 +57,7 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 	std::string BodyContent;
 	size_t start = 0, end = 0, BodyPos = 0;
 
-	// std::cout << "\n\nBuffer{" << Buffer << "}" << std::endl;
+	// std::cout << "\n\nBuffer{" << Buffer << "}\n\n" << std::endl;
 	// switch (BoundaryStatus)
 	// {
 	// 	case None : std::cout << "its Boundary Status[None]" << std::endl; break ;
@@ -72,33 +72,29 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 	{
 		if (BoundaryStatus == None)
 		{
-			Boundary.CrlfCount += CrlfCounter(Buffer);
-			std::cout << "1- CrlfCount in NONE=" << Boundary.CrlfCount << std::endl;
 			start = Buffer.find(Boundary.BoundaryStart, 0);
 			// std::cout << "\n****" << Buffer.substr(0, 10) << "**********\n";
 			if (start == std::string::npos)
 				obj.PrintError("Boudary Error", obj), throw 400;
 
+			Boundary.CrlfCount += CrlfCounter(Buffer, start + Boundary.BoundaryStart.size());
 			Buffer.erase(0, start + Boundary.BoundaryStart.size());
 			BoundaryStatus = GotBoundaryStart;
 		}
 		if (BoundaryStatus == GotBoundaryStart)
 		{
-			Boundary.CrlfCount += CrlfCounter(Buffer);
-			std::cout << "2- CrlfCount in GotBoundaryStart=" << Boundary.CrlfCount << std::endl;
 			FindFileName(Buffer, Filename);
 			// Buffer.erase(0, TrimBody + 3);
 			BoundaryStatus = GotFile;
 		}
 		if (BoundaryStatus == GotFile)
 		{
-			Boundary.CrlfCount += CrlfCounter(Buffer);
-			std::cout << "3- CrlfCount in GotFile=" << Boundary.CrlfCount << std::endl;
 			BodyPos = Buffer.find("\r\n\r\n");
 			if (BodyPos == std::string::npos) // ila makantch
 				obj.PrintError("No Body Found", obj), throw 400;
 			else // kayn Double CRLF
 			{
+				Boundary.CrlfCount += CrlfCounter(Buffer, BodyPos + 4);
 				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
 				if (Buffer.empty())
 					return ;
@@ -106,10 +102,7 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 		}
 		if (BoundaryStatus == GotBody)
 		{
-			Boundary.CrlfCount += CrlfCounter(Buffer);
-			std::cout << "4- CrlfCount in GotBody=" << Boundary.CrlfCount << std::endl;
 			std::string tmp(Buffer);
-
 			Appender(Buffer, PrevBuffer, tmp);
 
 			size_t end = Buffer.find("\r\n--" + Boundary.Boundary);
@@ -124,6 +117,8 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			{
 				BoundaryStatus = GotBodyEnd;
 
+				if (++Boundary.CrlfCount != 5)
+					obj.PrintError("Bad Request", obj), throw 400;
 				BodyContent = Buffer.substr(0, end);
 				OutFile.write(BodyContent.data(), BodyContent.size());
 				PrevBuffer.clear();
@@ -132,9 +127,9 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 		}
 		if (BoundaryStatus == GotBodyEnd)
 		{
+			Boundary.CrlfCount = -1; // -1 for the {Boundary*CRLF*}
+
 			size_t pos;
-			Boundary.CrlfCount += CrlfCounter(Buffer);
-			std::cout << "5- CrlfCount in GotBodyEnd=" << Boundary.CrlfCount << std::endl;
 			pos = Buffer.find(Boundary.BoundaryStart);
 			if (pos != std::string::npos)
 				BoundaryStatus = GotBoundaryEnd;
@@ -147,8 +142,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			OutFile.close(), FirstTime = true, BoundaryStatus = None;
 		if (BoundaryStatus == Finished)
 		{
-			std::cout << "------------->" << Boundary.CrlfCount << std::endl;
-			Boundary.CrlfCount = 0;
 			obj.SetClientStatus(EndReading);
 			std::cout << "File Uploaded!" << std::endl, throw 201; // "Created"
 		}
