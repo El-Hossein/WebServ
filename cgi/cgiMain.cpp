@@ -13,11 +13,22 @@ Cgi::Cgi()
     ss << getpid() << "_" << time(NULL) << "_" << rand();
     uniq = ss.str();
     checkConnection = _Empty;
+    cgiContentLength = -1;
 }
 
 Cgi::~Cgi()
 {
 
+}
+
+void    Cgi::setCgiCL(long _cgiCL)
+{
+    cgiContentLength = _cgiCL;
+}
+
+long     Cgi::getCgiCL()
+{
+    return cgiContentLength;
 }
 
 void    Cgi::sethasPendingCgi(bool pendingcgi)
@@ -267,7 +278,8 @@ int Cgi::IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> Con
         scriptFile = pathAfterCgi.substr(0, firstSlash);
     else
         scriptFile = pathAfterCgi;
-    if (scriptFile.find(".cgi") != std::string::npos || scriptFile.find(".py") != std::string::npos || scriptFile.find(".php") != std::string::npos)
+    if (scriptFile.find(".cgi") != std::string::npos || scriptFile.find(".py") != std::string::npos 
+        || scriptFile.find(".php") != std::string::npos)
         return 1;
     return 0;
 }
