@@ -6,6 +6,7 @@ class Response
 {
     private:
         int                            _E;
+        int                            kq;
         std::string                    uri;
         std::ifstream                  file;
         std::string                    index;
@@ -31,7 +32,7 @@ class Response
     public :
         Cgi                            _cgi;
         Response();
-        Response(int _clientFd);
+        Response(int _clientFd, int _kq);
         ~Response();
         
         bool    sendBody(size_t chunkSize);

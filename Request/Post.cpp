@@ -15,7 +15,7 @@ Post::Post(Request &_obj) : obj(_obj),
 	Chunk.Temp = "";
 	PrevBuffer = "";
 
-	Dir = obj.GetFullPath();
+	Dir = obj.GetUploadPath();
 	srand(time(NULL));
 }
 
