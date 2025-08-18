@@ -146,12 +146,12 @@ std::string readFileToStringCgi(std::string path)
     return contents.str();
 }
 
-bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req)
+void Cgi::responseErrorcgi(int statusCode, std::string message, Request &req)
 {
     std::string     body;
     std::string	    loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::string     root = getInfoConfigCgi(ConfigPars, "root", loc, req);
-    std::vector<std::string> error_page = getInfoConfigMultipleCgi(ConfigPars, "error_page", loc, req);
+    std::string     root = getInfoConfigCgi("root", loc, req);
+    std::vector<std::string> error_page = getInfoConfigMultipleCgi("error_page", loc, req);
     for (size_t i = 0; i + 1 < error_page.size(); i += 2)
 	{
 		if (std::atoi(error_page[i].c_str()) == statusCode)
@@ -197,5 +197,4 @@ bool Cgi::responseErrorcgi(int statusCode, std::string message, std::vector<Conf
         checkConnection = _close;
     }
     cgiHeaderSent = 0;
-    return false;
 }
