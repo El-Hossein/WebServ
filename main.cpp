@@ -48,23 +48,26 @@ int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 
 int main(int argc, char **argv)
 {
-	if (argc > 2)
+	if (argc <= 2)
+	{
+		signal(SIGPIPE, SIG_IGN);
+		std::string ConfigFilePath;
+		if (argc == 2)
+			ConfigFilePath = argv[1];
+		else
+			ConfigFilePath = "./default/default.conf";
+		std::vector<ConfigNode> ConfigPars;
+		ConfigNode obj;
+		if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
+			return 1;
+		if (StartServerFunc(ConfigPars) == 1)
+			return 1;
+	}
+	else
 	{
 		std::cerr << "./webserv [configuration file]" << std::endl;
 		return (1);
 	}
-	signal(SIGPIPE, SIG_IGN);
-	std::string ConfigFilePath;
-	if (argc == 2)
-		ConfigFilePath = argv[1];
-	else
-		ConfigFilePath = "./Defualt/defualt.conf";
-	std::vector<ConfigNode> ConfigPars;
-	ConfigNode obj;
-	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
-		return 1;
-	if (StartServerFunc(ConfigPars) == 1)
-		return 1;
 	return 0;
 }
 
