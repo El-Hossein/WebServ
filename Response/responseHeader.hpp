@@ -7,31 +7,31 @@ class Response
     private:
         int                            _E;
         std::string                    uri;
+        std::ifstream                  file;
         std::string                    index;
         std::string                    chunk;
-        ssize_t                        bytesSent;
+        std::string                    errorP;
         std::string                    method;
-        std::string                    headers;
         size_t                         filePos;
         bool                           hasMore;
-        int                            clientFd;
-        std::ifstream                  file;
+        std::string                    headers;
         size_t                         fileSize;
-        size_t                         staticFilePos;
-        bool                           usingStaticFile;
+        int                            clientFd;
+        ssize_t                        bytesSent;
         std::string                    htmlFound;
-        ssize_t                        bytesWritten;
         size_t                         headerSent;
         std::string                    autoIndexOn;
+        ssize_t                        bytesWritten;
         std::string                    finalResponse;
         std::string                    pathRequested;
+        size_t                         staticFilePos;
         std::string                    staticFileBody;
-        std::string                    errorP;
+        bool                           usingStaticFile;
 
     public :
         Cgi                            _cgi;
         Response();
-        Response(Request &req, int _clientFd);
+        Response(int _clientFd);
         ~Response();
         
         bool    sendBody(size_t chunkSize);
@@ -46,31 +46,31 @@ class Response
         std::string                    getChunk();
         bool                           getHasMore();
         int                            getClientFd();
-        size_t                        getBytesSent();
-        long                        getBytesWritten();
+        size_t                         getBytesSent();
+        long                           getBytesWritten();
         void                           setHasMore(bool _hasmore);
+        void                           getResponse(Request	&req);
+        void                           deleteMethod(Request &req);
         std::string                    checkContentType(int index);
+        void                           deleteResponse(Request &req);
+        bool                           checkPendingCgi(Request &req);
+        void                           servListingDiren(Request	&req);
         bool                           getNextChunk(size_t chunkSize);
+        void                           postMethod(Request &req, int e);
         void                           setBytesSent(ssize_t _bytessent);
         void                           setHeaderSent(size_t _headerSent);
-        std::string                    generateListingDir(Request	&req);
         void                           postResponse(Request &req, int e);
+        std::string                    generateListingDir(Request	&req);
+        bool                           generateAutoIndexOn(Request	&req);
+        void                           moveToResponse(Request	&req, int e);
         void                           setBytesWritten(ssize_t _byteswritten);
         std::string                    postResponseSuccess(std::string message);
         std::string                    deleteResponseSuccess(std::string message);
-        void                           getResponse(Request	&req);
-        void                           deleteMethod(Request &req);
-        void                           deleteResponse(Request &req);
-        bool                           checkPendingCgi(Request &req);
-        void                           postMethod(Request &req, int e);
-        void                           servListingDiren(Request	&req);
-        bool                           generateAutoIndexOn(Request	&req);
-        int                            prepareFileResponse(std::string filepath, std::string contentType, Request &req);
-        void                           moveToResponse(Request	&req, int e);
         void                           responseError(int statusCode, std::string message, Request &req);
         void                           nonRedirect(std::string redirectUrl, Request &req, int statusCode);
         int                            checkLocation(Request &req, std::string meth, std::string directive);
         void                           prepareRedirectResponse(std::vector<std::string> redirect, Request &req);
+        int                            prepareFileResponse(std::string filepath, std::string contentType, Request &req);
 };
 
 
