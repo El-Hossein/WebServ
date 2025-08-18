@@ -21,6 +21,11 @@ Cgi::~Cgi()
 
 }
 
+void     Cgi::setKq(int _kq)
+{
+    kq = _kq;
+}
+
 void    Cgi::setCgiCL(long _cgiCL)
 {
     cgiContentLength = _cgiCL;

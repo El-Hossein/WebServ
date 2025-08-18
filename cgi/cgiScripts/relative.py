@@ -2,7 +2,7 @@
 import os
 
 # Content-type header required by CGI
-print("Content-Type: text/plain\n")
+print("Content-Type: text/plain\r\n\r", end="")
 
 # Show current working directory
 print("Current working directory:", os.getcwd())
