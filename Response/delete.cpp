@@ -61,20 +61,5 @@ void    Response::deleteMethod(Request &req, std::vector<ConfigNode> ConfigPars)
 {
     if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
         return ;
-    _cgi.setcgiHeader("");
-    int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
-    if (checkCode == 1)
-    {
-        _cgi.handleCgiRequest(req, ConfigPars);
-        if (_cgi.getcgistatus() == CGI_RUNNING)
-        {
-            _cgi.sethasPendingCgi(true);
-            return;
-        }
-        _cgi.sethasPendingCgi(false);
-        return ;
-    }
-    else if (checkCode == -1)
-        return ;
     deleteResponse(ConfigPars, req);
 }
