@@ -28,7 +28,7 @@ class ConfigNode {
 		static ConfigNode GetServer(std::vector<ConfigNode> ConfigPars, _ServerDetails ServerDetails);
 		static std::vector<std::string> getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
 		static std::vector<std::string> ConfgetValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del)  ;
-		static std::string GetLocationValue(ConfigNode& ConfNode, const std::string& key, size_t index)  ;
+		static std::string GetLocationValue(ConfigNode& ConfNode, size_t index);
 		std::string GetRightLocation(std::string path);
 		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
 		void print() const;
