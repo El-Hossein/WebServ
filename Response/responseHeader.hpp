@@ -31,7 +31,7 @@ class Response
     public :
         Cgi                            _cgi;
         Response();
-        Response(Request &req, int _clientFd);
+        Response(int _clientFd);
         ~Response();
         
         bool    sendBody(size_t chunkSize);
