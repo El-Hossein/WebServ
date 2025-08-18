@@ -27,12 +27,12 @@ std::string Response::deleteResponseSuccess(std::string message)
     return html;
 }
 
-void Response::deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req)
+void Response::deleteResponse(Request &req)
 {
     struct stat st;
 
     if (stat(uri.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-        responseError(403, " Permission Denied", ConfigPars, req);
+        responseError(403, " Permission Denied", req);
     else if (std::remove(uri.c_str()) == 0)
     {
         staticFileBody = deleteResponseSuccess("file succesefuly deleted!!");
@@ -54,12 +54,12 @@ void Response::deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req)
         headerSent = 0;
     }
     else
-        responseError(404, " Not Found", ConfigPars, req);
+        responseError(404, " Not Found", req);
 }
 
-void    Response::deleteMethod(Request &req, std::vector<ConfigNode> ConfigPars)
+void    Response::deleteMethod(Request &req)
 {
-    if (checkLocation(req, "DELETE", "allow_methods", ConfigPars) == -1)
+    if (checkLocation(req, "DELETE", "allow_methods") == -1)
         return ;
-    deleteResponse(ConfigPars, req);
+    deleteResponse(req);
 }

@@ -104,12 +104,12 @@ std::string Response::generateListingDir(Request &req)
     return html;
 }
 
-bool Response::generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request &req)
+bool Response::generateAutoIndexOn(Request &req)
 {
     staticFileBody = generateListingDir(req);
     if (staticFileBody.empty())
     {
-        responseError(403, " Forbidden", ConfigPars, req);
+        responseError(403, " Forbidden", req);
         return false;
     }
     staticFilePos = 0;
@@ -131,11 +131,11 @@ bool Response::generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request &
     return true;
 }
 
-void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req)
+void Response::servListingDiren(Request	&req)
 {
 	std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    autoIndexOn = getInfoConfig(ConfigPars, "autoindex", loc, req);
-    index = getInfoConfig(ConfigPars, "index", loc, req);
+    autoIndexOn = getInfoConfig("autoindex", loc, req);
+    index = getInfoConfig("index", loc, req);
 
     if (!index.empty())
     {
@@ -149,25 +149,25 @@ void Response::servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req
             if (S_ISDIR(st.st_mode) || access(htmlFound.c_str(), R_OK) != 0)
             {
                 if (autoIndexOn == "on")
-                    generateAutoIndexOn(ConfigPars, req);
+                    generateAutoIndexOn(req);
                 else
-                    responseError(403, " Forbidden", ConfigPars, req);
+                    responseError(403, " Forbidden", req);
                 return ;
             }
             prepareFileResponse(htmlFound, checkContentType(1), req);
         }
         else if (autoIndexOn == "on")
-            generateAutoIndexOn(ConfigPars, req);
+            generateAutoIndexOn(req);
         else
-            responseError(403, " Forbidden", ConfigPars, req);
+            responseError(403, " Forbidden", req);
     }
     else if (autoIndexOn == "on")
-        generateAutoIndexOn(ConfigPars, req);
+        generateAutoIndexOn(req);
     else
-        responseError(403, " Forbidden", ConfigPars, req);
+        responseError(403, " Forbidden", req);
 }
 
-void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector<ConfigNode> ConfigPars, int statusCode)
+void    Response::nonRedirect(std::string redirectUrl, Request &req, int statusCode)
 {
     staticFileBody = redirectUrl;
     staticFilePos = 0;
@@ -250,7 +250,7 @@ void    Response::nonRedirect(std::string redirectUrl, Request &req, std::vector
     headerSent = 0;
 }
 
-void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars)
+void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Request &req)
 {
     int statusCode = std::atoi(redirect[0].c_str());
     std::string redirectUrl;
@@ -261,7 +261,7 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         redirectUrl = "";
     if (statusCode < 300 || statusCode > 308)
     {
-        nonRedirect(redirectUrl, req, ConfigPars, statusCode);
+        nonRedirect(redirectUrl, req, statusCode);
         return ;
     }
     staticFilePos = 0;
@@ -308,24 +308,24 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
     headerSent = 0;
 }
 
-void    Response::getResponse(Request	&req, std::vector<ConfigNode> ConfigPars)
+void    Response::getResponse(Request	&req)
 {
     struct stat st;
 
-    if (checkLocation(req, "GET", "allow_methods", ConfigPars) == -1)
+    if (checkLocation(req, "GET", "allow_methods") == -1)
         return ;
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::vector<std::string> redirect = getInfoConfigMultiple(ConfigPars, "return", loc, req);
+    std::vector<std::string> redirect = getInfoConfigMultiple("return", loc, req);
     if (redirect.size() != 0)
     {
-        prepareRedirectResponse(redirect, req, ConfigPars);
+        prepareRedirectResponse(redirect, req);
         return ;
     }
     _cgi.setcgiHeader("");
-    int checkCode = _cgi.IsCgiRequest(uri.c_str(), req, ConfigPars);
+    int checkCode = _cgi.IsCgiRequest(uri.c_str(), req);
     if (checkCode == 1)
     {
-        _cgi.handleCgiRequest(req, ConfigPars);
+        _cgi.handleCgiRequest(req);
         if (_cgi.getcgistatus() == CGI_RUNNING)
         {
             _cgi.sethasPendingCgi(true);
@@ -338,14 +338,14 @@ void    Response::getResponse(Request	&req, std::vector<ConfigNode> ConfigPars)
         return ;
     stat(uri.c_str(), &st);
     if (S_ISDIR(st.st_mode))
-        servListingDiren(ConfigPars, req);
+        servListingDiren(req);
     else
     {
         int code = prepareFileResponse(uri.c_str(), checkContentType(0), req);
         switch (code)
         {
-            case 404: responseError(404, " Not Found", ConfigPars, req); return;
-            case 403: responseError(403, " Forbidden", ConfigPars, req); return;
+            case 404: responseError(404, " Not Found", req); return;
+            case 403: responseError(403, " Forbidden", req); return;
         }
     }
 }

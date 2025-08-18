@@ -183,7 +183,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     return ;
 }
 
-void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vector<ConfigNode> ConfigPars, int &e)
+void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, int &e)
 {
     if (e != 200 && e != 201 && e != -1 && e != 42)
        res->setE(e);
@@ -191,20 +191,20 @@ void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vec
        res->setE(0);
 	switch (e)
 	{
-		case 500: res->responseError(500, " Internal Server Error", ConfigPars, *Request); return;
-		case 505: res->responseError(505, " HTTP Version Not Supported", ConfigPars, *Request); return;
-		case 501: res->responseError(501, " Not Implemented", ConfigPars, *Request); return;
-		case 400: res->responseError(400, " Bad Request", ConfigPars, *Request); return;
-		case 403: res->responseError(403, " Forbidden", ConfigPars, *Request); return;
-		case 404: res->responseError(404, " Not found", ConfigPars, *Request); return;
-		case 405: res->responseError(405, " Method Not Allowed", ConfigPars, *Request); return;
-        case 411: res->responseError(411, " Length Required", ConfigPars, *Request); return;
-		case 413: res->responseError(413, " Content Too Large", ConfigPars, *Request); return;
-		case 414: res->responseError(414, " URI Too Long", ConfigPars, *Request); return;
-		case 415: res->responseError(415, " Unsupported Media Type", ConfigPars, *Request); return;
+		case 500: res->responseError(500, " Internal Server Error", *Request); return;
+		case 505: res->responseError(505, " HTTP Version Not Supported", *Request); return;
+		case 501: res->responseError(501, " Not Implemented", *Request); return;
+		case 400: res->responseError(400, " Bad Request", *Request); return;
+		case 403: res->responseError(403, " Forbidden", *Request); return;
+		case 404: res->responseError(404, " Not found", *Request); return;
+		case 405: res->responseError(405, " Method Not Allowed", *Request); return;
+        case 411: res->responseError(411, " Length Required", *Request); return;
+		case 413: res->responseError(413, " Content Too Large", *Request); return;
+		case 414: res->responseError(414, " URI Too Long", *Request); return;
+		case 415: res->responseError(415, " Unsupported Media Type", *Request); return;
 	}
 	Request->SetContext(ctx);
-	res->moveToResponse(ctx->ident, *Request, ConfigPars, e);
+	res->moveToResponse(*Request, e);
 }
 
 
@@ -399,7 +399,7 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 				// std::cout << it->first << ": " << it->second << std::endl;
 			// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m" << std::endl;
 
-			SetUpResponse(ctx, response, request, ConfigPars, e);
+			SetUpResponse(ctx, response, request, e);
 			// std::cout << "\033[32m[+]\033[0m End building response" << std::endl;
 			if (response->_cgi.gethasPendingCgi())
 				return;
@@ -418,7 +418,7 @@ void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response 
 	pid_t exitedPid = ctx->cgi_pid;
 	if (response->_cgi.gethasPendingCgi() && response->_cgi.getpid_1() == exitedPid)
 	{
-		if (response->checkPendingCgi(ConfigPars, *request))
+		if (response->checkPendingCgi(*request))
 		{
 			pid_t pid = response->_cgi.getpid_1();
 			struct kevent kev;
@@ -448,7 +448,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
         kill(pid, SIGTERM);
         ctx->cgi_pid = 0;
         ctx->is_cgi = false;
-        response._cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, request);
+        response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
         response._cgi.setcgistatus(CGI_ERROR);
         if (!response._cgi.getinfile().empty())
             unlink(response._cgi.getinfile().c_str());

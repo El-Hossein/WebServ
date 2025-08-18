@@ -46,8 +46,8 @@ class Response
         std::string                    getChunk();
         bool                           getHasMore();
         int                            getClientFd();
-        ssize_t                        getBytesSent();
-        ssize_t                        getBytesWritten();
+        size_t                        getBytesSent();
+        long                        getBytesWritten();
         void                           setHasMore(bool _hasmore);
         std::string                    checkContentType(int index);
         bool                           getNextChunk(size_t chunkSize);
@@ -58,22 +58,22 @@ class Response
         void                           setBytesWritten(ssize_t _byteswritten);
         std::string                    postResponseSuccess(std::string message);
         std::string                    deleteResponseSuccess(std::string message);
-        void                           getResponse(Request	&req, std::vector<ConfigNode> ConfigPars);
-        void                           deleteMethod(Request &req, std::vector<ConfigNode> ConfigPars);
-        void                           deleteResponse(std::vector<ConfigNode> ConfigPars, Request &req);
-        bool                           checkPendingCgi(std::vector<ConfigNode> ConfigPars, Request &req);
-        void                           postMethod(Request &req, std::vector<ConfigNode> ConfigPars, int e);
-        void                           servListingDiren(std::vector<ConfigNode> ConfigPars, Request	&req);
-        bool                           generateAutoIndexOn(std::vector<ConfigNode> ConfigPars, Request	&req);
+        void                           getResponse(Request	&req);
+        void                           deleteMethod(Request &req);
+        void                           deleteResponse(Request &req);
+        bool                           checkPendingCgi(Request &req);
+        void                           postMethod(Request &req, int e);
+        void                           servListingDiren(Request	&req);
+        bool                           generateAutoIndexOn(Request	&req);
         int                            prepareFileResponse(std::string filepath, std::string contentType, Request &req);
-        void                           moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars, int e);
-        void                           responseError(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req);
-        void                           nonRedirect(std::string redirectUrl, Request &req, std::vector<ConfigNode> ConfigPars, int statusCode);
-        int                            checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
-        void                           prepareRedirectResponse(std::vector<std::string> redirect, Request &req, std::vector<ConfigNode> ConfigPars);
+        void                           moveToResponse(Request	&req, int e);
+        void                           responseError(int statusCode, std::string message, Request &req);
+        void                           nonRedirect(std::string redirectUrl, Request &req, int statusCode);
+        int                            checkLocation(Request &req, std::string meth, std::string directive);
+        void                           prepareRedirectResponse(std::vector<std::string> redirect, Request &req);
 };
 
 
 std::string                            frontPage(std::string uri);
-std::string                            getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
-std::vector<std::string>               getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+std::string                            getInfoConfig(std::string what, std::string location, Request &req);
+std::vector<std::string>               getInfoConfigMultiple(std::string what, std::string location, Request &req);

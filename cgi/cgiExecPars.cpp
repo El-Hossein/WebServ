@@ -53,7 +53,7 @@ void     Cgi::parseOutput()
         cgiHeader += "Content-Type: text/html\r\n";
 }
 
-char    **cgiEnvVariables(Request &req, std::vector<ConfigNode> ConfigPars, std::string _pathInfo)
+char    **cgiEnvVariables(Request &req, std::string _pathInfo)
 {
     char **envp = new char*[14];
 
@@ -136,7 +136,7 @@ void    execCgi(const char *scriptPath, char **envp)
 }
 
 
-int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
+void Cgi::executeCgiScript(Request &req)
 {
     std::ostringstream out;
     out << "/tmp/cgiOutput_" << uniq;
@@ -144,7 +144,10 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
     outFile = out.str();
     pid = fork();
     if (pid == -1)
-       return responseErrorcgi(500, " Internal Server Error", ConfigPars, req);
+    {
+        responseErrorcgi(500, " Internal Server Error", req);
+        return ;
+    }
     else if (pid == 0)
     {
         int inFd = open(inpFile.c_str(), O_RDONLY);
@@ -169,7 +172,7 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
                 exit(1);
             }
         }
-        envp = cgiEnvVariables(req, ConfigPars, pathInfo);
+        envp = cgiEnvVariables(req, pathInfo);
         execCgi(scriptFile.c_str(), envp);
     }
     else
@@ -205,8 +208,5 @@ int Cgi::executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars)
 
 		req.SetTimeOut(std::time(NULL));
         // std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true)  << std::endl;
-
-        return 2;
     }
-    return true;
 }
