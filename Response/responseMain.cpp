@@ -5,7 +5,7 @@ Response::Response()
     
 }
 
-Response::Response(Request	&req, int _clientFd)
+Response::Response(int _clientFd)
 {
     clientFd = _clientFd;
     filePos = 0;
@@ -47,7 +47,7 @@ void    Response::setHasMore(bool _hasmore)
     hasMore = _hasmore;
 }
 
-ssize_t  Response::getBytesSent()
+size_t  Response::getBytesSent()
 {
     return bytesSent;
 }
@@ -57,7 +57,7 @@ void  Response::setBytesSent(ssize_t _bytessent)
     bytesSent = _bytessent;
 }
 
-ssize_t  Response::getBytesWritten()
+long  Response::getBytesWritten()
 {
     return bytesWritten;
 }
@@ -118,12 +118,12 @@ std::string readFileToString(const std::string& path)
     return contents.str();
 }
 
-void     Response::responseError(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req)
+void     Response::responseError(int statusCode, std::string message, Request &req)
 {
     std::string body;
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::string root = getInfoConfig(ConfigPars, "root", loc, req);
-    std::vector<std::string> errorPage = getInfoConfigMultiple(ConfigPars, "error_page", loc, req);
+    std::string root = getInfoConfig("root", loc, req);
+    std::vector<std::string> errorPage = getInfoConfigMultiple("error_page", loc, req);
     errorP = "";
     for (size_t i = 0; i + 1 < errorPage.size(); i += 2)
 	{
@@ -179,7 +179,7 @@ void     Response::responseError(int statusCode, std::string message, std::vecto
     headerSent = 0;
 }
 
-std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+std::string getInfoConfig(std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
 
@@ -189,7 +189,7 @@ std::string getInfoConfig(std::vector<ConfigNode> ConfigPars, std::string what, 
 	return "";
 }
 
-std::vector<std::string> getInfoConfigMultiple(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+std::vector<std::string> getInfoConfigMultiple(std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
 
@@ -250,30 +250,30 @@ std::string Response::checkContentType(int index)
         return "Content-Type: application/octet-stream\r\n";
 }
 
-int Response::checkLocation(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
+int Response::checkLocation(Request &req, std::string meth, std::string directive)
 {
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::vector<std::string> allowed_methods = getInfoConfigMultiple(ConfigPars, directive, loc, req);
+    std::vector<std::string> allowed_methods = getInfoConfigMultiple(directive, loc, req);
     if (std::find(allowed_methods.begin(), allowed_methods.end(), meth) == allowed_methods.end())
     {
-        responseError(405, " Method Not Allowed", ConfigPars, req);
+        responseError(405, " Method Not Allowed", req);
         return -1;
     }
     return 0;
 }
 
-void    Response::moveToResponse(int &client_fd, Request	&req, std::vector<ConfigNode> ConfigPars, int e)
+void    Response::moveToResponse(Request	&req, int e)
 {
     uri = req.GetFullPath();
     method = req.GetHeaderValue("method");
     pathRequested = req.GetHeaderValue("path");
 
     if (method == "GET")
-        getResponse(req, ConfigPars);
+        getResponse(req);
     else if (method == "POST")
-        postMethod(req, ConfigPars, e);
+        postMethod(req, e);
     else if (method == "DELETE")
-        deleteMethod(req, ConfigPars);
+        deleteMethod(req);
     else
-        responseError(501, " Method not implemented", ConfigPars, req);
+        responseError(501, " Method not implemented", req);
 }

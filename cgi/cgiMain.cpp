@@ -126,7 +126,7 @@ void    Cgi::setFilePos(size_t _filepos)
     cgiFilePos = _filepos;
 }
 
-size_t  Cgi::getFilePos()
+long  Cgi::getFilePos()
 {
     return cgiFilePos;
 }
@@ -136,7 +136,7 @@ void Cgi::setCgiHeaderSent(size_t _cgiHeaderSent)
     cgiHeaderSent = _cgiHeaderSent;
 }
 
-ssize_t Cgi::getFileSize()
+long Cgi::getFileSize()
 {
     return cgiFileSize;
 }
@@ -151,7 +151,7 @@ bool    Cgi::getUsingCgi()
     return usingCgi;
 }
 
-std::string Cgi::getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+std::string Cgi::getInfoConfigCgi(std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
 
@@ -161,7 +161,7 @@ std::string Cgi::getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::strin
 	return "";
 }
 
-std::vector<std::string> Cgi::getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req)
+std::vector<std::string> Cgi::getInfoConfigMultipleCgi(std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
 
@@ -224,45 +224,45 @@ void Cgi::splitPathInfo(Request &req)
         pathInfo = fullPath.substr(posLength);
 }
 
-int Cgi::checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars)
+int Cgi::checkLocationCgi(Request &req, std::string meth, std::string directive)
 {
     std::string	 loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
-    std::vector<std::string> allowed_cgi = getInfoConfigMultipleCgi(ConfigPars, directive, loc, req);
+    std::vector<std::string> allowed_cgi = getInfoConfigMultipleCgi(directive, loc, req);
     if (std::find(allowed_cgi.begin(), allowed_cgi.end(), meth) == allowed_cgi.end())
     {
-        responseErrorcgi(403, " Forbidden", ConfigPars, req);
+        responseErrorcgi(403, " Forbidden", req);
         return -1;
     }
     return 0;
 }
 
-void Cgi::handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars)
+void Cgi::handleCgiRequest(Request &req)
 {
     splitPathInfo(req);
     int code = fileChecking(scriptFile);
     switch (code)
     {
-        case 403: responseErrorcgi(403, " Forbidden", ConfigPars, req); return;
-        case 404: responseErrorcgi(404, " not found", ConfigPars, req); return;
+        case 403: responseErrorcgi(403, " Forbidden", req); return;
+        case 404: responseErrorcgi(404, " not found", req); return;
     }
     if (!memoExt.empty())
     {
-        if (checkLocationCgi(req, memoExt, "allow_cgi", ConfigPars) == -1)
+        if (checkLocationCgi(req, memoExt, "allow_cgi") == -1)
             return ;
         memoExt = "";
     }
-    int _status = executeCgiScript(req, ConfigPars);
+    executeCgiScript(req);
     pid_1 = pid;
 }
 
-int Cgi::IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars)
+int Cgi::IsCgiRequest(std::string uri, Request &req)
 {
     size_t index = uri.find("/cgiScripts/");
     if (index == std::string::npos)
     {
         if (uri.find("/cgiScripts") != std::string::npos)
         {
-            if (servListingDirenCgi(req, ConfigPars, uri) == -1)
+            if (servListingDirenCgi(req, uri) == -1)
                 return -1;
             return 0;
         }
