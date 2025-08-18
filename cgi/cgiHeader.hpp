@@ -63,8 +63,8 @@ class Cgi
         pid_t                       getpid_1();
         std::string                 getinfile();
         std::string                 getoutfile();
-        size_t                      getFilePos();
-        ssize_t                     getFileSize();
+        long                      getFilePos();
+        long                     getFileSize();
         void                        parseOutput();
         bool                        getUsingCgi();
         std::string                 getCgiHeader();
@@ -87,15 +87,15 @@ class Cgi
         void                        setCgiHeaderSent(size_t _cgiHeaderSent);
         void                        setStatCgiFilePos(size_t _statCgifilepos);
         void                        setUsingStatCgiFile(bool _usingcgistatfile);
-        int                         executeCgiScript(Request &req, std::vector<ConfigNode> ConfigPars);
-        void                        handleCgiRequest(Request &req, std::vector<ConfigNode> ConfigPars);
-        bool                        generateAutoIndexOnCgi(std::vector<ConfigNode> ConfigPars, Request &req);
-        int                         IsCgiRequest(std::string uri, Request &req, std::vector<ConfigNode> ConfigPars);
-        int                         servListingDirenCgi(Request &req, std::vector<ConfigNode> ConfigPars, std::string uri);
-        bool                        responseErrorcgi(int statusCode, std::string message, std::vector<ConfigNode> ConfigPars, Request &req);
-        std::string                 getInfoConfigCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
-        int                         checkLocationCgi(Request &req, std::string meth, std::string directive, std::vector<ConfigNode> ConfigPars);
-        std::vector<std::string>    getInfoConfigMultipleCgi(std::vector<ConfigNode> ConfigPars, std::string what, std::string location, Request &req);
+        void                         executeCgiScript(Request &req);
+        void                        handleCgiRequest(Request &req);
+        bool                        generateAutoIndexOnCgi(Request &req);
+        int                         IsCgiRequest(std::string uri, Request &req);
+        int                         servListingDirenCgi(Request &req, std::string uri);
+        void                        responseErrorcgi(int statusCode, std::string message, Request &req);
+        std::string                 getInfoConfigCgi(std::string what, std::string location, Request &req);
+        int                         checkLocationCgi(Request &req, std::string meth, std::string directive);
+        std::vector<std::string>    getInfoConfigMultipleCgi(std::string what, std::string location, Request &req);
         
 };
 
