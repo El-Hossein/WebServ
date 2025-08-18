@@ -88,9 +88,9 @@ bool    Response::sendCgiScript(size_t chunkSize)
         std::string line;
         while (std::getline(f, line))
         {
-            if (!line.empty() && line[line.size() - 1] == '\r')
+            if (!line.empty() && line[line.size() - 1] == '\n')
                 line.erase(line.size() - 1);
-            if (line.empty()) 
+            if (line.empty())
                 break;
         }
         _cgi.setFilePos(0);
