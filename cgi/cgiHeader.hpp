@@ -22,6 +22,7 @@ class Cgi
 {
     private :
         pid_t               pid;
+        int                 kq;
         std::ifstream       file;
         std::string         uniq;
         pid_t               pid_1;
@@ -56,6 +57,7 @@ class Cgi
         ~Cgi();
         
 
+        void                        setKq(int _kq);
         std::ifstream&              getFile();
         time_t                      gettime();
         long                        getCgiCL();
