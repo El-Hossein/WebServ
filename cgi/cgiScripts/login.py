@@ -32,7 +32,7 @@ def get_login_page(cookie_payload, cookie_header):
     <head><meta charset="utf-8"><title>Login</title></head>
     <body>
     <h1>Login Page</h1>
-    <form action="/Desktop/WebServ/cgi/cgiScripts/login.py" method="POST">
+    <form action="/cgi/cgiScripts/login.py" method="POST">
     <label>Username: <input type="text" name="username" required></label><br><br>
     <label>Password: <input type="password" name="password" required></label><br><br>
     <input type="submit" value="Login">

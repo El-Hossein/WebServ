@@ -12,20 +12,31 @@ HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
 HttpServer::~HttpServer()	{ }
 
 // Get all the ports from the configuration file
-std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
+bool hasDuplicates(const std::vector<int>& vector)
 {
-    std::set<int> allPorts;
-
-    for (size_t i = 0; i < ConfigPars.size(); i++)
+    std::set<int> seen;
+    for (std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
     {
-        std::vector<std::string> ConfPort =
-            ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
-
-        for (size_t j = 0; j < ConfPort.size(); j++)
-            allPorts.insert(atoi(ConfPort[j].c_str()));
+        if (seen.find(*it) != seen.end())
+            return true;
+        seen.insert(*it);
     }
+    return false;
+}
 
-    return allPorts;
+void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<int > &AllPorts)
+{
+	for (size_t i = 0; i < ConfigPars.size(); i++)
+	{
+		std::vector<std::string> ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
+		if (!ConfPort.empty())
+		{
+			for (size_t j = 0; j < ConfPort.size(); j++)
+				AllPorts.push_back(atoi(ConfPort.at(j).c_str()));
+		}
+	}
+    if (hasDuplicates(AllPorts) == true)
+        throw std::runtime_error("Error: Ports Are duplicated");
 }
 
 // Set up the server address for binding
@@ -34,12 +45,12 @@ void SetUpForBind(struct sockaddr_in &server_addr, int port)
 	// Bind the socket to an address
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(port);
 }
 
 // Bind the socket to an address and listen on the socket
-int BindAndListen(int server_fd, struct sockaddr_in server_addr, int port, int i)
+int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 {
 	int opt = 1;
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
@@ -73,11 +84,11 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
 
     globalKq = kq;
-
-    std::set<int> AllPorts = GetAllPorts(ConfigPars);
+    std::vector<int > AllPorts;
+    GetAllPorts(ConfigPars, AllPorts);
 
     size_t i = 0;
-    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
+    for (std::vector<int >::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
     {
         int port = *it;
 
@@ -101,7 +112,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 
         struct sockaddr_in server_addr;
         SetUpForBind(server_addr, port);
-        if (BindAndListen(server_fd, server_addr, port, i) == 1)
+        if (BindAndListen(server_fd, server_addr) == 1)
         {
             close(server_fd);
             continue;
@@ -156,7 +167,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     int server_port = ntohs(server_addr.sin_port);
 
     // std::cout << "-----------------------------------------------------------------------------" << std::endl;
-    // std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
+    std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
 
     Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
@@ -350,7 +361,6 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 		response->setHeaderSent(0);
 		response->_cgi.setCgiHeaderSent(0);
 		
-		struct kevent ev;
         // std::cout << "EEE: " << response->getE() << std::endl;
 		if (response->_cgi.getCheckConnection() == keepAlive && response->getE() == 0)
 		{
@@ -383,7 +393,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 
 }
 
-void HttpServer::handle_client_read(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_client_read(EventContext* ctx, Request * request, Response * response)
 {
 		request->SetTimeOut(std::time(NULL));
 		// std::cout << request->GetTimeOut() << std::endl;
@@ -413,7 +423,7 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 		}
 }
 
-void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response)
 {
 	pid_t exitedPid = ctx->cgi_pid;
 	if (response->_cgi.gethasPendingCgi() && response->_cgi.getpid_1() == exitedPid)
@@ -437,7 +447,7 @@ void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response 
 	}
 }
 
-void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response)
 {
 	if (ctx->cgi_pid != 0)
 	{
@@ -465,7 +475,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
 	}
 }
 
-void HttpServer::handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_timeout(EventContext* ctx, Request & request)
 {
 
 	if (!ctx || !ctx->req || !ctx->res)
@@ -508,7 +518,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             bool isServerSocket = false;
             for (size_t j = 0; j < server_fds.size(); ++j)
             {
-                if (server_fds[j] == events[i].ident)
+                if (server_fds[j] == (int)events[i].ident)
                 {
                     // std::cout << "\033[34mserver FD : " << events[i].ident << "\033[0m" << std::endl;
                     accept_new_client_fd(static_cast<int>(events[i].ident), ConfigPars);
@@ -522,7 +532,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             int filter = events[i].filter;
             int flags = events[i].flags;
             unsigned int fflags = events[i].fflags;
-            intptr_t ident = events[i].ident;
+            // intptr_t ident = events[i].ident;
 
             EventContext* ctx = static_cast<EventContext*>(events[i].udata);
             // std::cout << "client fd: " << ident << " | filter: " << filter << std::endl;
@@ -546,7 +556,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (fflags & NOTE_EXIT)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_cgi_exit(ctx, ctx->req, ctx->res, ConfigPars);
+                    handle_cgi_exit(ctx, ctx->req, ctx->res);
                     continue;
                 }
             }
@@ -572,7 +582,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (filter == EVFILT_READ)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_client_read(ctx, ctx->req, ctx->res, ConfigPars);
+                    handle_client_read(ctx, ctx->req, ctx->res);
                 }
                 else if (filter == EVFILT_WRITE)
                 {
@@ -582,7 +592,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 else if (filter == EVFILT_TIMER)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
+                    handle_timeout(ctx, *ctx->req);
                 }
             }
             else
@@ -590,7 +600,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (filter == EVFILT_TIMER)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_cgi_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
+                    handle_cgi_timeout(ctx, *ctx->req, *ctx->res);
                 }
             }
         }

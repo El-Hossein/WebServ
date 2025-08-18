@@ -22,7 +22,7 @@ struct EventContext {
 	bool registered_write;
 	bool registered_timer;
 	std::vector<pid_t> registered_procs; // pids for which EVFILT_PROC/EVFILT_TIMER were registered // <- new
-    EventContext() : ident(-1), req(NULL), res(NULL), cgi_pid(0),
+    EventContext() : ident(-1), cgi_pid(0),req(NULL), res(NULL), 
                  is_cgi(false), marked_for_deletion(false),
                  registered_read(false), registered_write(false),
                  registered_timer(false) {}
@@ -43,12 +43,12 @@ class HttpServer{
 		void RemoveClient(int client_fd);
 		void RemoveReqRes(int client_fd);
 
-		void handle_client_read(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars);
+		void handle_client_read(EventContext* ctx, Request * request, Response * response);
 		void handle_client_write(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars);
-		void handle_cgi_exit(EventContext* ctx, Request *request, Response *response, std::vector<ConfigNode> ConfigPars);
-		void handle_cgi_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars);
+		void handle_cgi_exit(EventContext* ctx, Request *request, Response *response);
+		void handle_cgi_timeout(EventContext* ctx, Request & request, Response & response);
 		void AddToKqueue(struct kevent &event, int kq, intptr_t ident, int filter, int flags, void *udata, int fflags, intptr_t data);
-		void handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars);
+		void handle_timeout(EventContext* ctx, Request & request);
 		std::vector<EventContext*> all_contexts;
 		void FreeContexts();
 	private:
