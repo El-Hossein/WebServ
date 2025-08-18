@@ -30,6 +30,16 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
+std::string	Request::GetUploadPath() const
+{
+	return this->UploadPath;
+}
+
+std::string	Request::GetLocation() const
+{
+	return this->Location;
+}
+
 bool	Request::GetIsCGI() const
 {
 	return this->IsCGI;
@@ -83,11 +93,6 @@ std::string	Request::GetHeaderValue(std::string	key) const
 std::map<std::string, std::string>	Request::GetQueryParams() const
 {
 	return this->QueryParams;
-}
-
-std::vector<std::string>	Request::GetPathParts() const
-{
-	return this->PathParts;
 }
 
 bool	Request::GetConnection() const
@@ -289,13 +294,13 @@ int		Request::HexaToInt(std::string	x)
 	for (size_t i = 0; i < x.size() ; i++)
 	{
 		if (HexaChars.find(x[i]) == std::string::npos)
-			PrintError("Invalide Hexa value 1", *this), throw 400;
+			PrintError("Invalide Hexa value", *this), throw 400;
 	}
     stream << x;
     stream >> std::hex >> y;
 
 	if (y < 0)
-			PrintError("Invalide Hexa value 2", *this), throw 400;
+			PrintError("Invalide Hexa value", *this), throw 400;
     return y;
 }
 
@@ -467,7 +472,6 @@ void   Request::HandlePath()
 			PrintError("Path Error", *this), throw 403; // Forbiden
 		else if (!part.empty() && part != ".")
 		{
-			PathParts.push_back(part);
 			this->FullSystemPath += "/";
 			this->FullSystemPath += part;
 		}
@@ -593,6 +597,9 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = BinaryOrRaw;
 		}
 	}
+	std::vector<std::string>	PostPath = ConfigNode::getValuesForKey(RightServer, "upload_store", Location);
+	if (!PostPath.empty())
+		UploadPath = PostPath[0];
 }
 
 void	Request::ParseHeaders()
@@ -601,6 +608,9 @@ void	Request::ParseHeaders()
 		PrintError("No Host has been found!", *this), throw 400;
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
+	SetServerDetails(); // Init localhost + port
+	ParseURI();
+	CheckIfAllowedMethod();
 	if (Method == POST)
 		PostRequiredHeaders();
 	else
@@ -608,9 +618,6 @@ void	Request::ParseHeaders()
 		if (BodyBuffer.size() > 0 && Headers.find("content-length") == Headers.end())
 			PrintError("Length Required", *this), throw 411; // If Body exists and the method is Get or Delete
 	}
-	SetServerDetails(); // Init localhost + port
-	ParseURI();
-	CheckIfAllowedMethod();
 
 	std::vector<std::string> Vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "NULL");
 	if (Vec.empty())
