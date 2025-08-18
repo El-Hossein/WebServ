@@ -1,5 +1,4 @@
 #include "HttpServer.hpp"
-#include <set>
 
 int globalKq = -1;
 
@@ -24,19 +23,19 @@ bool hasDuplicates(const std::vector<int>& vector)
     return false;
 }
 
-void GetAllPorts(std::vector<ConfigNode> ConfigPars, std::vector<int > &AllPorts)
+std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
 {
-	for (size_t i = 0; i < ConfigPars.size(); i++)
-	{
-		std::vector<std::string> ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
-		if (!ConfPort.empty())
-		{
-			for (size_t j = 0; j < ConfPort.size(); j++)
-				AllPorts.push_back(atoi(ConfPort.at(j).c_str()));
-		}
-	}
-    if (hasDuplicates(AllPorts) == true)
-        throw std::runtime_error("Error: Ports Are duplicated");
+    std::set<int> allPorts;
+
+    for (size_t i = 0; i < ConfigPars.size(); i++)
+    {
+        std::vector<std::string> ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "");
+
+        for (size_t j = 0; j < ConfPort.size(); j++)
+            allPorts.insert(atoi(ConfPort[j].c_str()));
+    }
+
+    return allPorts;
 }
 
 // Set up the server address for binding
@@ -84,11 +83,10 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
 
     globalKq = kq;
-    std::vector<int > AllPorts;
-    GetAllPorts(ConfigPars, AllPorts);
+    std::set<int> AllPorts = GetAllPorts(ConfigPars);
 
     size_t i = 0;
-    for (std::vector<int >::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
+    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
     {
         int port = *it;
 
