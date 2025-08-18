@@ -39,7 +39,7 @@ void Post::FindFileName(std::string &Buffer, std::string &Filename)
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 
 	if (stat(Dir.c_str(), &Tmp) != 0) // Check for directory existance 
-		obj.PrintError("Not Found 0", obj), throw 404;
+		obj.PrintError("Not Found", obj), throw 404;
 	Filename = Dir + "/" + Filename; // "/Users/zderfouf/goinfre/ServerUploads" + "/" + "file.txt"
 
 	OutFile.open(Filename.c_str(), std::ios::binary); // std::ios::app => to append
@@ -399,18 +399,18 @@ void	Post::HandlePost()
 	// 	HandleCGI();
 
 
-	std::cout << "DataType----->";
-	switch (obj.GetDataType())
-	{
-		case FixedLength:  { std::cout << "FixedLength!\n"; break ; }
-		case Chunked:  { std::cout << "Chunked!\n"; break ; }
-	}
-	std::cout << "ContentType----->";
-	switch (obj.GetContentType())
-	{
-		case _Boundary:  { std::cout << "_Boundary!\n"; break ; }
-		case BinaryOrRaw:  { std::cout << "BinaryOrRaw!\n"; break ; }
-	}
+	// std::cout << "DataType----->";
+	// switch (obj.GetDataType())
+	// {
+	// 	case FixedLength:  { std::cout << "FixedLength!\n"; break ; }
+	// 	case Chunked:  { std::cout << "Chunked!\n"; break ; }
+	// }
+	// std::cout << "ContentType----->";
+	// switch (obj.GetContentType())
+	// {
+	// 	case _Boundary:  { std::cout << "_Boundary!\n"; break ; }
+	// 	case BinaryOrRaw:  { std::cout << "BinaryOrRaw!\n"; break ; }
+	// }
 
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
