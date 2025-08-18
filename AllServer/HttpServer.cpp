@@ -1,5 +1,4 @@
 #include "HttpServer.hpp"
-#include <set>
 
 int globalKq = -1;
 
@@ -12,14 +11,25 @@ HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
 HttpServer::~HttpServer()	{ }
 
 // Get all the ports from the configuration file
+bool hasDuplicates(const std::vector<int>& vector)
+{
+    std::set<int> seen;
+    for (std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
+    {
+        if (seen.find(*it) != seen.end())
+            return true;
+        seen.insert(*it);
+    }
+    return false;
+}
+
 std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
 {
     std::set<int> allPorts;
 
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
-        std::vector<std::string> ConfPort =
-            ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "NULL");
+        std::vector<std::string> ConfPort = ConfigPars[i].getValuesForKey(ConfigPars[i], "listen", "");
 
         for (size_t j = 0; j < ConfPort.size(); j++)
             allPorts.insert(atoi(ConfPort[j].c_str()));
@@ -34,12 +44,12 @@ void SetUpForBind(struct sockaddr_in &server_addr, int port)
 	// Bind the socket to an address
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(port);
 }
 
 // Bind the socket to an address and listen on the socket
-int BindAndListen(int server_fd, struct sockaddr_in server_addr, int port, int i)
+int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 {
 	int opt = 1;
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
@@ -73,7 +83,6 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
 
     globalKq = kq;
-
     std::set<int> AllPorts = GetAllPorts(ConfigPars);
 
     size_t i = 0;
@@ -88,20 +97,16 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
             continue;
         }
 
-        int fdflags = fcntl(server_fd, F_GETFD);
-        if (fdflags != -1)
-            fcntl(server_fd, F_SETFD, fdflags | FD_CLOEXEC);
+        fcntl(server_fd, F_SETFD, FD_CLOEXEC);
 
-        int fl = fcntl(server_fd, F_GETFL, 0);
-        if (fl != -1)
-            fcntl(server_fd, F_SETFL, fl | O_NONBLOCK);
+        fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
         // int opt = 1;
         // setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
         struct sockaddr_in server_addr;
         SetUpForBind(server_addr, port);
-        if (BindAndListen(server_fd, server_addr, port, i) == 1)
+        if (BindAndListen(server_fd, server_addr) == 1)
         {
             close(server_fd);
             continue;
@@ -134,14 +139,10 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     }
 
     // Immediately set FD_CLOEXEC so future exec()'d children won't inherit this client socket
-    int fdflags = fcntl(client_fd, F_GETFD);
-    if (fdflags != -1)
-        fcntl(client_fd, F_SETFD, fdflags | FD_CLOEXEC);
+    fcntl(client_fd, F_SETFD, FD_CLOEXEC);
 
     // set non-blocking (preserve existing flags)
-    int fl = fcntl(client_fd, F_GETFL, 0);
-    if (fl != -1)
-        fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
+    fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
@@ -156,11 +157,11 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     int server_port = ntohs(server_addr.sin_port);
 
     // std::cout << "-----------------------------------------------------------------------------" << std::endl;
-    // std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
+    std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
 
     Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
-    Response* res = new Response(*req, client_fd);
+    Response* res = new Response(client_fd);
 
     // Create EventContext
 	EventContext* ctx = new EventContext;
@@ -183,7 +184,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     return ;
 }
 
-void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vector<ConfigNode> ConfigPars, int &e)
+void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, int &e)
 {
     if (e != 200 && e != 201 && e != -1 && e != 42)
        res->setE(e);
@@ -191,20 +192,20 @@ void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, std::vec
        res->setE(0);
 	switch (e)
 	{
-		case 500: res->responseError(500, " Internal Server Error", ConfigPars, *Request); return;
-		case 505: res->responseError(505, " HTTP Version Not Supported", ConfigPars, *Request); return;
-		case 501: res->responseError(501, " Not Implemented", ConfigPars, *Request); return;
-		case 400: res->responseError(400, " Bad Request", ConfigPars, *Request); return;
-		case 403: res->responseError(403, " Forbidden", ConfigPars, *Request); return;
-		case 404: res->responseError(404, " Not found", ConfigPars, *Request); return;
-		case 405: res->responseError(405, " Method Not Allowed", ConfigPars, *Request); return;
-        case 411: res->responseError(411, " Length Required", ConfigPars, *Request); return;
-		case 413: res->responseError(413, " Content Too Large", ConfigPars, *Request); return;
-		case 414: res->responseError(414, " URI Too Long", ConfigPars, *Request); return;
-		case 415: res->responseError(415, " Unsupported Media Type", ConfigPars, *Request); return;
+		case 500: res->responseError(500, " Internal Server Error", *Request); return;
+		case 505: res->responseError(505, " HTTP Version Not Supported", *Request); return;
+		case 501: res->responseError(501, " Not Implemented", *Request); return;
+		case 400: res->responseError(400, " Bad Request", *Request); return;
+		case 403: res->responseError(403, " Forbidden", *Request); return;
+		case 404: res->responseError(404, " Not found", *Request); return;
+		case 405: res->responseError(405, " Method Not Allowed", *Request); return;
+        case 411: res->responseError(411, " Length Required", *Request); return;
+		case 413: res->responseError(413, " Content Too Large", *Request); return;
+		case 414: res->responseError(414, " URI Too Long", *Request); return;
+		case 415: res->responseError(415, " Unsupported Media Type", *Request); return;
 	}
 	Request->SetContext(ctx);
-	res->moveToResponse(ctx->ident, *Request, ConfigPars, e);
+	res->moveToResponse(*Request, e);
 }
 
 
@@ -350,7 +351,6 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 		response->setHeaderSent(0);
 		response->_cgi.setCgiHeaderSent(0);
 		
-		struct kevent ev;
         // std::cout << "EEE: " << response->getE() << std::endl;
 		if (response->_cgi.getCheckConnection() == keepAlive && response->getE() == 0)
 		{
@@ -361,7 +361,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 			RemoveReqRes(fd);
 
 			Request* new_request = new Request(fd, ReadHeader, ConfigPars, server_port);
-			Response* new_response = new Response(*new_request, fd);
+			Response* new_response = new Response(fd);
 
 			ctx->req = new_request;
 			ctx->res = new_response;
@@ -383,7 +383,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 
 }
 
-void HttpServer::handle_client_read(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_client_read(EventContext* ctx, Request * request, Response * response)
 {
 		request->SetTimeOut(std::time(NULL));
 		// std::cout << request->GetTimeOut() << std::endl;
@@ -399,7 +399,7 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 				// std::cout << it->first << ": " << it->second << std::endl;
 			// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m" << std::endl;
 
-			SetUpResponse(ctx, response, request, ConfigPars, e);
+			SetUpResponse(ctx, response, request, e);
 			// std::cout << "\033[32m[+]\033[0m End building response" << std::endl;
 			if (response->_cgi.gethasPendingCgi())
 				return;
@@ -413,12 +413,12 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 		}
 }
 
-void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response)
 {
 	pid_t exitedPid = ctx->cgi_pid;
 	if (response->_cgi.gethasPendingCgi() && response->_cgi.getpid_1() == exitedPid)
 	{
-		if (response->checkPendingCgi(ConfigPars, *request))
+		if (response->checkPendingCgi(*request))
 		{
 			pid_t pid = response->_cgi.getpid_1();
 			struct kevent kev;
@@ -437,7 +437,7 @@ void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response 
 	}
 }
 
-void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response)
 {
 	if (ctx->cgi_pid != 0)
 	{
@@ -448,7 +448,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
         kill(pid, SIGTERM);
         ctx->cgi_pid = 0;
         ctx->is_cgi = false;
-        response._cgi.responseErrorcgi(504, " Gateway Timeout", ConfigPars, request);
+        response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
         response._cgi.setcgistatus(CGI_ERROR);
         if (!response._cgi.getinfile().empty())
             unlink(response._cgi.getinfile().c_str());
@@ -465,7 +465,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
 	}
 }
 
-void HttpServer::handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars)
+void HttpServer::handle_timeout(EventContext* ctx, Request & request)
 {
 
 	if (!ctx || !ctx->req || !ctx->res)
@@ -508,7 +508,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             bool isServerSocket = false;
             for (size_t j = 0; j < server_fds.size(); ++j)
             {
-                if (server_fds[j] == events[i].ident)
+                if (server_fds[j] == (int)events[i].ident)
                 {
                     // std::cout << "\033[34mserver FD : " << events[i].ident << "\033[0m" << std::endl;
                     accept_new_client_fd(static_cast<int>(events[i].ident), ConfigPars);
@@ -522,7 +522,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             int filter = events[i].filter;
             int flags = events[i].flags;
             unsigned int fflags = events[i].fflags;
-            intptr_t ident = events[i].ident;
+            // intptr_t ident = events[i].ident;
 
             EventContext* ctx = static_cast<EventContext*>(events[i].udata);
             // std::cout << "client fd: " << ident << " | filter: " << filter << std::endl;
@@ -546,7 +546,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (fflags & NOTE_EXIT)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_cgi_exit(ctx, ctx->req, ctx->res, ConfigPars);
+                    handle_cgi_exit(ctx, ctx->req, ctx->res);
                     continue;
                 }
             }
@@ -572,7 +572,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (filter == EVFILT_READ)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_client_read(ctx, ctx->req, ctx->res, ConfigPars);
+                    handle_client_read(ctx, ctx->req, ctx->res);
                 }
                 else if (filter == EVFILT_WRITE)
                 {
@@ -582,7 +582,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 else if (filter == EVFILT_TIMER)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
+                    handle_timeout(ctx, *ctx->req);
                 }
             }
             else
@@ -590,7 +590,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 if (filter == EVFILT_TIMER)
                 {
                     // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
-                    handle_cgi_timeout(ctx, *ctx->req, *ctx->res, ConfigPars);
+                    handle_cgi_timeout(ctx, *ctx->req, *ctx->res);
                 }
             }
         }
