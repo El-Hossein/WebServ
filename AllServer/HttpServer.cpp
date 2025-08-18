@@ -99,13 +99,9 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
             continue;
         }
 
-        int fdflags = fcntl(server_fd, F_GETFD);
-        if (fdflags != -1)
-            fcntl(server_fd, F_SETFD, fdflags | FD_CLOEXEC);
+        fcntl(server_fd, F_SETFD, FD_CLOEXEC);
 
-        int fl = fcntl(server_fd, F_GETFL, 0);
-        if (fl != -1)
-            fcntl(server_fd, F_SETFL, fl | O_NONBLOCK);
+        fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
         // int opt = 1;
         // setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -145,14 +141,10 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     }
 
     // Immediately set FD_CLOEXEC so future exec()'d children won't inherit this client socket
-    int fdflags = fcntl(client_fd, F_GETFD);
-    if (fdflags != -1)
-        fcntl(client_fd, F_SETFD, fdflags | FD_CLOEXEC);
+    fcntl(client_fd, F_SETFD, FD_CLOEXEC);
 
     // set non-blocking (preserve existing flags)
-    int fl = fcntl(client_fd, F_GETFL, 0);
-    if (fl != -1)
-        fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
+    fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
