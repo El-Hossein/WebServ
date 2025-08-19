@@ -419,7 +419,6 @@ void	Request::HandleQuery()
 			continue;
 		QueryParams.insert(make_pair(key, value));
 	}
-	// std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
 }
 
 void	Request::CheckFileExistance()
@@ -427,7 +426,6 @@ void	Request::CheckFileExistance()
 	struct stat FileStat;
 	std::string	tmp;
 	IsCGI ? tmp = PurePath(FullSystemPath) : tmp = FullSystemPath;
-
     if (stat(tmp.c_str(), &FileStat) != 0)
         Client = EndReading, throw 404;
     if (access(tmp.c_str(), W_OK) != 0)
@@ -458,39 +456,24 @@ void   Request::HandlePath()
 	DecodeHexaToChar(UriPath);
 	SetHeaderValue("path", UriPath);
 
-	Location = RightServer.GetRightLocation(UriPath); // {/}
-
+	Location = RightServer.GetRightLocation(UriPath);
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
-	// if (ConfigPath.empty())
-	// {
-	// 	std::getenv("HOME") ? FullSystemPath = std::getenv("HOME") : FullSystemPath = "/Users/zderfouf";
-	// }
-	// else
-	// 	FullSystemPath = ConfigPath[0];
+	if (ConfigPath.empty())
+		FullSystemPath = "./";
+	else
+		FullSystemPath = ConfigPath[0];
 
-	// if (!(Location == "/"))
-	// 	UriPath.erase(0, Location.size());
+	if (Location != "/")
+		UriPath.erase(0, Location.size());
 
-	// FullSystemPath += UriPath;
-
-	ConfigPath.empty() ? FullSystemPath = "/Users/eel-ghal" + UriPath
-		: FullSystemPath = ConfigPath[0] + UriPath;
-
-	std::cout << "FullSystemPath:{" << FullSystemPath << "}\n";
-
+	FullSystemPath += UriPath;
 	std::istringstream	stream(FullSystemPath);
 	std::string			part;
 
-	FullSystemPath.clear();
 	while (std::getline(stream, part, '/'))
 	{
 		if (part == "..")
 			PrintError("Path Error", *this), throw 403; // Forbiden
-		else if (!part.empty() && part != ".")
-		{
-			this->FullSystemPath += "/";
-			this->FullSystemPath += part;
-		}
 	}
 	IsCGI = CheckForCgi();
 	CheckFileExistance();
@@ -588,8 +571,6 @@ void	Request::PostRequiredHeaders()
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
 		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
-		if (ContentLength > 0 && !TotalBytesRead) // Bytes read from body == 0
-			PrintError("Empty Body", *this), throw 400;
 		if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
 			PrintError("Malformed Request", *this), throw 400;
 		this->DataType = FixedLength;
