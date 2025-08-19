@@ -491,7 +491,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
     while (true)
     {
         int nev = kevent(kq, NULL, 0, events, BACKLOG, NULL);
-		std::cout << "\033[34m------------------------Requests Send------------------------\033[0m" << std::endl;
+		// std::cout << "\033[34m------------------------Requests Send------------------------\033[0m" << std::endl;
         if (nev < 0)
         {
             if (errno == EINTR) continue; // interrupted by signal, safe to retry
@@ -521,7 +521,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             unsigned int fflags = events[i].fflags;
 
             EventContext* ctx = static_cast<EventContext*>(events[i].udata);
-            std::cout << "client fd: "  << " | filter: " << filter << std::endl;
+            // std::cout << "client fd: "  << " | filter: " << filter << std::endl;
 
             if (ctx == NULL)
                 continue;
@@ -531,14 +531,14 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 				continue;
 			}
 
-            std::cout << "\033[32m[+]\033[0m CLIENT -> CTX: CLIENT: " << ctx->ident << " | CGI ID: " << ctx->cgi_pid << " | is_cgi : " << ctx->is_cgi  << std::endl;
+            // std::cout << "\033[32m[+]\033[0m CLIENT -> CTX: CLIENT: " << ctx->ident << " | CGI ID: " << ctx->cgi_pid << " | is_cgi : " << ctx->is_cgi  << std::endl;
 
             if (filter == EVFILT_PROC)
             {
                 // process/child events (CGI)
                 if (fflags & NOTE_EXIT)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_exit(ctx, ctx->req, ctx->res);
                     continue;
                 }
@@ -564,17 +564,17 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             {
                 if (filter == EVFILT_READ)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_read(ctx, ctx->req, ctx->res);
                 }
                 else if (filter == EVFILT_WRITE)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter Write client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Write client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_write(ctx, ctx->req, ctx->res, ConfigPars);
                 }
                 else if (filter == EVFILT_TIMER)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_timeout(ctx, *ctx->req);
                 }
             }
@@ -582,7 +582,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             {
                 if (filter == EVFILT_TIMER)
                 {
-                    std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_timeout(ctx, *ctx->req, *ctx->res);
                 }
             }
