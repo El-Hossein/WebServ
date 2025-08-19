@@ -155,9 +155,9 @@ bool Response::checkPendingCgi(Request &req)
             _cgi.setcgistatus(CGI_ERROR);
         }
         if (!_cgi.getinfile().empty())
-            unlink(_cgi.getinfile().c_str());
+            std::remove(_cgi.getinfile().c_str());
         if (!_cgi.getoutfile().empty())   
-            unlink(_cgi.getoutfile().c_str());
+            std::remove(_cgi.getoutfile().c_str());
         _cgi.sethasPendingCgi(false);
         return true;
     }
@@ -171,9 +171,9 @@ bool Response::checkPendingCgi(Request &req)
         _cgi.sethasPendingCgi(false);
 
         if (!_cgi.getinfile().empty())
-            unlink(_cgi.getinfile().c_str());
+            std::remove(_cgi.getinfile().c_str());
         if (!_cgi.getoutfile().empty())   
-            unlink(_cgi.getoutfile().c_str());
+            std::remove(_cgi.getoutfile().c_str());
         return true;
     }
     return false;
