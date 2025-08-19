@@ -457,10 +457,24 @@ void   Request::HandlePath()
 	SetHeaderValue("path", UriPath);
 
 	Location = RightServer.GetRightLocation(UriPath); // {/}
+
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
+	// if (ConfigPath.empty())
+	// {
+	// 	std::getenv("HOME") ? FullSystemPath = std::getenv("HOME") : FullSystemPath = "/Users/zderfouf";
+	// }
+	// else
+	// 	FullSystemPath = ConfigPath[0];
+
+	// if (!(Location == "/"))
+	// 	UriPath.erase(0, Location.size());
+
+	// FullSystemPath += UriPath;
 
 	ConfigPath.empty() ? FullSystemPath = "/Users/eel-ghal" + UriPath
 		: FullSystemPath = ConfigPath[0] + UriPath;
+
+	std::cout << "FullSystemPath:{" << FullSystemPath << "}\n";
 
 	std::istringstream	stream(FullSystemPath);
 	std::string			part;
