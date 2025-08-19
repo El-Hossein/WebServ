@@ -2,7 +2,7 @@ NAME = webserv
 
 CC = c++
 
-FLAGS = -fsanitize=address -g3 #-Wall -Wextra -Werror -std=c++98
+FLAGS = -fsanitize=address -g3 -Wall -Wextra -Werror -std=c++98
 
 SRC	=	./pars_config/config.cpp main.cpp ./AllServer/HttpServer.cpp \
 		./FunctionTools.cpp ./Request/Request.cpp ./Request/Post.cpp \
