@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <stdexcept>
 
 
 void	HttpServer::SetAllContexts(EventContext* ctx) { all_contexts.push_back(ctx);	}
@@ -8,19 +9,6 @@ HttpServer::HttpServer()	{ }
 HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
 
 HttpServer::~HttpServer()	{ }
-
-// Get all the ports from the configuration file
-bool hasDuplicates(const std::vector<int>& vector)
-{
-    std::set<int> seen;
-    for (std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
-    {
-        if (seen.find(*it) != seen.end())
-            return true;
-        seen.insert(*it);
-    }
-    return false;
-}
 
 std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
 {
@@ -65,12 +53,7 @@ int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 void HttpServer::AddToKqueue(struct kevent &event, int kq, intptr_t ident, int filter, int flags, void *udata, int fflags, intptr_t data)
 {
 	EV_SET(&event, ident, filter, flags, fflags, data, udata);
-	if (kevent(kq, &event, 1, NULL, 0, NULL) == -1)
-	{
-		// std::cout << "\033[31m[-]\033[0m \033[31mkevent failed for ident " << ident << ": " << strerror(errno) << " client\033[0m" << std::endl;
-		// std::cout << "\033[31m[-]\033[0m \033[31mfilter: " << filter  << " | flags: " << flags << " | fflags: " << fflags << " client\033[0m" << std::endl;
-		// Continue — don't throw; keep server resilient
-	}
+	kevent(kq, &event, 1, NULL, 0, NULL);
 }
 
 //done with the server setup
@@ -111,7 +94,10 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         }
 
         struct kevent event;
-        AddToKqueue(event, kq, server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, 0, 0);
+        // AddToKqueue(event, kq, server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, 0, 0);
+        EV_SET(&event, server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	    if(kevent(kq, &event, 1, NULL, 0, NULL) == -1)
+            throw std::runtime_error("\033[31mkevent failed\033[0m");
         server_fds.push_back(server_fd);
 
         std::cout << "\033[32m[+]\033[0m \033[32mServer " << i << " listening on port " << port << "\033[0m" << std::endl;
@@ -177,8 +163,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 	AddToKqueue(kev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, ctx, 0, NULL);
 
     EV_SET(&kev, client_fd, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
-	if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
-		// std::cout << "\033[31m[+]\033[0m \033[31mkevent failed for ident " << client_fd << ": " << strerror(errno) << " EVFILT_TIMER client\033[0m" << std::endl;
+	kevent(kq, &kev, 1, NULL, 0, NULL);
     return ;
 }
 
@@ -252,7 +237,6 @@ void HttpServer::RemoveClient(int client_fd)
             }
             else
             {
-                // fallback: try single pid fields but only if safe
                 pid_t proc_pid = ctx->cgi_pid;
                 if (proc_pid == 0 && ctx->res)
                 {
@@ -439,27 +423,30 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
 {
 	if (ctx->cgi_pid != 0)
 	{
-        pid_t pid = response._cgi.getpid_1();
-        struct kevent kev;
-        EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-        kevent(kq, &kev, 1, NULL, 0, NULL);
-        kill(pid, SIGTERM);
-        ctx->cgi_pid = 0;
-        ctx->is_cgi = false;
-        response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
-        response._cgi.setcgistatus(CGI_ERROR);
-        if (!response._cgi.getinfile().empty())
-            unlink(response._cgi.getinfile().c_str());
-        if (!response._cgi.getoutfile().empty())   
-            unlink(response._cgi.getoutfile().c_str());
-        response._cgi.sethasPendingCgi(false);
-        request.SetTimeOut(std::time(NULL));
-        struct kevent ev;
-        int client_fd = response.getClientFd();
-        AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
-        AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
-        // AddToKqueue(ev, kq, client_fd, EVFILT_TIMER, EV_DISABLE, ctx, 0, 0);
-        return;
+        time_t currentTime = time(NULL);
+        if(currentTime - request.GetTimeOut() >= 30)
+        {
+            pid_t pid = response._cgi.getpid_1();
+            struct kevent kev;
+            EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+            kevent(kq, &kev, 1, NULL, 0, NULL);
+            kill(pid, SIGTERM);
+            ctx->cgi_pid = 0;
+            ctx->is_cgi = false;
+            response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
+            response._cgi.setcgistatus(CGI_ERROR);
+            if (!response._cgi.getinfile().empty())
+                unlink(response._cgi.getinfile().c_str());
+            if (!response._cgi.getoutfile().empty())   
+                unlink(response._cgi.getoutfile().c_str());
+            response._cgi.sethasPendingCgi(false);
+            request.SetTimeOut(std::time(NULL));
+            struct kevent ev;
+            int client_fd = response.getClientFd();
+            AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
+            AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
+            return;
+        }
 	}
 }
 
@@ -520,16 +507,12 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
             int filter = events[i].filter;
             int flags = events[i].flags;
             unsigned int fflags = events[i].fflags;
-            // intptr_t ident = events[i].ident;
 
             EventContext* ctx = static_cast<EventContext*>(events[i].udata);
             std::cout << "client fd: "  << " | filter: " << filter << std::endl;
 
             if (ctx == NULL)
-            {
-                std::cout << "\033[31mWarning: event with NULL udata for ident "  << " - skipping\033[0m" << std::endl;
                 continue;
-            }
 			if (ctx->marked_for_deletion)
 			{
 				/* std::cout << "Skipping event for ctx marked for deletion: " << (void*)ctx << std::endl; */

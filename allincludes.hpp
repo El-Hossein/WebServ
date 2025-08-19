@@ -64,4 +64,5 @@ struct	ChunkVars
 	std::string		Temp;
 };
 
-void AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
+void		AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
+std::string	intToString(int n);

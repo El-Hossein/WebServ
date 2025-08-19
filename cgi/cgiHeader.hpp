@@ -63,6 +63,7 @@ class Cgi
         long                        getCgiCL();
         pid_t                       getpid_1();
         std::string                 getinfile();
+        std::string                 getcgiBody();
         std::string                 getoutfile();
         long                        getFilePos();
         long                        getFileSize();
@@ -101,5 +102,4 @@ class Cgi
         
 };
 
-std::string                         intToString(int n);
 std::string                         readFileToStringCgi(std::string path);
