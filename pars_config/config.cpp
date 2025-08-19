@@ -171,13 +171,13 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
     {
         if (key == "return")
             throw std::runtime_error("return should have 1 or 2 in the same return");
-        if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
-        if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+        if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
+        if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
     }
     else
     {
-        if (max != -1 && (int)(count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + std::to_string(max) + ".");
-        if (mult != -1 && (count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + std::to_string(mult) + ".");
+        if (max != -1 && (int)(count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
+        if (mult != -1 && (count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
     }
 }
 
@@ -567,7 +567,7 @@ ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDeta
     if (ServerDetails.IsPortExist == true)
         port = ServerDetails.ServerPort.substr(ServerDetails.ServerPort.find(":") + 1);
     else 
-        port = std::to_string(ServerDetails.RealPort);
+        port = intToString(ServerDetails.RealPort);
     // std::cout << "Host: " << host << std::endl;
     // std::cout << "port: " << port << std::endl;
     return  GetTheServer(ConfigPars, host, "server_names", port);
