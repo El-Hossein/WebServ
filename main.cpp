@@ -9,7 +9,7 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 	try
 	{
 		if (ConfigFilePath.size() < 6 ||  ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
-	        throw std::runtime_error("Error: Config file does not have the correct extension. {.conf}");
+	        throw"Error: Config file does not have the correct extension. {.conf}";
 		StructConf(ConfigFilePath, ConfigPars);
 		// if(Printall == 1)
 		// {
@@ -21,11 +21,16 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 		// 	}
 		// }
 	}
-	catch (const std::exception &e)
+	catch (char const*e)
 	{
-		std::cerr << e.what() << std::endl;
+		std::cerr << e << std::endl;
 		return 1;
 	}
+	catch (const std::string &e)
+    {
+        std::cout << e << std::endl;
+		return 1;
+    }
 	return 0; 
 }
 
@@ -38,11 +43,16 @@ int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 		server.setup_server(ConfigPars);
 		server.run(ConfigPars);
 	}
-	catch (const std::exception &e)
+	catch (char const*e)
 	{
-		std::cerr << e.what() << std::endl;
+		std::cerr << e << std::endl;
 		return 1;
 	}
+    catch (const std::string &e)
+    {
+        std::cout << e << std::endl;
+		return 1;
+    }
 	return 0;
 }
 

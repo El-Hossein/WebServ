@@ -147,16 +147,16 @@ void CheckStartServer(std::vector<ConfigNode*> &nodeStack, std::string text, siz
     std::vector<std::string> words = split(text);
     if (pos == 0)
     {
-        if (words.size() != 1) throw std::runtime_error("Error: Expected exactly one word in server.");
-        if (words[0] != "server") throw std::runtime_error("Error: The first word must be 'server'.");
+        if (words.size() != 1) throw ("Error: Expected exactly one word in server.");
+        if (words[0] != "server") throw ("Error: The first word must be 'server'.");
     }
     else
     {
         std::string name = nodeStack.back()->getName();
         std::vector<std::string> checkwords = split(name);
-        if (checkwords[0] == "location") throw std::runtime_error("Error: Location block cannot be nested in another location block.");
-        if (words.size() != 2) throw std::runtime_error("Error: Expected exactly two words in location");
-        if (words[0] != "location") throw std::runtime_error("Error: The first word must be 'location'.");
+        if (checkwords[0] == "location") throw ("Error: Location block cannot be nested in another location block.");
+        if (words.size() != 2) throw ("Error: Expected exactly two words in location");
+        if (words[0] != "location") throw ("Error: The first word must be 'location'.");
     }
 }
 
@@ -170,14 +170,14 @@ void CheckAllError(std::vector<std::string>& KV, const std::string& key, ConfigN
     if (!helo.empty())
     {
         if (key == "return")
-            throw std::runtime_error("return should have 1 or 2 in the same return");
-        if (max != -1 && (int)(helo.size() + count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
-        if (mult != -1 && (helo.size() + count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
+            throw ("return should have 1 or 2 in the same return");
+        if (max != -1 && (int)(helo.size() + count) > max) throw ("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
+        if (mult != -1 && (helo.size() + count) % mult != 0) throw ("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
     }
     else
     {
-        if (max != -1 && (int)(count) > max) throw std::runtime_error("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
-        if (mult != -1 && (count) % mult != 0) throw std::runtime_error("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
+        if (max != -1 && (int)(count) > max) throw ("Error: Too many values for key '" + key + "'. Maximum allowed is " + intToString(max) + ".");
+        if (mult != -1 && (count) % mult != 0) throw ("Error: Number of values for key '" + key + "' must be a multiple of " + intToString(mult) + ".");
     }
 }
 
@@ -211,9 +211,8 @@ void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& wo
     std::vector<std::string>::const_iterator it;
     for (it = VALID_KEYS.begin(); it != VALID_KEYS.end(); ++it)
         if (*it == words[0]) 
-            break;
-    if (it == VALID_KEYS.end())
-        throw std::runtime_error("Error: Invalid key '" + words[0] + "' for " + blockType + " block");
+        
+        throw ("Error: Invalid key '" + words[0] + "' for " + blockType + " block");
     ErrorHandle(words, ConfNode, blockType);
 }
 
@@ -231,18 +230,18 @@ int CheckDigit(std::string value)
 void CheckUnit(const std::string& value)
 {
     if (value.empty())
-        throw std::runtime_error("client_max_body_size is empty");
+        throw ("client_max_body_size is empty");
 
     size_t len = value.length();
     char unit = value[len - 1];
 
     if (unit != 'B' && unit != 'K' && unit != 'M' && unit != 'G')
-        throw std::runtime_error("Unit of the client_max_body_size is not correct (B, K, M, G)");
+        throw ("Unit of the client_max_body_size is not correct (B, K, M, G)");
 
     // Check that all characters before the unit are digits
     for (size_t i = 0; i < len - 1; ++i) {
         if (!std::isdigit(value[i]))
-            throw std::runtime_error("client_max_body_size must be numeric before unit");
+            throw ("client_max_body_size must be numeric before unit");
     }
 }
 
@@ -266,7 +265,7 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
 	}
     // Prevent overly large inputs
     if (num_str.length() >= 20)
-        throw std::runtime_error("client_max_body_size is too large");
+        throw ("client_max_body_size is too large");
 
     // Parse to a wider type first
     std::stringstream ss(num_str);
@@ -274,7 +273,7 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
     ss >> temp;
 
     if (ss.fail())
-        throw std::runtime_error("Invalid number for client_max_body_size");
+        throw ("Invalid number for client_max_body_size");
 
     // Apply unit multiplier with overflow check
     unsigned long long multiplier = 1;
@@ -285,11 +284,11 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
         case 'M': multiplier = 1024ULL * 1024; break;
         case 'G': multiplier = 1024ULL * 1024 * 1024; break;
         default:
-            throw std::runtime_error("Unexpected unit");
+            throw ("Unexpected unit");
     }
 
     if (temp > std::numeric_limits<size_t>::max() / multiplier)
-        throw std::runtime_error("Overflow: client_max_body_size too large");
+        throw ("Overflow: client_max_body_size too large");
 
     size_t number = static_cast<size_t>(temp * multiplier);
 
@@ -313,20 +312,20 @@ void CheckListen(std::vector<std::string>& words, ConfigNode &ConfNode)
         std::string port = it->c_str();
         for (size_t i = 0; port[i]; ++i) {
             if (!std::isdigit(port[i]))
-                throw std::runtime_error("listen only take digits.");
+                throw ("listen only take digits.");
         }
         if (port.length() > 5)
-            throw std::runtime_error("listen port should be > 0 and < 65535.");
+            throw ("listen port should be > 0 and < 65535.");
         int a = std::atoi(port.c_str());
         if (a > 65535)
-            throw std::runtime_error("listen port should be > 0 and < 65535.");
+            throw ("listen port should be > 0 and < 65535.");
         std::vector<std::string> confPorts = ConfNode.getValuesForKey(ConfNode, "listen", "");
         if (!confPorts.empty())
         {
             for (std::vector<std::string>::iterator Confoneport = confPorts.begin(); Confoneport != confPorts.end(); ++Confoneport) {
                 std::string ConPo = Confoneport->c_str();
                 if (ConPo == port)
-                    throw std::runtime_error("duplicate port in the same server");
+                    throw ("duplicate port in the same server");
             }
         }
     }
@@ -346,15 +345,15 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
             else if (*it == "NONE")
                 CheckNono = 1;
             else 
-                throw std::runtime_error("Error: allow_methods are GET POST DELETE NONE");
+                throw ("Error: allow_methods are GET POST DELETE NONE");
         }
         if (CheckNono == 1 && CheckOthers == 1)
-            throw std::runtime_error("Error: Cant be NONE and other Methods in the same location in allow_methods");
+            throw ("Error: Cant be NONE and other Methods in the same location in allow_methods");
     }
     else if (words[0] == "autoindex")
     {
         if (words[1] != "on" && words[1] != "off")
-            throw std::runtime_error("Error: antoindex take only on or off");
+            throw ("Error: antoindex take only on or off");
     }
     else if (words[0] == "listen")
         CheckListen(words, ConfNode);
@@ -391,7 +390,7 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
     }
 
     if (words.size() < 2)
-        throw std::runtime_error("Error: Invalid key-value pair.");
+        throw ("Error: Invalid key-value pair.");
 
     std::string nodeName = ConfNode.getName();
     trimSpaces(nodeName);
@@ -402,7 +401,7 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
     else if (locations[0] == "location")
         AllowedIn(LOCATION_VALID_KEYS, words, ConfNode, locations[0]);
     else
-        throw std::runtime_error("Error: Unknown block type in configuration.");
+        throw ("Error: Unknown block type in configuration.");
 
     CheckEdgeCases(words, ConfNode);
     
@@ -422,26 +421,26 @@ int onlyspace(std::string &text)
 void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (onlyspace(text) == 1)
-        throw std::runtime_error("Error: unexpected data before '}'");
+        throw ("Error: unexpected data before '}'");
     ConfigNode &lastOne = *nodeStack.back();
     std::vector<std::string> a = lastOne.getValuesForKey(lastOne, "allow_methods", "");
     for (std::vector<std::string>::iterator it = a.begin(); it != a.end(); ++it)
     {
         if (*it == "POST")
             if(lastOne.getValuesForKey(lastOne, "upload_store", "").empty())
-               throw std::runtime_error("Error: you need upload_store when u have POST in allow_methods");
+               throw ("Error: you need upload_store when u have POST in allow_methods");
     }
     if (!nodeStack.empty())
         nodeStack.pop_back();
     else
-        throw std::runtime_error("Error: Unmatched closing brace '}'.");
+        throw ("Error: Unmatched closing brace '}'.");
 }
 
 // process the semicolon
 void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (nodeStack.empty())
-        throw std::runtime_error("Error: No active node for key-value pair.");
+        throw ("Error: No active node for key-value pair.");
     std::vector<std::string> words = split(text);
     if (!words.empty())
         AddKV(*nodeStack.back(), words);
@@ -475,11 +474,11 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     std::vector<ConfigNode*> nodeStack;
     // nodeStack.push_back(&ConfNode);
     bool isRootNameSet = false;
-    if (buffer.size() == 0) throw std::runtime_error("Error: Empty configuration file.");
+    if (buffer.size() == 0) throw ("Error: Empty configuration file.");
     while (pos < buffer.size())
     {
         size_t delimiterPos = buffer.find_first_of(delimiters, pos);
-        if (delimiterPos == std::string::npos) throw std::runtime_error("Error: Could not find any delimiters '{};'");
+        if (delimiterPos == std::string::npos) throw ("Error: Could not find any delimiters '{};'");
         text = buffer.substr(pos, delimiterPos - pos);
         std::string delimiter = buffer.substr(delimiterPos, 1);
 
@@ -503,7 +502,7 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
         pos = delimiterPos + 1;
     }
     ConfigPars.push_back(ConfNode);
-    if (nodeStack.size() != 0) throw std::runtime_error("Error: Unmatched opening brace '{'.");
+    if (nodeStack.size() != 0) throw ("Error: Unmatched opening brace '{'.");
 }
 
 // Parse the configuration file
@@ -511,7 +510,7 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	std::ifstream infile(ConfigFilePath);
 	if (!infile.is_open())
-		throw std::runtime_error("Error: Could not open configuration file.");
+		throw ("Error: Could not open configuration file.");
 	std::stringstream buffer;
 	buffer << infile.rdbuf();
 	infile.close();
