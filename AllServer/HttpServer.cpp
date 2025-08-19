@@ -61,7 +61,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
     // std::cout << "\033[34mSetting up server...\033[0m" << std::endl;
     kq = kqueue();
     if (kq == -1)
-        throw std::runtime_error("\033[31mFailed to create kqueue\033[0m");
+        throw ("\033[31mFailed to create kqueue\033[0m");
 
     std::set<int> AllPorts = GetAllPorts(ConfigPars);
 
@@ -96,7 +96,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         // AddToKqueue(event, kq, server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, 0, 0);
         EV_SET(&event, server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	    if(kevent(kq, &event, 1, NULL, 0, NULL) == -1)
-            throw std::runtime_error("\033[31mkevent failed\033[0m");
+            throw ("\033[31mkevent failed\033[0m");
         server_fds.push_back(server_fd);
 
         std::cout << "\033[32m[+]\033[0m \033[32mServer " << i << " listening on port " << port << "\033[0m" << std::endl;
