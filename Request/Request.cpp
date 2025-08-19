@@ -588,8 +588,6 @@ void	Request::PostRequiredHeaders()
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
 		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
-		if (ContentLength > 0 && !TotalBytesRead) // Bytes read from body == 0
-			PrintError("Empty Body", *this), throw 400;
 		if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
 			PrintError("Malformed Request", *this), throw 400;
 		this->DataType = FixedLength;
