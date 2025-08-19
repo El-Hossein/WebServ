@@ -425,10 +425,12 @@ void	Request::HandleQuery()
 void	Request::CheckFileExistance()
 {
 	struct stat FileStat;
+	std::string	tmp;
+	IsCGI ? tmp = PurePath(FullSystemPath) : tmp = FullSystemPath;
 
-    if (stat(FullSystemPath.c_str(), &FileStat) != 0)
+    if (stat(tmp.c_str(), &FileStat) != 0)
         Client = EndReading, throw 404;
-    if (access(FullSystemPath.c_str(), W_OK) != 0)
+    if (access(tmp.c_str(), W_OK) != 0)
         PrintError("Forbiden", *this), throw 403;
 }
 
@@ -490,8 +492,8 @@ void   Request::HandlePath()
 			this->FullSystemPath += part;
 		}
 	}
-	CheckFileExistance();
 	IsCGI = CheckForCgi();
+	CheckFileExistance();
 }
 
 void	Request::SplitURI()

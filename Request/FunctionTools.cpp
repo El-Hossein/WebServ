@@ -58,6 +58,23 @@ std::string	HexaToChar(std::string	Hexa)
 	return std::string(1, Helpervar); // calling constructor string with 1 character
 }
 
+std::string	PurePath(std::string &Path)
+{
+    size_t posLength = std::string::npos;
+    size_t cgiPos = Path.find(".cgi");
+    size_t phpPos = Path.find(".php");
+    size_t pyPos = Path.find(".py");
+    if (cgiPos != std::string::npos && cgiPos < phpPos && cgiPos < pyPos)
+        posLength = cgiPos + 4;
+    else if (phpPos != std::string::npos && phpPos < cgiPos && phpPos < pyPos)
+        posLength = phpPos + 4;
+    else if (pyPos != std::string::npos && pyPos < cgiPos && pyPos < phpPos)
+        posLength = pyPos + 3;
+
+    return Path.substr(0, posLength);
+}
+
+
 // --------------#	PRINTER	 #-------------- //
 
 void	PrintHeaders(std::map<std::string, std::string> Headers)
