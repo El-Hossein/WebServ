@@ -63,6 +63,7 @@ class Cgi
         long                        getCgiCL();
         pid_t                       getpid_1();
         std::string                 getinfile();
+        std::string                 getcgiBody();
         std::string                 getoutfile();
         long                        getFilePos();
         long                        getFileSize();

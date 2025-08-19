@@ -21,6 +21,11 @@ Cgi::~Cgi()
 
 }
 
+std::string    Cgi::getcgiBody()
+{
+    return this->cgiBody;
+}
+
 void     Cgi::setKq(int _kq)
 {
     kq = _kq;
