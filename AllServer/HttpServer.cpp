@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <stdexcept>
 
 
 void	HttpServer::SetAllContexts(EventContext* ctx) { all_contexts.push_back(ctx);	}
