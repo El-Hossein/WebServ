@@ -36,6 +36,32 @@ std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, size_t index)
         return ConfNode.children[index].getName();
 }
 
+std::string RemoveSlashs(std::string path)
+{
+    std::string result;
+    bool lastWasSlash = false;
+    
+    result.reserve(path.length());
+    
+    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
+    {
+        if (*it == '/')
+        {
+            if (!lastWasSlash)
+            {
+                result += *it;
+                lastWasSlash = true;
+            }
+        }
+        else
+        {
+            result += *it;
+            lastWasSlash = false;
+        }
+    }
+    return result;
+}
+
 std::vector<std::string> ConfigNode::   getValuesForKey(ConfigNode& ConfNode, const std::string& key, std::string del) 
 {
     std::vector<std::string> emptyResult;
@@ -459,8 +485,32 @@ void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack,
     }
     else
     {
+        std::vector<std::string> tokens = split(text);
+        if (tokens.size() > 1 && tokens[0] == "location")
+        {
+            tokens[1] = RemoveSlashs(tokens[1]);
+            text = tokens[0] + " " + tokens[1];
+        }
+
         nodeStack.back()->addChild(ConfigNode(text));
         ConfigNode* childPtr = &(nodeStack.back()->getLastChild());
+
+        if (tokens.size() > 1 && tokens[0] == "location")
+        {
+            std::string newLoc = tokens[1];
+            const std::vector<ConfigNode>& siblings = nodeStack.back()->getChildren();
+            for (size_t i = 0; i + 1 < siblings.size(); ++i)
+            {
+                std::vector<std::string> siblingTokens = split(siblings[i].getName());
+                if (siblingTokens.size() > 1 && siblingTokens[0] == "location")
+                {
+                    std::string existingLoc = siblingTokens[1];
+                    if (existingLoc == newLoc)
+                        throw ("Error: Duplicate location '" + newLoc + "' in the same server block.");
+                }
+            }
+        }
+
         nodeStack.push_back(childPtr);
     }
 }
@@ -473,7 +523,7 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     std::string text;
     ConfigNode ConfNode;
     std::vector<ConfigNode*> nodeStack;
-    // nodeStack.push_back(&ConfNode);
+
     bool isRootNameSet = false;
     if (buffer.size() == 0) throw ("Error: Empty configuration file.");
     while (pos < buffer.size())
@@ -604,32 +654,6 @@ bool startsWith(const std::string& path, const std::string& prefix)
 {
     if (prefix.length() > path.length()) return false;
     return path.compare(0, prefix.length(), prefix) == 0;
-}
-
-std::string RemoveSlashs(std::string path)
-{
-    std::string result;
-    bool lastWasSlash = false;
-    
-    result.reserve(path.length());
-    
-    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
-    {
-        if (*it == '/')
-        {
-            if (!lastWasSlash)
-            {
-                result += *it;
-                lastWasSlash = true;
-            }
-        }
-        else
-        {
-            result += *it;
-            lastWasSlash = false;
-        }
-    }
-    return result;
 }
 
 std::string ConfigNode::GetRightLocation(std::string path)
