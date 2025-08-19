@@ -185,18 +185,12 @@ void Cgi::executeCgiScript(Request &req)
         struct kevent kev;
         // watch for child exit
         EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, req.ctx);
-        if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1){
-            std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_PROC CGI\033[0m" << std::endl;
-        }
-        else
+        kevent(kq, &kev, 1, NULL, 0, NULL);
+        if (req.ctx)
         {
-            // record we registered this proc for this context
-            if (req.ctx)
-            {
-                req.ctx->registered_procs.push_back(pid);
-                req.ctx->cgi_pid = pid; // already set but reinforce
-            }
-        }        // add a pid timer with 1s tick for responsive CGI timeout checking
+            req.ctx->registered_procs.push_back(pid);
+            req.ctx->cgi_pid = pid; // already set but reinforce
+        }
         EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
         if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
