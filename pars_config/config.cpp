@@ -539,7 +539,7 @@ void ConfigNode::print() const {
     }
 }
 
-ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string ReqPortHost, std::string PortOrHostInConfig, std::string port)
+ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string PortOrHostInConfig, std::string port)
 {
     for (size_t i = 0; i < ConfigPars.size(); i++)
     {
@@ -548,31 +548,19 @@ ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string ReqPortH
         {
             for (std::vector<std::string>::iterator it = ValuesOfPortOrHost.begin(); it != ValuesOfPortOrHost.end(); ++it)
             {
-                if (*it == ReqPortHost)
+                if (*it == port)
                     return ConfigPars[i];
             }
         }
     }
-	if (PortOrHostInConfig == "listen")
-    	return ConfigPars[0];		
-    return GetTheServer(ConfigPars, port, "listen", port);
+    return ConfigPars[0];		
 }
 
-ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, _ServerDetails ServerDetails)
+ConfigNode ConfigNode::GetServer(std::vector<ConfigNode> ConfigPars, int RealPort)
 {
-    std::vector<std::vector<std::string> > arr;
-    std::string port;
-    std::string host;
-    host = ServerDetails.ServerHost.substr(0, ServerDetails.ServerHost.find(":"));
-    if (ServerDetails.IsPortExist == true)
-        port = ServerDetails.ServerPort.substr(ServerDetails.ServerPort.find(":") + 1);
-    else 
-        port = intToString(ServerDetails.RealPort);
-    // std::cout << "Host: " << host << std::endl;
-    // std::cout << "port: " << port << std::endl;
-    return  GetTheServer(ConfigPars, host, "server_names", port);
-    
+    return  GetTheServer(ConfigPars, "listen", intToString(RealPort));
 }
+
 
 std::vector<std::string> split_path(const std::string& path)
 {
