@@ -8,7 +8,7 @@ int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigP
 {
 	try
 	{
-		if (ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
+		if (ConfigFilePath.size() < 6 ||  ConfigFilePath.substr(ConfigFilePath.length() - 5) != ".conf")
 	        throw std::runtime_error("Error: Config file does not have the correct extension. {.conf}");
 		StructConf(ConfigFilePath, ConfigPars);
 		// if(Printall == 1)
