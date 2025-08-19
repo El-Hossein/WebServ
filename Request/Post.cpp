@@ -38,7 +38,7 @@ void Post::FindFileName(std::string &Buffer, std::string &Filename)
 	}
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
 	if (Filename.empty())
-		obj.PrintError("Bad Request", obj), throw 404;
+		obj.PrintError("Bad Request", obj), throw 400;
 
 	if (stat(Dir.c_str(), &Tmp) != 0) // Check for directory existance 
 		obj.PrintError("Not Found", obj), throw 404;
@@ -74,11 +74,18 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 	{
 		if (BoundaryStatus == None)
 		{
+			std::string tmp(Buffer);
+			Appender(Buffer, PrevBuffer, tmp);
+
 			start = Buffer.find(Boundary.BoundaryStart, 0);
 			// std::cout << "\n****" << Buffer.substr(0, 10) << "**********\n";
 			if (start == std::string::npos)
-				obj.PrintError("Boudary Error", obj), throw 400;
+			{
+				PrevBuffer = tmp;
+				return ;
+			}
 
+			PrevBuffer.clear();
 			Boundary.CrlfCount += CrlfCounter(Buffer, start + Boundary.BoundaryStart.size());
 			Buffer.erase(0, start + Boundary.BoundaryStart.size());
 			BoundaryStatus = GotBoundaryStart;
