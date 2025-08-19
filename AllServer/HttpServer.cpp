@@ -9,19 +9,6 @@ HttpServer::HttpServer(const HttpServer & other)	{ *this = other; }
 
 HttpServer::~HttpServer()	{ }
 
-// Get all the ports from the configuration file
-bool hasDuplicates(const std::vector<int>& vector)
-{
-    std::set<int> seen;
-    for (std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
-    {
-        if (seen.find(*it) != seen.end())
-            return true;
-        seen.insert(*it);
-    }
-    return false;
-}
-
 std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
 {
     std::set<int> allPorts;
@@ -249,7 +236,6 @@ void HttpServer::RemoveClient(int client_fd)
             }
             else
             {
-                // fallback: try single pid fields but only if safe
                 pid_t proc_pid = ctx->cgi_pid;
                 if (proc_pid == 0 && ctx->res)
                 {
