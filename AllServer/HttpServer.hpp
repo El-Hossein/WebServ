@@ -11,8 +11,8 @@ class Response;
 class Request;
 
 struct EventContext {
-    int ident;         // fd for client
-    pid_t cgi_pid;         //  pid for CGI
+    int ident;
+    pid_t cgi_pid;
     Request* req;
     Response* res;
     bool is_cgi;
