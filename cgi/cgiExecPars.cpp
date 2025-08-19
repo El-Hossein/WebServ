@@ -122,14 +122,14 @@ void    execCgi(const char *scriptPath, char **envp)
         argv[4] = NULL;
         execve("/usr/bin/php", argv, envp);
     }
-    perror("execve failed");
+    std::cerr << "execve failed" << std::endl;
     if (envp)
     {
         for (int i = 0; envp[i]; i++)
             delete[] envp[i];
         delete[] envp;
     }
-    exit(1);
+    std::exit(1);
 }
 
 
@@ -163,8 +163,8 @@ void Cgi::executeCgiScript(Request &req)
         {
             if (chdir(scriptDir.c_str()) == -1)
             {
-                perror("chdir failed");
-                exit(1);
+                std::cerr << "chdir failed" << std::endl;
+                std::exit(1);
             }
         }
         envp = cgiEnvVariables(req, pathInfo);
