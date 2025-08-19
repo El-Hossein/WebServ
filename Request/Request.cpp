@@ -261,7 +261,7 @@ void	Request::SetServerDetails()
 		if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
 			PrintError("Host Error", *this), throw 400;
 	}
-	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
+	RightServer = ConfigNode::GetServer(Servers, ServerDetails.RealPort);
 }
 
 /*	|#----------------------------------#|
