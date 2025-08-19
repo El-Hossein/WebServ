@@ -1,5 +1,4 @@
 #include "HttpServer.hpp"
-#include <stdexcept>
 
 
 void	HttpServer::SetAllContexts(EventContext* ctx) { all_contexts.push_back(ctx);	}
@@ -31,7 +30,7 @@ void SetUpForBind(struct sockaddr_in &server_addr, int port)
 	// Bind the socket to an address
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_port = htons(port);
 }
 
@@ -106,6 +105,21 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
     std::cout << "------------------------------------------------------------------------------" << std::endl;
 }
 
+std::string ip_port_to_string(const struct sockaddr_in &addr)
+{
+    uint32_t ip_raw = ntohl(addr.sin_addr.s_addr);
+    int port = ntohs(addr.sin_port);
+    std::cout << "dsa :  dsa" << std::endl;
+    std::cout << "dsa :  " << ip_raw << std::endl;
+    std::stringstream ss;
+    ss << ((ip_raw >> 24) & 0xFF) << "."
+       << ((ip_raw >> 16) & 0xFF) << "."
+       << ((ip_raw >> 8) & 0xFF) << "."
+       << (ip_raw & 0xFF) << ":"
+       << port;
+
+    return ss.str();
+}
 
 void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> ConfigPars)
 {
@@ -124,24 +138,22 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 
     // Immediately set FD_CLOEXEC so future exec()'d children won't inherit this client socket
     fcntl(client_fd, F_SETFD, FD_CLOEXEC);
-
     // set non-blocking (preserve existing flags)
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    int client_port = ntohs(client_addr.sin_port);
-
+    std::string client_ip = ip_port_to_string(client_addr);
+    
     struct sockaddr_in server_addr;
     socklen_t server_addr_len = sizeof(server_addr);
     getsockname(client_fd, (struct sockaddr*)&server_addr, &server_addr_len);
 
-    char server_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &server_addr.sin_addr, server_ip, INET_ADDRSTRLEN);
-    int server_port = ntohs(server_addr.sin_port);
+    std::string server_ip = ip_port_to_string(server_addr);
 
     // std::cout << "-----------------------------------------------------------------------------" << std::endl;
-    // std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip << ":" << client_port << " connected to server at " << server_ip << ":" << server_port << "\033[0m\n" << std::endl;
+    std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip  << " connected to server at " << server_ip << "\033[0m\n" << std::endl;
+
+    int client_port = ntohs(client_addr.sin_port);
+    int server_port = ntohs(server_addr.sin_port);
 
     Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
