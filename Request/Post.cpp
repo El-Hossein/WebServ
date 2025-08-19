@@ -37,6 +37,8 @@ void Post::FindFileName(std::string &Buffer, std::string &Filename)
 		obj.PrintError("Could't find file", obj), throw 400;
 	}
 	Filename = Buffer.substr(FilenamePos + 10, FilenameEndPos - (FilenamePos + 10)); // 10 = sizeof("filename=")
+	if (Filename.empty())
+		obj.PrintError("Bad Request", obj), throw 404;
 
 	if (stat(Dir.c_str(), &Tmp) != 0) // Check for directory existance 
 		obj.PrintError("Not Found", obj), throw 404;
