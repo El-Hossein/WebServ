@@ -109,9 +109,6 @@ std::vector<std::string> ConfigNode::ConfgetValuesForKey(ConfigNode& ConfNode, c
 
 void ConfigNode::PutName(const std::string &name) {this->name = name;}
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// trim spaces from the line
 void trimSpaces(std::string &str)
 {
     size_t first = str.find_first_not_of(" \t\n\r");
@@ -126,9 +123,6 @@ void trimSpaces(std::string &str)
     str = str.substr(first, last - first + 1);
 }
 
-// split the line into words
-
-// remove spaces from the line
 std::string removeSpaces( std::string &input)
 {
 	std::string result = "";
@@ -136,7 +130,7 @@ std::string removeSpaces( std::string &input)
 		if (input[i] != ' ') result += input[i];
 	return result;
 }
-// remove extra spaces from the line
+
 std::string removeExtraSpaces(std::string line)
 {
 	std::stringstream result;
@@ -152,7 +146,6 @@ std::string removeExtraSpaces(std::string line)
 	return result.str();
 }
 
-// remove comments from the buffer
 std::string RmComments(std::string buffer) {
     std::string result;
     std::istringstream iss(buffer);
@@ -231,7 +224,6 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
     }
 }
 
-// check if the key is allowed in the block
 void AllowedIn(std::vector<std::string> VALID_KEYS, std::vector<std::string>& words, ConfigNode &ConfNode, const std::string& blockType)
 {
     std::vector<std::string>::const_iterator it;
@@ -265,7 +257,6 @@ void CheckUnit(const std::string& value)
     if (unit != 'B' && unit != 'K' && unit != 'M' && unit != 'G')
         throw ("Unit of the client_max_body_size is not correct (B, K, M, G)");
 
-    // Check that all characters before the unit are digits
     for (size_t i = 0; i < len - 1; ++i) {
         if (!std::isdigit(value[i]))
             throw ("client_max_body_size must be numeric before unit");
@@ -290,11 +281,10 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
         words[1] = "0"; 
 		return ;
 	}
-    // Prevent overly large inputs
+
     if (num_str.length() >= 20)
         throw ("client_max_body_size is too large");
 
-    // Parse to a wider type first
     std::stringstream ss(num_str);
     unsigned long long temp = 0;
     ss >> temp;
@@ -302,7 +292,6 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
     if (ss.fail())
         throw ("Invalid number for client_max_body_size");
 
-    // Apply unit multiplier with overflow check
     unsigned long long multiplier = 1;
     switch (unit)
     {
@@ -319,7 +308,6 @@ void MaxBodySizeToBytes(std::vector<std::string>& words)
 
     size_t number = static_cast<size_t>(temp * multiplier);
 
-    // Convert to string
     std::stringstream result;
     result << number;
     words[1] = result.str();
@@ -335,7 +323,7 @@ void CheckListen(std::vector<std::string>& words, ConfigNode &ConfNode)
             is = 1;
             continue;
         }
-        // std::cout << *it << std::endl;
+
         std::string port = it->c_str();
         for (size_t i = 0; port[i]; ++i) {
             if (!std::isdigit(port[i]))
@@ -394,7 +382,6 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
         CheckListen(words, ConfNode);
 }
 
-// add key-value pair to the node
 void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
 {
     static bool initialized = false;
@@ -444,7 +431,6 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
         ConfNode.addValue(words[0], words[i]);
 }
 
-// process the closing brace
 int onlyspace(std::string &text)
 {
     for (int i = 0; text[i]; i++) {
@@ -473,7 +459,6 @@ void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
         throw ("Error: Unmatched closing brace '}'.");
 }
 
-// process the semicolon
 void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (nodeStack.empty())
@@ -483,7 +468,6 @@ void processSemicolon(std::string &text, std::vector<ConfigNode*> &nodeStack)
         AddKV(*nodeStack.back(), words);
 }
 
-// process the opening brace
 void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack, bool &isRootNameSet, size_t pos)
 {
     CheckStartServer(nodeStack, text, pos);
@@ -525,7 +509,6 @@ void processOpeningBrace(std::string &text, std::vector<ConfigNode*> &nodeStack,
     }
 }
 
-// check the content of the buffer
 void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
 {
     std::string delimiters = "{};";
@@ -566,7 +549,6 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     if (nodeStack.size() != 0) throw ("Error: Unmatched opening brace '{'.");
 }
 
-// Parse the configuration file
 void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	std::ifstream infile(ConfigFilePath);
@@ -627,13 +609,11 @@ std::vector<std::string> split_path(const std::string& path)
     std::vector<std::string> components;
     std::string current;
     
-    // Handle empty path or single slash
     if (path.empty() || path == "/") {
         components.push_back("/");
         return components;
     }
 
-    // Split path into individual components
     std::vector<std::string> parts;
     std::string temp;
     for (std::string::size_type i = 0; i < path.length(); ++i) {
@@ -650,7 +630,6 @@ std::vector<std::string> split_path(const std::string& path)
         parts.push_back(temp);
     }
 
-    // Build cumulative paths
     current = "";
     for (std::vector<std::string>::size_type i = 0; i < parts.size(); ++i) {
         current += "/" + parts[i];
