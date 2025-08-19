@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <set>
+std::string                         intToString(int n);
 
 struct	_BoundarySettings
 {

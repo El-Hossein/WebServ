@@ -102,5 +102,4 @@ class Cgi
         
 };
 
-std::string                         intToString(int n);
 std::string                         readFileToStringCgi(std::string path);
