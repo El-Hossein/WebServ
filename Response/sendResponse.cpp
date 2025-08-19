@@ -53,70 +53,35 @@ bool    Response::sendBody(size_t chunkSize)
     return false;
 }
 
-
-bool    Response::readAccordingToCL(size_t chunkSize, std::ifstream &f)
+bool Response::sendCgiScript(size_t chunkSize)
 {
-    long cl = _cgi.getCgiCL();
-    long sent = _cgi.getFilePos();
-    size_t remaining = cl - sent;
-    if (remaining <= 0)
-    {
-        f.close();
-        return false;
-    }
-    long toRead = std::min(chunkSize, remaining);
-    char buffer[toRead];
-    f.read(buffer, toRead);
-    int bytesRead = f.gcount();
-    if (bytesRead > 0)
-    {
-        chunk.assign(buffer, bytesRead);
-        _cgi.setFilePos(sent + bytesRead);
-        if (_cgi.getFilePos() >= cl || f.eof())
-            f.close();
-        return true;
-    }
-    return false;
-}
+    std::string body = _cgi.getcgiBody();
 
-bool    Response::sendCgiScript(size_t chunkSize)
-{
-    std::ifstream& f = _cgi.getFile();
-
-    if (_cgi.getFilePos() == 0)
-    {
-        std::string line;
-        while (std::getline(f, line, '\r'))
-        {
-            if (!line.empty() && line[0] == '\n')
-                line.erase(0, 1);
-            if (line.empty())
-                break;
-        }
-        _cgi.setFilePos(0);
-    }
     if (_cgi.getCgiCL() == -1)
     {
-        char buffer[chunkSize];
-        f.read(buffer, chunkSize);
-        int bytesRead = f.gcount();
-        if (bytesRead > 0)
+        size_t remaining = body.size() - _cgi.getFilePos();
+        size_t sendNow = std::min(chunkSize, remaining);
+        if (sendNow > 0)
         {
-            chunk.assign(buffer, bytesRead);
-            _cgi.setFilePos(_cgi.getFilePos() + bytesRead);
-            if (_cgi.getFilePos() >= _cgi.getFileSize())
-                f.close();
+            chunk.assign(body, _cgi.getFilePos(), sendNow);
+            _cgi.setFilePos(_cgi.getFilePos() + sendNow);
             return true;
         }
-        f.close();
     }
-    else if (_cgi.getCgiCL() != -1)
+    else
     {
-        if (readAccordingToCL(chunkSize, f) == true)
+        size_t remaining = _cgi.getCgiCL() - _cgi.getFilePos();
+        size_t sendNow = std::min(chunkSize, remaining);
+        if (sendNow > 0)
+        {
+            chunk.assign(body, _cgi.getFilePos(), sendNow);
+            _cgi.setFilePos(_cgi.getFilePos() + sendNow);
             return true;
+        }
     }
     return false;
 }
+
 
 bool Response::sendFile(size_t chunkSize)
 {

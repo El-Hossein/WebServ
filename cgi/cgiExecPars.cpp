@@ -198,7 +198,6 @@ void Cgi::executeCgiScript(Request &req)
             }
         }        // add a pid timer with 1s tick for responsive CGI timeout checking
         EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
-        std::cout << kq << std::endl;
         if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
 
