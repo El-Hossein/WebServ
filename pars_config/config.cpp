@@ -374,6 +374,14 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
             else 
                 throw ("Error: allow_methods are GET POST DELETE NONE");
         }
+        std::vector<std::string > fromconf = ConfNode.ConfgetValuesForKey(ConfNode, "allow_methods");
+        if (!fromconf.empty())
+            for (std::vector<std::string>::iterator it = fromconf.begin()+ 1; it != fromconf.end(); ++it) {
+                if (*it == "GET" || *it == "POST" || *it == "DELETE")
+                    CheckOthers = 1;
+                else if (*it == "NONE")
+                    CheckNono = 1;
+            }
         if (CheckNono == 1 && CheckOthers == 1)
             throw ("Error: Cant be NONE and other Methods in the same location in allow_methods");
     }
@@ -449,6 +457,8 @@ void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
 {
     if (onlyspace(text) == 1)
         throw ("Error: unexpected data before '}'");
+    if (nodeStack.empty())
+        throw ("Error: Unmatched closing brace '}'.");
     ConfigNode &lastOne = *nodeStack.back();
     std::vector<std::string> a = lastOne.getValuesForKey(lastOne, "allow_methods", "");
     for (std::vector<std::string>::iterator it = a.begin(); it != a.end(); ++it)
