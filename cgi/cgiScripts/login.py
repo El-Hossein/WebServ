@@ -26,7 +26,7 @@ def send(content, set_cookie_value=None):
     sys.stdout.buffer.write(body_bytes)
 
 # ---------------- HTML pages ----------------
-def get_login_page(cookie_payload, cookie_header):
+def get_login_page():
     return f"""<!DOCTYPE html>
     <html lang="en">
     <head><meta charset="utf-8"><title>Login</title></head>
@@ -37,7 +37,6 @@ def get_login_page(cookie_payload, cookie_header):
     <label>Password: <input type="password" name="password" required></label><br><br>
     <input type="submit" value="Login">
     </form>
-    <p>Debug: cookie_payload={cookie_payload}, cookie_header={cookie_header}</p>
     </body>
     </html>"""
 
@@ -172,9 +171,7 @@ def main():
         send(f"<html><body><h1>Welcome back, user {user}</h1></body></html>")
         return
 
-    # Not authenticated: show login page
-    login_page = get_login_page(cookie_payload=token_parse(token) if token else None,
-                                cookie_header=cookie_header)
+    login_page = get_login_page()
     send(login_page)
 
 if __name__ == "__main__":
