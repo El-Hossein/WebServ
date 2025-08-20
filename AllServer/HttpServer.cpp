@@ -109,8 +109,6 @@ std::string ip_port_to_string(const struct sockaddr_in &addr)
 {
     uint32_t ip_raw = ntohl(addr.sin_addr.s_addr);
     int port = ntohs(addr.sin_port);
-    std::cout << "dsa :  dsa" << std::endl;
-    std::cout << "dsa :  " << ip_raw << std::endl;
     std::stringstream ss;
     ss << ((ip_raw >> 24) & 0xFF) << "."
        << ((ip_raw >> 16) & 0xFF) << "."

@@ -603,6 +603,9 @@ void	Request::ParseHeaders()
 {
 	if (Headers.find("host") == Headers.end())
 		PrintError("No Host has been found!", *this), throw 400;
+	if (Headers.find("content-length") != Headers.end() && !ValidContentLength(Headers.find("content-length")->second))
+		PrintError("Bad Request", *this), throw 400;
+
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
 	SetServerDetails(); // Init localhost + port
@@ -616,7 +619,7 @@ void	Request::ParseHeaders()
 			PrintError("Length Required", *this), throw 411; // If Body exists and the method is Get or Delete
 	}
 
-	std::vector<std::string> Vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "NULL");
+	std::vector<std::string> Vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "");
 	if (Vec.empty())
 		LimitedBodySize = false;
 	if (LimitedBodySize)
