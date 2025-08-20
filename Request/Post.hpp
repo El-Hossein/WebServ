@@ -3,13 +3,6 @@
 #include "Request.hpp"
 #include "../allincludes.hpp"
 
-/**
- *
- *	Handle the Location in request for every path...
- * 
- */
-
-
 class Request;
 
 class Post

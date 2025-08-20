@@ -59,17 +59,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 	std::string BodyContent;
 	size_t start = 0, BodyPos = 0;
 
-	// std::cout << "\n\nBuffer{" << Buffer << "}\n\n" << std::endl;
-	// switch (BoundaryStatus)
-	// {
-	// 	case None : std::cout << "its Boundary Status[None]" << std::endl; break ;
-	// 	case GotBoundaryStart : std::cout << "its Boundary Status[GotBoundaryStart]" << std::endl; break ;
-	// 	case GotFile : std::cout << "its Boundary Status[GotFile]" << std::endl; break ;
-	// 	case GotBody : std::cout << "its Boundary Status[GotBody]" << std::endl; break ;
-	// 	case GotBoundaryEnd : std::cout << "its Boundary Status[GotBoundaryEnd]" << std::endl; break ;
-	// 	case Finished : std::cout << "its Boundary Status[Finished]" << std::endl; break ;
-	// }
-
 	while (true)
 	{
 		if (BoundaryStatus == None)
@@ -78,7 +67,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			Appender(Buffer, PrevBuffer, tmp);
 
 			start = Buffer.find(Boundary.BoundaryStart, 0);
-			// std::cout << "\n****" << Buffer.substr(0, 10) << "**********\n";
 			if (start == std::string::npos)
 			{
 				PrevBuffer = tmp;
@@ -93,15 +81,14 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 		if (BoundaryStatus == GotBoundaryStart)
 		{
 			FindFileName(Buffer, Filename);
-			// Buffer.erase(0, TrimBody + 3);
 			BoundaryStatus = GotFile;
 		}
 		if (BoundaryStatus == GotFile)
 		{
 			BodyPos = Buffer.find("\r\n\r\n");
-			if (BodyPos == std::string::npos) // ila makantch
+			if (BodyPos == std::string::npos)
 				obj.PrintError("No Body Found", obj), throw 400;
-			else // kayn Double CRLF
+			else
 			{
 				Boundary.CrlfCount += CrlfCounter(Buffer, BodyPos + 4);
 				Buffer.erase(0, BodyPos + 4), BoundaryStatus = GotBody; // Go next
@@ -119,7 +106,6 @@ void Post::GetSubBodies(std::string &Buffer) // state machine
 			{
 				OutFile.write(PrevBuffer.data(), PrevBuffer.size());
 				PrevBuffer = tmp;
-				// std::cout << "--->Filename{" << Filename << "}" << std::endl;
 				break ;
 			}
 			else
@@ -271,13 +257,13 @@ void Post::ParseChunked()
 					Chunk.ChunkStatus = ChunkVars::None;
 					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
 
-					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0)
 						Chunk.ChunkStatus = ChunkVars::Finished;
 					break;
 				}
 				else
 					PreviousBuffer = UnprocessedBuffer;
-				return; // return to wait for the FullBody end
+				return;
 			}
 			case ChunkVars::Finished:
 			{
@@ -347,13 +333,13 @@ void Post::ParseChunkedBoundary()
 					Chunk.ChunkStatus = ChunkVars::None;
 					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
 
-					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0) // return 0 if strings are equal
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0)
 						Chunk.ChunkStatus = ChunkVars::Finished;
 					break;
 				}
 				else
 					PreviousBuffer = UnprocessedBuffer;
-				return; // return to wait for the FullBody end
+				return;
 			}
 			case ChunkVars::Finished:
 			{
@@ -364,29 +350,6 @@ void Post::ParseChunkedBoundary()
 }
 
 /*	|#----------------------------------#|
-	|#				HandleCGI		    #|
-	|#----------------------------------#|
-*/
-
-void	Post::HandleCGI()
-{
-	if (FirstTime)
-	{
-		cgiFileName = "/tmp/" + RandomString();
-		obj.setCgiFileName(cgiFileName);
-		OutFile.open(cgiFileName, std::ios::binary), FirstTime = false;
-		if (!OutFile.is_open())
-			obj.PrintError("Could't open file", obj), throw 500; // Internal Server Error
-	}
-	// if (obj.GetTotatlBytesRead() >= obj.GetContentLength())
-	// {
-	// 	obj.SetClientStatus(EndReading);
-	// 	OutFile.close();
-	// 	std::cout << "File Uploaded!" << std::endl, throw 201;
-	// }
-}
-
-/*	|#----------------------------------#|
 	|#			ParsingMenu		    	#|
 	|#----------------------------------#|
 */
@@ -394,25 +357,6 @@ void	Post::HandleCGI()
 void	Post::HandlePost()
 {
 	UnprocessedBuffer = obj.GetBodyBuffer();
-
-	std::cout << "Total bytes read: " << obj.GetTotatlBytesRead() << "/" << obj.GetContentLength() << std::endl;
-
-	// if (obj.GetIsCGI())
-	// 	HandleCGI();
-
-
-	// std::cout << "DataType----->";
-	// switch (obj.GetDataType())
-	// {
-	// 	case FixedLength:  { std::cout << "FixedLength!\n"; break ; }
-	// 	case Chunked:  { std::cout << "Chunked!\n"; break ; }
-	// }
-	// std::cout << "ContentType----->";
-	// switch (obj.GetContentType())
-	// {
-	// 	case _Boundary:  { std::cout << "_Boundary!\n"; break ; }
-	// 	case BinaryOrRaw:  { std::cout << "BinaryOrRaw!\n"; break ; }
-	// }
 
 	switch (obj.GetDataType()) // Chunked || FixedLength
 	{
