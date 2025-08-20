@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <set>
-#include <cstdlib>
 
 struct	_BoundarySettings
 {
