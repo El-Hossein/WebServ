@@ -150,6 +150,5 @@ bool			ValidBoundary(std::string	&value);
 size_t			CrlfCounter(std::string	&str, size_t pos);
 void			PrintCrlfString(std::string Buffer);
 std::string		RandomString();
-std::string		RemoveCrlf(std::string BodyContent);
 void			Appender(std::string &Buffer, const std::string &PrevBuffer, const std::string &tmp);
 std::string		PurePath(std::string &Path);

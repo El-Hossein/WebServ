@@ -4,14 +4,12 @@
 
 #include "../allincludes.hpp"
 
-//  server === > "listen", "server_names", "error_page", "client_max_body_size", "root", "index", "autoindex", "return"
-//  location =====> "autoindex", "allow_methods", "return", "php-cgi", "root", "index", "py-cgi", "upload_store"
 class ConfigNode {
 	private:
 		std::vector<ConfigNode> ConfigPars;
-		std::string name; // Name of the context ("http", "server", etc.)
-		std::map<std::string, std::vector<std::string> > values; // Multi-value directives
-		std::vector<ConfigNode> children;  // Nested contexts
+		std::string name;
+		std::map<std::string, std::vector<std::string> > values;
+		std::vector<ConfigNode> children;
 	public:
 		ConfigNode();
 		ConfigNode(const std::string& name);
@@ -30,8 +28,6 @@ class ConfigNode {
 		static std::vector<std::string> ConfgetValuesForKey(ConfigNode& ConfNode, const std::string& key)  ;
 		static std::string GetLocationValue(ConfigNode& ConfNode, size_t index);
 		std::string GetRightLocation(std::string path);
-		// const std::map<std::string, std::vector<std::string> >& getValues() const {return values;}
-		void print() const;
 };
 
 
