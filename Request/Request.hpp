@@ -71,7 +71,7 @@ private:
 	time_t						CurrentTime;
 
 public:
-	Request(const int	&, ClientStatus, std::vector<ConfigNode>, int &);
+	Request(const int	&, std::vector<ConfigNode>, int &);
 	~Request();
 
 	EventContext* ctx;

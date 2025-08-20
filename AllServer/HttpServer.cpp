@@ -141,7 +141,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     int client_port = ntohs(client_addr.sin_port);
     int server_port = ntohs(server_addr.sin_port);
 
-    Request* req = new Request(client_fd, ReadHeader, ConfigPars, server_port);
+    Request* req = new Request(client_fd, ConfigPars, server_port);
     req->SetTimeOut(std::time(NULL));
     Response* res = new Response(client_fd, kq);
 
@@ -314,7 +314,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 
 			RemoveReqRes(fd);
 
-			Request* new_request = new Request(fd, ReadHeader, ConfigPars, server_port);
+			Request* new_request = new Request(fd, ConfigPars, server_port);
 			Response* new_response = new Response(fd, kq);
 
 			ctx->req = new_request;

@@ -1,23 +1,23 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _ConfigPars, int &_RealPort)
-						:	ClientFd(fd),
-							Client(ReadHeader),
-							DataType(FixedLength),
-							ContentType(BinaryOrRaw),
-							PostObj(NULL),
-							Servers(_ConfigPars),
-							HeaderBuffer(""),
-							BodyBuffer(""),
-							ContentLength(0),
-							TotalBytesRead(0),
-							KeepAlive(false),
-							LimitedBodySize(true),
-							RequestNotComplete(true)
+Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars, int &_RealPort)
 {
 	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
 	SetExtentionsMap();
+	ClientFd = fd;
+	ContentType = BinaryOrRaw;
+	DataType = FixedLength;
+	Client = ReadHeader;
+	PostObj = NULL;
+	Servers = _ConfigPars;
+	HeaderBuffer = "";
+	BodyBuffer = "";
+	ContentLength = 0;
+	TotalBytesRead = 0;
+	KeepAlive = false;
+	LimitedBodySize = true;
+	RequestNotComplete = true;
 }
 
 Request::~Request() {
