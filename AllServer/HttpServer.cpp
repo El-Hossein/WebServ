@@ -26,12 +26,11 @@ std::set<int> GetAllPorts(std::vector<ConfigNode> &ConfigPars)
 
 void SetUpForBind(struct sockaddr_in &server_addr, int port)
 {
-	memset(&server_addr, 0, sizeof(server_addr));
+	std::memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_port = htons(port);
 }
-
 
 int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 {
@@ -41,7 +40,6 @@ int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 	if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
 		return  (1);
 
-	// Listen on the socket
 	if (listen(server_fd, BACKLOG) < 0)
 		return  (1);
 	return  0;
@@ -75,7 +73,6 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         }
 
         fcntl(server_fd, F_SETFD, FD_CLOEXEC);
-
         fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
         struct sockaddr_in server_addr;
@@ -121,7 +118,7 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     if (client_fd < 0)
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK)
-            std::cout << "\033[31m[-]\033[0m \033[31mAccept failed on server_fd " << server_fd << ": " << strerror(errno) << "\033[0m" << std::endl;
+            std::cout << "\033[31m[-]\033[0m \033[31mAccept failed on server_fd " << server_fd << ": " << std::strerror(errno) << "\033[0m" << std::endl;
         return ;
     }
 
@@ -138,7 +135,6 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 
     std::cout << "\033[32m[+]\033[0m \033[32mClient " << client_ip  << " connected to server at " << server_ip << "\033[0m\n" << std::endl;
 
-    int client_port = ntohs(client_addr.sin_port);
     int server_port = ntohs(server_addr.sin_port);
 
     Request* req = new Request(client_fd, ConfigPars, server_port);
@@ -202,10 +198,7 @@ void HttpServer::RemoveClient(int client_fd)
     kevent(kq, &kev, 1, NULL, 0, NULL);
 
     if (client_fd >= 0)
-    {
         close(client_fd);
-        std::cout << "\033[32m[-]\033[0m Closed client fd: " << client_fd << std::endl;
-    }
 
     for (std::vector<EventContext*>::iterator it = all_contexts.begin(); it != all_contexts.end(); ++it)
     {
@@ -386,7 +379,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
 	if (ctx->cgi_pid != 0)
 	{
         time_t currentTime = time(NULL);
-        if(currentTime - request.GetTimeOut() >= 30)
+        if(currentTime - request.GetTimeOut() >= 10)
         {
             pid_t pid = response._cgi.getpid_1();
             struct kevent kev;
@@ -437,7 +430,7 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
         if (nev < 0)
         {
             if (errno == EINTR) continue;
-            std::cout << "\033[31mkevent error: " << strerror(errno) << "\033[0m" << std::endl;
+            std::cout << "\033[31mkevent error: " << std::strerror(errno) << "\033[0m" << std::endl;
             continue;
         }
 
@@ -465,7 +458,6 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 continue;
 			if (ctx->marked_for_deletion)
 				continue;
-
 
             if (filter == EVFILT_PROC)
             {
