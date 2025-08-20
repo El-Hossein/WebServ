@@ -174,28 +174,22 @@ void Cgi::executeCgiScript(Request &req)
     {
         startTime = time(NULL);
         cgistatus = CGI_RUNNING;
-        // std::cout << "\033[34mCGI PID : " << pid << "\033[0m" << std::endl;
-        // link pid to request context
         if (req.ctx)
         {
             req.ctx->is_cgi = true;
             req.ctx->cgi_pid = pid;
         }
-
         struct kevent kev;
-        // watch for child exit
         EV_SET(&kev, pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, req.ctx);
         kevent(kq, &kev, 1, NULL, 0, NULL);
         if (req.ctx)
         {
             req.ctx->registered_procs.push_back(pid);
-            req.ctx->cgi_pid = pid; // already set but reinforce
+            req.ctx->cgi_pid = pid;
         }
         EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
         if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
-
 		req.SetTimeOut(std::time(NULL));
-        // std::cout << "CGI CTX: CLIENT: " << (req.ctx ? req.ctx->ident : -1) << " | CGI ID: " << (req.ctx ? req.ctx->cgi_pid : pid) << " | is_cgi : " << (req.ctx ? req.ctx->is_cgi : true)  << std::endl;
     }
 }
