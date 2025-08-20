@@ -561,26 +561,6 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
     if (!ConfigPars.empty()) ConfigPars.erase(ConfigPars.begin());
 }
 
-void ConfigNode::print() const {
-    std::cout << "[++" << name << "]" << std::endl;
-
-    for (std::map<std::string, std::vector<std::string> >::const_iterator it = values.begin(); it != values.end(); ++it)
-    {
-        std::cout << "    [---" << it->first << "]";
-        for (size_t i = 0; i < it->second.size(); i++)
-        {
-            std::cout <<  " [" << it->second[i] << "]";
-        }
-        std::cout << ";" << std::endl;
-    }
-
-    for (size_t i = 0; i < children.size(); i++)
-    {
-        std::cout << "  ";
-        children[i].print();
-    }
-}
-
 ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string PortOrHostInConfig, std::string port)
 {
     for (size_t i = 0; i < ConfigPars.size(); i++)
