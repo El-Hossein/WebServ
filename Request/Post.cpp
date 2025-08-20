@@ -228,6 +228,7 @@ void Post::ParseChunked()
 					return;
 				}
 				Chunk.BodySize = obj.HexaToInt(UnprocessedBuffer.substr(0, start));
+				Chunk.BodySizeTmp = Chunk.BodySize;
 				UnprocessedBuffer = UnprocessedBuffer.substr(start + 2);
 
 				Chunk.ChunkStatus = ChunkVars::GotHexaSize;
@@ -257,7 +258,7 @@ void Post::ParseChunked()
 					Chunk.ChunkStatus = ChunkVars::None;
 					UnprocessedBuffer = UnprocessedBuffer.substr(end + 2);
 
-					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0)
+					if (UnprocessedBuffer.compare(0, 5, "0\r\n\r\n") == 0 || !Chunk.BodySizeTmp)
 						Chunk.ChunkStatus = ChunkVars::Finished;
 					break;
 				}

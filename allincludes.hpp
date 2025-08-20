@@ -60,6 +60,7 @@ struct	ChunkVars
 	};
 	_ChunkStatus	ChunkStatus;
 	size_t			BodySize;
+	size_t			BodySizeTmp;
 	std::string		Temp;
 };
 
