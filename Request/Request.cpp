@@ -566,18 +566,23 @@ void	Request::PostRequiredHeaders()
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
 		PrintError("Missing POST headers", *this), throw 400;
 
+	std::cout <<  "BODY{" << BodyBuffer << "}" << std::endl;
+	std::cout <<  "BODY size:" << BodyBuffer.size() << "" << std::endl;
+	
+	if (Headers.find("transfer-encoding") != Headers.end())
+		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	if (Headers.find("content-length") != Headers.end())
 	{
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
 		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
-		if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
-			PrintError("Malformed Request", *this), throw 400;
-		this->DataType = FixedLength;
+		if (DataType != Chunked)
+		{
+			if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
+				PrintError("Malformed Request", *this), throw 400;
+			this->DataType = FixedLength;
+		}
 	}
-	
-	if (Headers.find("transfer-encoding") != Headers.end())
-		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	
 	if (Headers.find("content-type") != Headers.end())
 	{
