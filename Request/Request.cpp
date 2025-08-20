@@ -684,11 +684,6 @@ void	Request::ReadRequestHeader()
 	ParseHeaders();
 }
 
-/**
- * @brief	throw -1 If request didn't end yet.
- * 			throw 42 if completed reading request.
- */
-
 void	Request::SetUpRequest()
 {
 	switch (Client)
@@ -706,7 +701,7 @@ void	Request::SetUpRequest()
 	}
 	else
 	{
-		Client = EndReading; // Ila madrtch hadi ayhangi server
-		throw 42; // Continue to Get || Delete
+		Client = EndReading;
+		throw 42;
 	}
 }
