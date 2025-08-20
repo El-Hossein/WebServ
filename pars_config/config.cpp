@@ -205,7 +205,6 @@ void ErrorHandle(std::vector<std::string>& KV, ConfigNode &ConfNode, std::string
     if (blockType == "server")
     {
         CheckAllError(KV, "listen", ConfNode, -1, 1);
-        CheckAllError(KV, "server_names", ConfNode, -1, 1);
         CheckAllError(KV, "error_page", ConfNode, -1, 2);
         CheckAllError(KV, "client_max_body_size", ConfNode, 1, 1);
         CheckAllError(KV, "root", ConfNode, 1, 1);
@@ -392,7 +391,6 @@ void AddKV(ConfigNode &ConfNode, std::vector<std::string>& words)
     if (!initialized)
     {
         SERVER_VALID_KEYS.push_back("listen");
-        SERVER_VALID_KEYS.push_back("server_names");
         SERVER_VALID_KEYS.push_back("error_page");
         SERVER_VALID_KEYS.push_back("client_max_body_size");
         SERVER_VALID_KEYS.push_back("root");
