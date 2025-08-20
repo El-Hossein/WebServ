@@ -134,9 +134,9 @@ bool Response::checkPendingCgi(Request &req)
         struct kevent kev;
         EV_SET(&kev, childPid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
         kevent(kq, &kev, 1, NULL, 0, NULL);
-        if (WIFEXITED(status)) // returns non zero if child terminates normally
+        if (WIFEXITED(status))
         {
-            int exCode = WEXITSTATUS(status); // Extracts the exit code that the child exited with
+            int exCode = WEXITSTATUS(status);
             if (exCode == 0)
             {
                 _cgi.parseOutput();
