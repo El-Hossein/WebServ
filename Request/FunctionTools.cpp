@@ -163,16 +163,3 @@ size_t	CrlfCounter(std::string	&str, size_t pos)
 	}
 	return Count;
 }
-
-std::string	RemoveCrlf(std::string BodyContent)
-{
-	if (BodyContent.size() > 2)
-	{
-		if (BodyContent[BodyContent.size() - 2] == '\r' && BodyContent[BodyContent.size() - 2] == '\n')
-		{
-			BodyContent.pop_back(), BodyContent.pop_back();
-			std::cout << "done popping the CRLF\n\n";
-		}
-	}
-	return BodyContent;
-}
