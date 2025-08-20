@@ -2,13 +2,13 @@
 #include "Request.hpp"
 
 Post::Post(Request &_obj) : obj(_obj),
-							UnprocessedBuffer(_obj.GetBodyBuffer()),
 							Boundary(obj.GetBoundarySettings()),
 							FirstTime(true),
 							BodyFullyRead(false)
 {
 	Boundary.CrlfCount = 0;
 	BoundaryStatus = None;
+	UnprocessedBuffer = _obj.GetBodyBuffer(),
 
 	Chunk.ChunkStatus = ChunkVars::None;
 	Chunk.BodySize = 0;
@@ -57,7 +57,7 @@ void Post::FindFileName(std::string &Buffer, std::string &Filename)
 void Post::GetSubBodies(std::string &Buffer) // state machine
 {
 	std::string BodyContent;
-	size_t start = 0, end = 0, BodyPos = 0;
+	size_t start = 0, BodyPos = 0;
 
 	// std::cout << "\n\nBuffer{" << Buffer << "}\n\n" << std::endl;
 	// switch (BoundaryStatus)
