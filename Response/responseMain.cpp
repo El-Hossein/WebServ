@@ -131,7 +131,7 @@ void     Response::responseError(int statusCode, std::string message, Request &r
 	{
 		if (std::atoi(errorPage[i].c_str()) == statusCode)
 		{
-			std::string errorPath = root;
+			errorPath = root;
 			if (!root.empty() && root.back() != '/')
 				errorPath += "/";
 			errorPath += errorPage[i + 1];
@@ -204,7 +204,7 @@ std::string Response::checkContentType(int index)
     if (index == 1)
         exte = htmlFound;
     else if (index == 2)
-        exte = errorP;
+        exte = errorPath;
     else
         exte = uri;
     size_t dotPos = exte.find_last_of(".");

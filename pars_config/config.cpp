@@ -28,12 +28,6 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
-bool startsWith(const std::string& path, const std::string& prefix)
-{
-    if (prefix.length() > path.length()) return false;
-    return path.compare(0, prefix.length(), prefix) == 0;
-}
-
 std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, size_t index) 
 {
     if (index > ConfNode.children.size())
@@ -450,16 +444,6 @@ void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
     if (nodeStack.empty())
         throw ("Error: Unmatched closing brace '}'.");
     ConfigNode &lastOne = *nodeStack.back();
-    if(lastOne.getName() == "server")
-    {
-        if (lastOne.getValuesForKey(lastOne, "listen", "").empty() || lastOne.getValuesForKey(lastOne, "root", "").empty())
-            throw ("Error: server should have listen and root");
-    }
-    if(startsWith(lastOne.getName(), "location"))
-    {
-        if (lastOne.getValuesForKey(lastOne, "allow_methods", "").empty())
-            throw ("Error: location should have allow_methods");
-    }
     std::vector<std::string> a = lastOne.getValuesForKey(lastOne, "allow_methods", "");
     for (std::vector<std::string>::iterator it = a.begin(); it != a.end(); ++it)
     {
@@ -633,7 +617,11 @@ std::vector<std::string> split_path(const std::string& path)
     return components;
 }
 
-
+bool startsWith(const std::string& path, const std::string& prefix)
+{
+    if (prefix.length() > path.length()) return false;
+    return path.compare(0, prefix.length(), prefix) == 0;
+}
 
 std::string ConfigNode::GetRightLocation(std::string path)
 {
