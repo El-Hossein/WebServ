@@ -18,6 +18,7 @@ class Response
         std::string                    headers;
         size_t                         fileSize;
         int                            clientFd;
+        std::string                    errorPath;
         ssize_t                        bytesSent;
         std::string                    htmlFound;
         size_t                         headerSent;
