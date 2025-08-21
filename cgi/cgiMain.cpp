@@ -10,7 +10,8 @@ Cgi::Cgi()
     usingCgiStatFile = false;
     statCgiFilePos = 0;
     std::ostringstream ss;
-    ss << getpid() << "_" << time(NULL) << "_" << rand();
+    int random;
+    ss << "_" << std::time(NULL) << "_" << std::rand() << &random;
     uniq = ss.str();
     checkConnection = _Empty;
     cgiContentLength = -1;
@@ -203,7 +204,7 @@ int fileChecking(std::string path)
 
 void Cgi::splitPathInfo(Request &req)
 {
-    std::string fullPath = req.GetFullPath();
+    fullPath = req.GetFullPath();
     memoExt = "";
 
     size_t quotationPos = fullPath.find('?');

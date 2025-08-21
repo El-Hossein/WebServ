@@ -82,10 +82,12 @@ bool Cgi::prepareFileResponseCgi(Request &req)
     if (cgiHeader.find("Content-Length") == std::string::npos)
     {
         if (cgiContentLength > cgiFileSize || cgiContentLength < 0)
+        {
+            cgiContentLength = cgiFileSize;
             httpResponse += "Content-Length: " + intToString(cgiFileSize) + "\r\n";
+        }
         else
             httpResponse += "Content-Length: " + intToString(cgiContentLength) + "\r\n";
-
     }
     if (cgiHeader.find("Connection") == std::string::npos)
     {

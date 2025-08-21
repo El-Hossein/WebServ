@@ -139,7 +139,7 @@ bool Response::checkPendingCgi(Request &req)
             int exCode = WEXITSTATUS(status);
             if (exCode == 0)
             {
-                _cgi.parseOutput();
+                _cgi.parseOutput(req);
                 _cgi.prepareFileResponseCgi(req);
                 _cgi.setcgistatus(CGI_COMPLETED);
             }

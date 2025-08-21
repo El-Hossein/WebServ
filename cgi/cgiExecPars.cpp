@@ -1,19 +1,19 @@
 #include "cgiHeader.hpp"
 #include "../AllServer/HttpServer.hpp"
 
-void     Cgi::parseOutput()
+void Cgi::parseOutput(Request& req)
 {
-    cgiStatusCode = 200;
     std::ifstream file(outFile.c_str());
     std::string line;
     bool readHeader = true;
+    cgiStatusCode = 200;
     cgiHeader = "";
     cgiBody = "";
 
-    while (std::getline(file, line, '\r'))
+    while (std::getline(file, line))
     {
-        if (!line.empty() && line[0] == '\n')
-            line.erase(0, 1);
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
         if (readHeader)
         {
             if (line.empty())
@@ -22,107 +22,102 @@ void     Cgi::parseOutput()
                 continue;
             }
             size_t colonPos = line.find(':');
-            if (colonPos != std::string::npos)
-            {
-                std::string headerName = line.substr(0, colonPos);
-                std::string headerValue = line.substr(colonPos + 1);
-                if (headerName == "Status")
-                    cgiStatusCode = std::atoi(headerValue.c_str());
-                else if (headerName == "Content-Length")
-                    cgiContentLength = std::atoi(headerValue.c_str());
-                else
-                    cgiHeader += line + "\r\n";
-            }
+            if (colonPos == std::string::npos)
+                return responseErrorcgi(500, "Internal Server Error", req);
+            std::string headerName = line.substr(0, colonPos);
+            std::string headerValue = line.substr(colonPos + 1);
+            headerValue.erase(0, headerValue.find_first_not_of(" \t"));
+            if (headerName == "Status")
+                cgiStatusCode = std::atoi(headerValue.c_str());
+            else if (headerName == "Content-Length")
+                cgiContentLength = std::atoi(headerValue.c_str());
+            else if (headerName == "Content-Type")
+                cgiHeader += headerName + ": " + headerValue + "\r\n";
             else
-            {
-                readHeader = false;
-                cgiBody += line;
-            }
+                cgiHeader += headerName + ": " + headerValue + "\r\n";
         }
         else
-            cgiBody += line;
+            cgiBody += line + "\n";
     }
     cgiFileSize = cgiBody.size();
-    if (cgiHeader.find("Content-Type:") == std::string::npos)
-        cgiHeader += "Content-Type: text/html\r\n";
 }
 
-char    **cgiEnvVariables(Request &req, std::string _pathInfo)
+
+char    **Cgi::cgiEnvVariables(Request &req, std::string _pathInfo)
 {
     char **envp = new char*[15];
 
-    envp[0] = new char[strlen("REQUEST_METHOD=") + strlen(req.GetHeaderValue("method").c_str()) + 1];
+    envp[0] = new char[strlen("REQUEST_METHOD=") + std::strlen(req.GetHeaderValue("method").c_str()) + 1];
     strcpy(envp[0], "REQUEST_METHOD=");
     strcat(envp[0], req.GetHeaderValue("method").c_str());
-    envp[1] = new char[strlen("SCRIPT_NAME=") + strlen(req.GetHeaderValue("path").c_str()) + 1];
+    envp[1] = new char[std::strlen("SCRIPT_NAME=") + std::strlen(fullPath.c_str()) + 1];
     strcpy(envp[1], "SCRIPT_NAME=");
-    strcat(envp[1], req.GetHeaderValue("path").c_str());
-    envp[2] = new char[strlen("SCRIPT_FILENAME=") + strlen(req.GetFullPath().c_str()) + 1];
+    strcat(envp[1], fullPath.c_str());
+    envp[2] = new char[std::strlen("SCRIPT_FILENAME=") + std::strlen(scriptFile.c_str()) + 1];
     strcpy(envp[2], "SCRIPT_FILENAME=");
-    strcat(envp[2], req.GetFullPath().c_str());
-    envp[3] = new char[strlen("QUERY_STRING=") + strlen(req.GetHeaderValue("query").c_str()) + 1];
+    strcat(envp[2], scriptFile.c_str());
+    envp[3] = new char[std::strlen("QUERY_STRING=") + std::strlen(req.GetHeaderValue("query").c_str()) + 1];
     strcpy(envp[3], "QUERY_STRING=");
     strcat(envp[3], req.GetHeaderValue("query").c_str());
-    envp[4] = new char[strlen("SERVER_PROTOCOL=") + strlen("HTTP/1.1") + 1];
+    envp[4] = new char[std::strlen("SERVER_PROTOCOL=") + std::strlen("HTTP/1.1") + 1];
     strcpy(envp[4], "SERVER_PROTOCOL=");
     strcat(envp[4], "HTTP/1.1");
-    envp[5] = new char[strlen("GATEWAY_INTERFACE=") + strlen("CGI/1.1") + 1];
+    envp[5] = new char[std::strlen("GATEWAY_INTERFACE=") + std::strlen("CGI/1.1") + 1];
     strcpy(envp[5], "GATEWAY_INTERFACE=");
     strcat(envp[5], "CGI/1.1");
-    envp[6] = new char[strlen("SERVER_SOFTWARE=") + strlen("webSERV/1.0") + 1];
+    envp[6] = new char[std::strlen("SERVER_SOFTWARE=") + std::strlen("webSERV/1.0") + 1];
     strcpy(envp[6], "SERVER_SOFTWARE=");
     strcat(envp[6], "webSERV/1.0");
-    envp[7] = new char[strlen("PATH_INFO=") + strlen(_pathInfo.c_str()) + 1];
+    envp[7] = new char[std::strlen("PATH_INFO=") + std::strlen(_pathInfo.c_str()) + 1];
     strcpy(envp[7], "PATH_INFO=");
     strcat(envp[7], _pathInfo.c_str());
-    envp[8] = new char[strlen("CONTENT_TYPE=") + strlen(req.GetHeaderValue("content-type").c_str()) + 1];
+    envp[8] = new char[std::strlen("CONTENT_TYPE=") + std::strlen(req.GetHeaderValue("content-type").c_str()) + 1];
     strcpy(envp[8], "CONTENT_TYPE=");
     strcat(envp[8], req.GetHeaderValue("content-type").c_str());
-    envp[9] = new char[strlen("CONTENT_LENGTH=") + strlen(req.GetHeaderValue("content-length").c_str()) + 1];
+    envp[9] = new char[std::strlen("CONTENT_LENGTH=") + std::strlen(req.GetHeaderValue("content-length").c_str()) + 1];
     strcpy(envp[9], "CONTENT_LENGTH=");
     strcat(envp[9], req.GetHeaderValue("content-length").c_str());
-    envp[10] = new char[strlen("SERVER_NAME=") + strlen(req.GetHeaderValue("host").c_str()) + 1];
+    envp[10] = new char[std::strlen("SERVER_NAME=") + std::strlen(req.GetHeaderValue("host").c_str()) + 1];
     strcpy(envp[10], "SERVER_NAME=");
     strcat(envp[10], req.GetHeaderValue("host").c_str());
-    envp[11] = new char[strlen("SERVER_PORT=") + strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
+    envp[11] = new char[std::strlen("SERVER_PORT=") + std::strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
     strcpy(envp[11], "SERVER_PORT=");
     strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
-    envp[12] = new char[strlen("HTTP_COOKIE=") + strlen(req.GetHeaderValue("cookie").c_str()) + 1];
+    envp[12] = new char[std::strlen("HTTP_COOKIE=") + std::strlen(req.GetHeaderValue("cookie").c_str()) + 1];
     strcpy(envp[12], "HTTP_COOKIE=");
     strcat(envp[12], req.GetHeaderValue("cookie").c_str());
-    envp[13] = new char[strlen("REDIRECT_STATUS=") + 4];
+    envp[13] = new char[std::strlen("REDIRECT_STATUS=") + 4];
     strcpy(envp[13], "REDIRECT_STATUS=");
     strcat(envp[13], "200");
     envp[14] = NULL;
     return envp;
 }
 
-void    execCgi(const char *scriptPath, char **envp)
+void    Cgi::execCgi(char **envp)
 {
-    char* argv[5];
-    if (strstr(scriptPath, ".py"))
+    const char* argv[5];
+    if (std::strstr(scriptFile.c_str(), ".py"))
     {
         argv[0] = (char*)"python3";
-        argv[1] = (char*)scriptPath;
+        argv[1] = scriptFile.c_str();
         argv[2] = NULL;
-        execve("/usr/bin/python3", argv, envp);
+        execve("/usr/bin/python3", (char *const *)argv, envp);
     }
-    else if (strstr(scriptPath, ".cgi"))
+    else if (std::strstr(scriptFile.c_str(), ".cgi"))
     {
-        argv[0] = (char*)scriptPath;
+        argv[0] = scriptFile.c_str();
         argv[1] = NULL;
-        execve(scriptPath, argv, envp);
+        execve(scriptFile.c_str(), (char *const *)argv, envp);
     }
-    else if (strstr(scriptPath, ".php"))
+    else if (std::strstr(scriptFile.c_str(), ".php"))
     {
         argv[0] = (char*)"php";
         argv[1] = (char*)"-d";
         argv[2] = (char*)"display_errors=0";
-        argv[3] = (char*)scriptPath;
+        argv[3] = scriptFile.c_str();
         argv[4] = NULL;
-        execve("/usr/bin/php", argv, envp);
+        execve("/usr/bin/php", (char *const *)argv, envp);
     }
-    std::cerr << "execve failed" << std::endl;
     if (envp)
     {
         for (int i = 0; envp[i]; i++)
@@ -163,12 +158,14 @@ void Cgi::executeCgiScript(Request &req)
         {
             if (chdir(scriptDir.c_str()) == -1)
             {
-                std::cerr << "chdir failed" << std::endl;
+                responseErrorcgi(500, " Internal Server Error", req);
                 std::exit(1);
             }
         }
+        fullPath = scriptFile;
+        scriptFile = scriptFile.substr(scriptFile.find_last_of("/") + 1);
         envp = cgiEnvVariables(req, pathInfo);
-        execCgi(scriptFile.c_str(), envp);
+        execCgi(envp);
     }
     else
     {
