@@ -17,14 +17,9 @@ struct EventContext {
     Response* res;
     bool is_cgi;
 	bool marked_for_deletion;
-	bool registered_read;
-	bool registered_write;
-	bool registered_timer;
 	std::vector<pid_t> registered_procs; // pids for which EVFILT_PROC/EVFILT_TIMER were registered // <- new
     EventContext() : ident(-1), cgi_pid(0),req(NULL), res(NULL), 
-                 is_cgi(false), marked_for_deletion(false),
-                 registered_read(false), registered_write(false),
-                 registered_timer(false) {}
+                 is_cgi(false), marked_for_deletion(false)  {}
 };
 
 class HttpServer{
