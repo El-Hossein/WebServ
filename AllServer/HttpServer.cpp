@@ -60,7 +60,8 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 
     std::set<int> AllPorts = GetAllPorts(ConfigPars);
 
-    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it)
+    size_t i = 0;
+    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
     {
         int port = *it;
 
