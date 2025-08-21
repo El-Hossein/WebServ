@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import base64
-import json
-import secrets
-from datetime import datetime, timezone
 import fcntl
 import hashlib
-from urllib.parse import parse_qs
+import json
+import os
 import re
+import secrets
+import sys
+from datetime import datetime, timezone
+from urllib.parse import parse_qs
+
+
 # ---------------- Send pages ----------------
 def send(content, set_cookie_value=None):
     """Send HTTP response with optional Set-Cookie header and content."""
@@ -19,7 +21,7 @@ def send(content, set_cookie_value=None):
         # Only servers send Set-Cookie; never send a "Cookie" header in responses
         # Add secure-ish attributes as appropriate for your environment (add 'Secure' if HTTPS)
         print(f"Set-Cookie: token={set_cookie_value}; Path=/; HttpOnly; SameSite=Strict\r")
-    print(f"Content-Length: {len(body_bytes)}\r\n\r", end="")
+    print(f"Content-Length: {len(body_bytes)}\r\n\r")
     # print()
     # Write bytes to avoid accidental encoding issues with large bodies
     sys.stdout.flush()
@@ -27,18 +29,167 @@ def send(content, set_cookie_value=None):
 
 # ---------------- HTML pages ----------------
 def get_login_page():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Login</title>
+<style>
+    body {
+        background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e);
+        font-family: 'Segoe UI', sans-serif;
+        color: #e0e0e0;
+        padding: 40px;
+        margin: 0;
+    }
+    .container {
+        max-width: 500px;
+        margin: auto;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        animation: fadeIn 0.6s ease-in-out;
+        text-align: center;
+    }
+    h1 {
+        color: #a5d6a7;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px rgba(165, 214, 167, 0.8);
+        animation: slideDown 0.5s ease-in-out;
+    }
+    label {
+        display: block;
+        margin: 15px 0 10px;
+        font-weight: bold;
+        color: #c8e6c9;
+    }
+    input[type="text"],
+    input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: none;
+        margin-top: 5px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 1em;
+    }
+    input[type="submit"] {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #43a047;
+        border: none;
+        border-radius: 6px;
+        color: #fff;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 1em;
+    }
+    input[type="submit"]:hover {
+        background: #4caf50;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes slideDown {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Login</h1>
+        <form action="" method="POST">
+            <label>Username:
+                <input type="text" name="username" required>
+            </label>
+            <label>Password:
+                <input type="password" name="password" required>
+            </label>
+            <input type="submit" value="Login">
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+
+
+def styled_message_page(title: str, message: str):
     return f"""<!DOCTYPE html>
-    <html lang="en">
-    <head><meta charset="utf-8"><title>Login</title></head>
-    <body>
-    <h1>Login Page</h1>
-    <form action="" method="POST">
-    <label>Username: <input type="text" name="username" required></label><br><br>
-    <label>Password: <input type="password" name="password" required></label><br><br>
-    <input type="submit" value="Login">
-    </form>
-    </body>
-    </html>"""
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<style>
+    body {{
+        background: linear-gradient(to bottom, #0b3d2e, #14532d, #0b3d2e);
+        font-family: 'Segoe UI', sans-serif;
+        color: #e0e0e0;
+        padding: 40px;
+        margin: 0;
+    }}
+    .container {{
+        max-width: 600px;
+        margin: auto;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        animation: fadeIn 0.6s ease-in-out;
+    }}
+    h1 {{
+        color: #a5d6a7;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px rgba(165, 214, 167, 0.8);
+        animation: slideDown 0.5s ease-in-out;
+    }}
+    p {{
+        font-size: 1.2em;
+        margin-top: 10px;
+        color: #c8e6c9;
+    }}
+    a {{
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #2e7d32;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background 0.3s ease;
+        font-weight: bold;
+    }}
+    a:hover {{
+        background: #388e3c;
+    }}
+    @keyframes fadeIn {{
+        from {{ opacity: 0; }}
+        to {{ opacity: 1; }}
+    }}
+    @keyframes slideDown {{
+        from {{ transform: translateY(-20px); opacity: 0; }}
+        to {{ transform: translateY(0); opacity: 1; }}
+    }}
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>{title}</h1>
+        <p>{message}</p>
+    </div>
+</body>
+</html>"""
+
 
 # ---------------- Post data ----------------
 def get_post_body():
@@ -141,10 +292,10 @@ def main():
         password = parsed.get('password', [''])[0]
 
         if not username or not password:
-            send("<html><body><h1>Missing username or password</h1></body></html>")
+            send(styled_message_page("Login Failed", "Missing username or password"))
             return
         if not (is_alphanumeric(username)):
-            send("<html><body><h1>Username  must be alphanumeric only</h1></body></html>")
+            send(styled_message_page("Invalid Username", "Username must be alphanumeric only"))
             return
         found = find_user_by_username(username)
         if found:
@@ -152,15 +303,15 @@ def main():
             userna, stored_pwd_hash, existing_token = found
             if hash_password(password) == stored_pwd_hash:
                 # Valid login; refresh cookie (optional) by re-setting it
-                send(f"<html><body><h1>Welcome back, user {userna}</h1></body></html>", set_cookie_value=existing_token)
+                send(styled_message_page("Welcome Back", f"Welcome back, <strong>{userna}</strong>!"), set_cookie_value=existing_token)
             else:
-                send(f"<html><body><h1>Incorrect password for user {userna}</h1></body></html>")
+                send(styled_message_page("Incorrect Password", f"Incorrect password for user <strong>{userna}</strong>"))
             return
         else:
             # New user: create account and set cookie
             token = token_create(username)
             store_token(username, hash_password(password), token)
-            send(f"<html><body><h1>Login successful! Welcome, new user {username}</h1></body></html>", set_cookie_value=token)
+            send(styled_message_page("Login Successful", f"Welcome, new user <strong>{username}</strong>!"), set_cookie_value=token)
             return
 
     # GET
@@ -168,7 +319,7 @@ def main():
     valid_line = validate_token(token) if token else None
     if valid_line:
         user, pswd_hash, tok = valid_line.split(",", 2)
-        send(f"<html><body><h1>Welcome back, user {user}</h1></body></html>")
+        send(styled_message_page("Welcome", f"Welcome back, <strong>{user}</strong>!"))
         return
 
     login_page = get_login_page()

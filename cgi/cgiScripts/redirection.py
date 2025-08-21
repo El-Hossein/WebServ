@@ -1,6 +1,6 @@
 print("Status: 302 Found\r")
 print("Location: https://www.youtube.com/\r")
-print("Content-Type: text/html\r\n\r", end="")
+print("Content-Type: text/html\r\n\r")
 
 print("""
 <html>

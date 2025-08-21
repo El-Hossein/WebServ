@@ -41,6 +41,7 @@ class Cgi
         std::string         scriptPath;
         size_t              cgiFilePos;
         std::string         scriptFile;
+        std::string         fullPath;
         ssize_t             cgiFileSize;
         int                 cgiStatusCode;
         size_t              cgiHeaderSent;
@@ -67,11 +68,13 @@ class Cgi
         std::string                 getoutfile();
         long                        getFilePos();
         long                        getFileSize();
-        void                        parseOutput();
+        void                        execCgi(char **envp);
+        void                        parseOutput(Request &req);
         bool                        getUsingCgi();
         std::string                 getCgiHeader();
         int                         getcgistatus();
         size_t                      getCgiHeaderSent();
+        char                      **cgiEnvVariables(Request &req, std::string _pathInfo);
         bool                        gethasPendingCgi();
         size_t                      getStatCgiFilePos();
         std::string                 getStatCgiFileBody();
