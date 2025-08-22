@@ -401,8 +401,8 @@ void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response 
 
 void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response)
 {
-	if (ctx->cgi_pid != 0)
-	{
+    if (ctx->cgi_pid != 0)
+    {
         pid_t pid = response._cgi.getpid_1();
         struct kevent kev;
         ctx->cgi_pid = 0;
@@ -414,12 +414,16 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
         kevent(kq, &kev, 1, NULL, 0, NULL);
         EV_SET(&kev, pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
         kevent(kq, &kev, 1, NULL, 0, NULL);
-        kill(pid, SIGTERM);
+        kill(pid, SIGKILL);
+        int status;
+        while ((waitpid(pid, &status, WNOHANG) >= 0))
+            kill(pid, SIGKILL);
         response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
         response._cgi.setcgistatus(CGI_ERROR);
+        response._cgi.sethasPendingCgi(false);
         if (!response._cgi.getinfile().empty())
             std::remove(response._cgi.getinfile().c_str());
-        if (!response._cgi.getoutfile().empty())   
+        if (!response._cgi.getoutfile().empty())
             std::remove(response._cgi.getoutfile().c_str());
         request.SetTimeOut(std::time(NULL));
         struct kevent ev;
@@ -429,7 +433,7 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
         EV_SET(&ev, response.getClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
         kevent(kq, &ev, 1, NULL, 0, NULL);
         return;
-	}
+    }
 }
 
 void HttpServer::handle_timeout(EventContext* ctx, Request & request)

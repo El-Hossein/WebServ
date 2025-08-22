@@ -353,9 +353,13 @@ bool	Request::CheckForCgi()
 	    if (S_ISDIR(st.st_mode))
 	        return false;
 	}
-	if (ScriptFile.find(".cgi") != std::string::npos || ScriptFile.find(".py") != std::string::npos
-		||	ScriptFile.find(".php") != std::string::npos)
-	    return true;
+	size_t extPos = ScriptFile.rfind(".");
+    if (extPos != std::string::npos)
+    {
+        std::string ext = ScriptFile.substr(extPos);
+        if (ext == ".cgi" || ext == ".py" || ext == ".php")
+            return true;
+    }
 	return false;
 }
 
