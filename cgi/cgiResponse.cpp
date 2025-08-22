@@ -154,15 +154,19 @@ void Cgi::responseErrorcgi(int statusCode, std::string message, Request &req)
     std::string	    loc = req.GetRightServer().GetRightLocation(req.GetHeaderValue("path"));
     std::string     root = getInfoConfigCgi("root", loc, req);
     std::vector<std::string> error_page = getInfoConfigMultipleCgi("error_page", loc, req);
+    std::string errorContentTC = "";
+    errorPathCgi = "";
     for (size_t i = 0; i + 1 < error_page.size(); i += 2)
 	{
 		if (std::atoi(error_page[i].c_str()) == statusCode)
 		{
-			std::string errorPath = root;
+			errorPathCgi = root;
 			if (!root.empty() && root.back() != '/')
-				errorPath += "/";
-			errorPath += error_page[i + 1];
-			body = readFileToStringCgi(errorPath);
+				errorPathCgi += "/";
+			errorPathCgi += error_page[i + 1];
+			body = readFileToStringCgi(errorPathCgi);
+            if (!body.empty())
+                errorContentTC = checkContentTypeCgi();
 			break;
 		}
 	}
@@ -186,7 +190,10 @@ void Cgi::responseErrorcgi(int statusCode, std::string message, Request &req)
         case 405: cgiHeader += " Method Not Allowed"; break;
     }
     cgiHeader += "\r\n";
-    cgiHeader += "Content-Type: text/html\r\n";
+    if (!errorContentTC.empty())
+        cgiHeader += errorContentTC;
+    else
+        cgiHeader += "Content-Type: text/html\r\n";
     cgiHeader += "Content-Length: " + intToString(body.length()) + "\r\n";
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
