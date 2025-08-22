@@ -439,7 +439,8 @@ void   Request::HandlePath()
 	std::string		Reserved = GenDelims + SubDelims;
 	std::string		Unreserved = "-_.~";
 	std::string		UriPath = GetHeaderValue("path");
-
+	
+	UriPath = RemoveSlashs(UriPath);
 	for (size_t i = 0; i < UriPath.size(); i++) // if not alpha || digit -> check if Allowed character
 	{
 		if (!std::isalpha(UriPath[i]) && !std::isdigit(UriPath[i]))
