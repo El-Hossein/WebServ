@@ -66,3 +66,4 @@ struct	ChunkVars
 
 void		AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
 std::string	intToString(int n);
+std::string RemoveSlashs(std::string path);
