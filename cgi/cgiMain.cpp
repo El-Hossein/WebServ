@@ -162,6 +162,53 @@ bool    Cgi::getUsingCgi()
     return usingCgi;
 }
 
+std::string Cgi::checkContentTypeCgi()
+{
+    size_t dotPos = errorPathCgi.find_last_of(".");
+    if (dotPos != std::string::npos)
+    {
+        std::string extension = errorPathCgi.substr(dotPos);
+        if (extension == ".png")   return "Content-Type: image/png\r\n";
+        if (extension == ".jpg" || extension == ".jpeg") return "Content-Type: image/jpeg\r\n";
+        if (extension == ".gif")   return "Content-Type: image/gif\r\n";
+        if (extension == ".bmp")   return "Content-Type: image/bmp\r\n";
+        if (extension == ".webp")  return "Content-Type: image/webp\r\n";
+        if (extension == ".svg")   return "Content-Type: image/svg+xml\r\n";
+        if (extension == ".mp4")   return "Content-Type: video/mp4\r\n";
+        if (extension == ".webm")  return "Content-Type: video/webm\r\n";
+        if (extension == ".ogv")   return "Content-Type: video/ogg\r\n";
+        if (extension == ".avi")   return "Content-Type: video/x-msvideo\r\n";
+        if (extension == ".mov")   return "Content-Type: video/quicktime\r\n";
+        if (extension == ".mkv")   return "Content-Type: video/x-matroska\r\n";
+        if (extension == ".mp3")   return "Content-Type: audio/mpeg\r\n";
+        if (extension == ".wav")   return "Content-Type: audio/wav\r\n";
+        if (extension == ".ogg")   return "Content-Type: audio/ogg\r\n";
+        if (extension == ".flac")  return "Content-Type: audio/flac\r\n";
+        if (extension == ".aac")   return "Content-Type: audio/aac\r\n";
+        if (extension == ".pdf")   return "Content-Type: application/pdf\r\n";
+        if (extension == ".zip")   return "Content-Type: application/zip\r\n";
+        if (extension == ".tar")   return "Content-Type: application/x-tar\r\n";
+        if (extension == ".gz")    return "Content-Type: application/gzip\r\n";
+        if (extension == ".bz2")   return "Content-Type: application/x-bzip2\r\n";
+        if (extension == ".7z")    return "Content-Type: application/x-7z-compressed\r\n";
+        if (extension == ".rar")   return "Content-Type: application/vnd.rar\r\n";
+        if (extension == ".html" || extension == ".htm") return "Content-Type: text/html\r\n";
+        if (extension == ".css")   return "Content-Type: text/css\r\n";
+        if (extension == ".js")    return "Content-Type: application/javascript\r\n";
+        if (extension == ".json")  return "Content-Type: application/json\r\n";
+        if (extension == ".xml")   return "Content-Type: application/xml\r\n";
+        if (extension == ".txt")   return "Content-Type: text/plain\r\n";
+        if (extension == ".csv")   return "Content-Type: text/csv\r\n";
+        if (extension == ".md")    return "Content-Type: text/markdown\r\n";
+        else
+            return "Content-Type: text/plain\r\n";
+    }
+    if (access(errorPathCgi.c_str(), X_OK) != 0)
+        return "Content-Type: text/plain\r\n";
+    else
+        return "Content-Type: application/octet-stream\r\n";
+}
+
 std::string Cgi::getInfoConfigCgi(std::string what, std::string location, Request &req)
 {
     ConfigNode a = req.GetRightServer();
@@ -289,8 +336,12 @@ int Cgi::IsCgiRequest(std::string uri, Request &req)
         scriptFile = pathAfterCgi.substr(0, firstSlash);
     else
         scriptFile = pathAfterCgi;
-    if (scriptFile.find(".cgi") != std::string::npos || scriptFile.find(".py") != std::string::npos 
-        || scriptFile.find(".php") != std::string::npos)
-        return 1;
+    size_t extPos = scriptFile.rfind(".");
+    if (extPos != std::string::npos)
+    {
+        std::string ext = scriptFile.substr(extPos);
+        if (ext == ".cgi" || ext == ".py" || ext == ".php")
+            return 1;
+    }
     return 0;
 }

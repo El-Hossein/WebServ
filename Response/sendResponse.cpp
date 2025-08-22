@@ -139,9 +139,16 @@ bool Response::checkPendingCgi(Request &req)
             int exCode = WEXITSTATUS(status);
             if (exCode == 0)
             {
-                _cgi.parseOutput(req);
-                _cgi.prepareFileResponseCgi(req);
-                _cgi.setcgistatus(CGI_COMPLETED);
+                if (_cgi.parseOutput() == false)
+                {
+                    _cgi.responseErrorcgi(500, " Internal Server Error", req);
+                    _cgi.setcgistatus(CGI_ERROR);
+                }
+                else
+                {
+                    _cgi.prepareFileResponseCgi(req);
+                    _cgi.setcgistatus(CGI_COMPLETED);
+                }
             }
             else
             {
