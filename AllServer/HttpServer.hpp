@@ -2,7 +2,6 @@
 
 #define BACKLOG 128
 
-// #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/responseHeader.hpp"
@@ -17,9 +16,12 @@ struct EventContext {
     Response* res;
     bool is_cgi;
 	bool marked_for_deletion;
-	std::vector<pid_t> registered_procs; // pids for which EVFILT_PROC/EVFILT_TIMER were registered // <- new
+	bool cgi_terminating;
+    pid_t terminated_cgi_pid;
+	std::vector<pid_t> registered_procs;
     EventContext() : ident(-1), cgi_pid(0),req(NULL), res(NULL), 
-                 is_cgi(false), marked_for_deletion(false)  {}
+                 is_cgi(false), marked_for_deletion(false),
+				 cgi_terminating(false), terminated_cgi_pid(0) {}
 };
 
 class HttpServer{
