@@ -369,7 +369,7 @@ void CheckEdgeCases(std::vector<std::string>& words, ConfigNode &ConfNode)
         }
         std::vector<std::string > fromconf = ConfNode.ConfgetValuesForKey(ConfNode, "allow_methods");
         if (!fromconf.empty())
-            for (std::vector<std::string>::iterator it = fromconf.begin()+ 1; it != fromconf.end(); ++it) {
+            for (std::vector<std::string>::iterator it = fromconf.begin(); it != fromconf.end(); ++it) {
                 if (*it == "GET" || *it == "POST" || *it == "DELETE")
                     CheckOthers = 1;
                 else if (*it == "NONE")

@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <sys/event.h>
 
 
 void	HttpServer::SetAllContexts(EventContext* ctx) { all_contexts.push_back(ctx);	}
@@ -372,61 +373,90 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 
 void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response * response)
 {
-	pid_t exitedPid = ctx->cgi_pid;
-	if (response->_cgi.gethasPendingCgi() && response->_cgi.getpid_1() == exitedPid)
-	{
-		if (response->checkPendingCgi(*request))
-		{
-			pid_t pid = response->_cgi.getpid_1();
-			struct kevent kev;
-			EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
-			kevent(kq, &kev, 1, NULL, 0, NULL);
+    if (!ctx) return;
 
-			struct kevent ev;
-			int client_fd = response->getClientFd();
-			AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
-			AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
+    pid_t exitedPid = ctx->cgi_pid;
 
-            EV_SET(&kev, response->getClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
-            kevent(kq, &kev, 1, NULL, 0, NULL);
-			request->SetTimeOut(std::time(NULL));
-			ctx->is_cgi = false;
-		}
-		response->_cgi.sethasPendingCgi(false);
-	}
-}
+    if (ctx->cgi_terminating && ctx->terminated_cgi_pid > 0)
+        exitedPid = ctx->terminated_cgi_pid;
 
-void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response)
-{
-	if (ctx->cgi_pid != 0)
-	{
-        // time_t currentTime = time(NULL);
-        // if(currentTime - request.GetTimeOut() >= 10)
-        // {
-            pid_t pid = response._cgi.getpid_1();
+    if (exitedPid == 0 || ctx->is_cgi == false)
+    {
+        ctx->cgi_terminating = false;
+        ctx->terminated_cgi_pid = 0;
+        return;
+    }
+
+    if (response && response->_cgi.getpid_1() != exitedPid && ctx->cgi_pid != exitedPid)
+    {
+        ctx->cgi_terminating = false;
+        ctx->terminated_cgi_pid = 0;
+        return;
+    }
+
+    if (ctx->cgi_pid != 0 && ctx->is_cgi && response->_cgi.gethasPendingCgi() && response->_cgi.getpid_1() == exitedPid)
+    {
+        if (response->checkPendingCgi(*request))
+        {
+            pid_t pid = response->_cgi.getpid_1();
             struct kevent kev;
             EV_SET(&kev, pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
             kevent(kq, &kev, 1, NULL, 0, NULL);
-            kill(pid, SIGTERM);
-            ctx->cgi_pid = 0;
-            ctx->is_cgi = false;
-            response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
-            response._cgi.setcgistatus(CGI_ERROR);
-            if (!response._cgi.getinfile().empty())
-                std::remove(response._cgi.getinfile().c_str());
-            if (!response._cgi.getoutfile().empty())   
-                std::remove(response._cgi.getoutfile().c_str());
-            response._cgi.sethasPendingCgi(false);
-            request.SetTimeOut(std::time(NULL));
+
             struct kevent ev;
-            int client_fd = response.getClientFd();
+            int client_fd = response->getClientFd();
             AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
             AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
-            EV_SET(&ev, response.getClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
-            kevent(kq, &ev, 1, NULL, 0, NULL);
+
+            EV_SET(&kev, response->getClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
+            kevent(kq, &kev, 1, NULL, 0, NULL);
+            request->SetTimeOut(std::time(NULL));
+
+            ctx->is_cgi = false;
+        }
+        response->_cgi.sethasPendingCgi(false);
+    }
+
+    ctx->cgi_terminating = false;
+    ctx->terminated_cgi_pid = 0;
+    ctx->cgi_pid = 0;
+}
+
+
+void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Response & response)
+{
+    if (ctx->cgi_pid != 0)
+    {
+        pid_t pid = response._cgi.getpid_1();
+        if (pid <= 0)
             return;
-        // }
-	}
+
+        ctx->cgi_terminating = true;
+        ctx->terminated_cgi_pid = pid;
+
+        kill(pid, SIGTERM);
+
+        int status = 0;
+        waitpid(pid, &status, WNOHANG);
+
+        response._cgi.responseErrorcgi(504, " Gateway Timeout", request);
+        response._cgi.setcgistatus(CGI_ERROR);
+
+        if (!response._cgi.getinfile().empty())
+            std::remove(response._cgi.getinfile().c_str());
+        if (!response._cgi.getoutfile().empty())
+            std::remove(response._cgi.getoutfile().c_str());
+
+        request.SetTimeOut(std::time(NULL));
+        struct kevent ev;
+        int client_fd = response.getClientFd();
+
+        AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
+        AddToKqueue(ev, kq, client_fd, EVFILT_READ, EV_DISABLE, ctx, 0, 0);
+        EV_SET(&ev, client_fd, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
+        kevent(kq, &ev, 1, NULL, 0, NULL);
+        return;
+    }
 }
 
 void HttpServer::handle_timeout(EventContext* ctx, Request & request)
