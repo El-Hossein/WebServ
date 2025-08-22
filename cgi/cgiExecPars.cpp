@@ -1,7 +1,7 @@
 #include "cgiHeader.hpp"
 #include "../AllServer/HttpServer.hpp"
 
-void Cgi::parseOutput(Request& req)
+bool Cgi::parseOutput()
 {
     std::ifstream file(outFile.c_str());
     std::string line;
@@ -22,11 +22,13 @@ void Cgi::parseOutput(Request& req)
                 continue;
             }
             size_t colonPos = line.find(':');
-            if (colonPos == std::string::npos)
-                return responseErrorcgi(500, "Internal Server Error", req);
+            if (colonPos == std::string::npos || colonPos == 0)
+                return false;
             std::string headerName = line.substr(0, colonPos);
             std::string headerValue = line.substr(colonPos + 1);
             headerValue.erase(0, headerValue.find_first_not_of(" \t"));
+            if (headerValue.empty())
+                return false;
             if (headerName == "Status")
                 cgiStatusCode = std::atoi(headerValue.c_str());
             else if (headerName == "Content-Length")
@@ -37,9 +39,16 @@ void Cgi::parseOutput(Request& req)
                 cgiHeader += headerName + ": " + headerValue + "\r\n";
         }
         else
+        {
+            if (line.find("\r") != std::string::npos)
+                return false;
+            if (line.empty())
+                continue;
             cgiBody += line + "\n";
+        }
     }
     cgiFileSize = cgiBody.size();
+    return true;
 }
 
 
@@ -48,47 +57,47 @@ char    **Cgi::cgiEnvVariables(Request &req, std::string _pathInfo)
     char **envp = new char*[15];
 
     envp[0] = new char[strlen("REQUEST_METHOD=") + std::strlen(req.GetHeaderValue("method").c_str()) + 1];
-    strcpy(envp[0], "REQUEST_METHOD=");
-    strcat(envp[0], req.GetHeaderValue("method").c_str());
+    std::strcpy(envp[0], "REQUEST_METHOD=");
+    std::strcat(envp[0], req.GetHeaderValue("method").c_str());
     envp[1] = new char[std::strlen("SCRIPT_NAME=") + std::strlen(fullPath.c_str()) + 1];
-    strcpy(envp[1], "SCRIPT_NAME=");
-    strcat(envp[1], fullPath.c_str());
+    std::strcpy(envp[1], "SCRIPT_NAME=");
+    std::strcat(envp[1], fullPath.c_str());
     envp[2] = new char[std::strlen("SCRIPT_FILENAME=") + std::strlen(scriptFile.c_str()) + 1];
-    strcpy(envp[2], "SCRIPT_FILENAME=");
-    strcat(envp[2], scriptFile.c_str());
+    std::strcpy(envp[2], "SCRIPT_FILENAME=");
+    std::strcat(envp[2], scriptFile.c_str());
     envp[3] = new char[std::strlen("QUERY_STRING=") + std::strlen(req.GetHeaderValue("query").c_str()) + 1];
-    strcpy(envp[3], "QUERY_STRING=");
-    strcat(envp[3], req.GetHeaderValue("query").c_str());
+    std::strcpy(envp[3], "QUERY_STRING=");
+    std::strcat(envp[3], req.GetHeaderValue("query").c_str());
     envp[4] = new char[std::strlen("SERVER_PROTOCOL=") + std::strlen("HTTP/1.1") + 1];
-    strcpy(envp[4], "SERVER_PROTOCOL=");
-    strcat(envp[4], "HTTP/1.1");
+    std::strcpy(envp[4], "SERVER_PROTOCOL=");
+    std::strcat(envp[4], "HTTP/1.1");
     envp[5] = new char[std::strlen("GATEWAY_INTERFACE=") + std::strlen("CGI/1.1") + 1];
-    strcpy(envp[5], "GATEWAY_INTERFACE=");
-    strcat(envp[5], "CGI/1.1");
+    std::strcpy(envp[5], "GATEWAY_INTERFACE=");
+    std::strcat(envp[5], "CGI/1.1");
     envp[6] = new char[std::strlen("SERVER_SOFTWARE=") + std::strlen("webSERV/1.0") + 1];
-    strcpy(envp[6], "SERVER_SOFTWARE=");
-    strcat(envp[6], "webSERV/1.0");
+    std::strcpy(envp[6], "SERVER_SOFTWARE=");
+    std::strcat(envp[6], "webSERV/1.0");
     envp[7] = new char[std::strlen("PATH_INFO=") + std::strlen(_pathInfo.c_str()) + 1];
-    strcpy(envp[7], "PATH_INFO=");
-    strcat(envp[7], _pathInfo.c_str());
+    std::strcpy(envp[7], "PATH_INFO=");
+    std::strcat(envp[7], _pathInfo.c_str());
     envp[8] = new char[std::strlen("CONTENT_TYPE=") + std::strlen(req.GetHeaderValue("content-type").c_str()) + 1];
-    strcpy(envp[8], "CONTENT_TYPE=");
-    strcat(envp[8], req.GetHeaderValue("content-type").c_str());
+    std::strcpy(envp[8], "CONTENT_TYPE=");
+    std::strcat(envp[8], req.GetHeaderValue("content-type").c_str());
     envp[9] = new char[std::strlen("CONTENT_LENGTH=") + std::strlen(req.GetHeaderValue("content-length").c_str()) + 1];
-    strcpy(envp[9], "CONTENT_LENGTH=");
-    strcat(envp[9], req.GetHeaderValue("content-length").c_str());
+    std::strcpy(envp[9], "CONTENT_LENGTH=");
+    std::strcat(envp[9], req.GetHeaderValue("content-length").c_str());
     envp[10] = new char[std::strlen("SERVER_NAME=") + std::strlen(req.GetHeaderValue("host").c_str()) + 1];
-    strcpy(envp[10], "SERVER_NAME=");
-    strcat(envp[10], req.GetHeaderValue("host").c_str());
+    std::strcpy(envp[10], "SERVER_NAME=");
+    std::strcat(envp[10], req.GetHeaderValue("host").c_str());
     envp[11] = new char[std::strlen("SERVER_PORT=") + std::strlen(req.GetServerDetails().ServerPort.c_str()) + 1];
-    strcpy(envp[11], "SERVER_PORT=");
-    strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
+    std::strcpy(envp[11], "SERVER_PORT=");
+    std::strcat(envp[11], req.GetServerDetails().ServerPort.c_str());
     envp[12] = new char[std::strlen("HTTP_COOKIE=") + std::strlen(req.GetHeaderValue("cookie").c_str()) + 1];
-    strcpy(envp[12], "HTTP_COOKIE=");
-    strcat(envp[12], req.GetHeaderValue("cookie").c_str());
+    std::strcpy(envp[12], "HTTP_COOKIE=");
+    std::strcat(envp[12], req.GetHeaderValue("cookie").c_str());
     envp[13] = new char[std::strlen("REDIRECT_STATUS=") + 4];
-    strcpy(envp[13], "REDIRECT_STATUS=");
-    strcat(envp[13], "200");
+    std::strcpy(envp[13], "REDIRECT_STATUS=");
+    std::strcat(envp[13], "200");
     envp[14] = NULL;
     return envp;
 }

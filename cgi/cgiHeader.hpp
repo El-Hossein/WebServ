@@ -21,8 +21,8 @@ enum Connection
 class Cgi
 {
     private :
-        pid_t               pid;
         int                 kq;
+        pid_t               pid;
         std::ifstream       file;
         std::string         uniq;
         pid_t               pid_1;
@@ -35,14 +35,15 @@ class Cgi
         std::string         pathInfo;
         bool                usingCgi;
         std::string         cgiChunk;
+        std::string         fullPath;
         std::string         cgiHeader;
         int                 cgistatus;
         time_t              startTime;
         std::string         scriptPath;
         size_t              cgiFilePos;
         std::string         scriptFile;
-        std::string         fullPath;
         ssize_t             cgiFileSize;
+        std::string         errorPathCgi;
         int                 cgiStatusCode;
         size_t              cgiHeaderSent;
         bool                hasPendingCgi;
@@ -58,7 +59,6 @@ class Cgi
         ~Cgi();
         
 
-        void                        setKq(int _kq);
         std::ifstream&              getFile();
         time_t                      gettime();
         long                        getCgiCL();
@@ -68,19 +68,20 @@ class Cgi
         std::string                 getoutfile();
         long                        getFilePos();
         long                        getFileSize();
-        void                        execCgi(char **envp);
-        void                        parseOutput(Request &req);
+        bool                        parseOutput();
         bool                        getUsingCgi();
+        void                        setKq(int _kq);
         std::string                 getCgiHeader();
         int                         getcgistatus();
         size_t                      getCgiHeaderSent();
-        char                      **cgiEnvVariables(Request &req, std::string _pathInfo);
         bool                        gethasPendingCgi();
         size_t                      getStatCgiFilePos();
         std::string                 getStatCgiFileBody();
         bool                        getCheckConnection();
+        void                        execCgi(char **envp);
         bool                        getUsingStatCgiFile();
         void                        setCgiCL(long _cgiCL);
+        std::string                 checkContentTypeCgi();
         void                        setFilePos(size_t _filepos);
         void                        splitPathInfo(Request &req);
         void                        setcgistatus(int _cgistatus);
@@ -98,6 +99,7 @@ class Cgi
         void                        setUsingStatCgiFile(bool _usingcgistatfile);
         int                         IsCgiRequest(std::string uri, Request &req);
         int                         servListingDirenCgi(Request &req, std::string uri);
+        char                      **cgiEnvVariables(Request &req, std::string _pathInfo);
         void                        responseErrorcgi(int statusCode, std::string message, Request &req);
         std::string                 getInfoConfigCgi(std::string what, std::string location, Request &req);
         int                         checkLocationCgi(Request &req, std::string meth, std::string directive);

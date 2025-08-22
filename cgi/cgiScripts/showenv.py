@@ -2,7 +2,7 @@
 import os
 
 
-print("Content-Type: text/plain\r\n\r", end="")
+print("Content-Type: text/plain\r\n\r")
 
 vars_to_check = [
     "REQUEST_METHOD",
