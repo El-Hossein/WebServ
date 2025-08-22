@@ -28,6 +28,12 @@ const std::string& ConfigNode::getName() const {return name;}
 
 std::map<std::string, std::vector<std::string> >& ConfigNode::getValues()  {return values;}
 
+bool startsWith(const std::string& path, const std::string& prefix)
+{
+    if (prefix.length() > path.length()) return false;
+    return path.compare(0, prefix.length(), prefix) == 0;
+}
+
 std::string ConfigNode::GetLocationValue(ConfigNode& ConfNode, size_t index) 
 {
     if (index > ConfNode.children.size())
@@ -444,6 +450,16 @@ void processClosingBrace(std::string &text, std::vector<ConfigNode*> &nodeStack)
     if (nodeStack.empty())
         throw ("Error: Unmatched closing brace '}'.");
     ConfigNode &lastOne = *nodeStack.back();
+    if(lastOne.getName() == "server")
+    {
+        if (lastOne.getValuesForKey(lastOne, "listen", "").empty() || lastOne.getValuesForKey(lastOne, "root", "").empty())
+            throw ("Error: server should have listen and root");
+    }
+    if(startsWith(lastOne.getName(), "location"))
+    {
+        if (lastOne.getValuesForKey(lastOne, "allow_methods", "").empty())
+            throw ("Error: location should have allow_methods");
+    }
     std::vector<std::string> a = lastOne.getValuesForKey(lastOne, "allow_methods", "");
     for (std::vector<std::string>::iterator it = a.begin(); it != a.end(); ++it)
     {
@@ -547,6 +563,39 @@ void checkContent(std::string buffer, std::vector<ConfigNode> &ConfigPars)
     if (nodeStack.size() != 0) throw ("Error: Unmatched opening brace '{'.");
 }
 
+void CheckServerPorts( std::vector<ConfigNode>& ConfigPars)
+{
+    if (ConfigPars.empty())
+        throw ("Error: No servers defined.");
+
+    std::set<std::string> usedPorts;
+    for (size_t i = 0; i < ConfigPars.size(); i++)
+    {
+        std::vector<std::string> ports = ConfigNode::ConfgetValuesForKey(ConfigPars[i], "listen");
+
+        if (ports.empty())
+            throw ("Error: server block missing 'listen' directive.");
+
+        bool hasUnique = false;
+
+        for (size_t j = 0; j < ports.size(); j++)
+        {
+            std::string &port = ports[j];
+            if (usedPorts.find(port) == usedPorts.end())
+            {
+                hasUnique = true;
+            }
+        }
+        if (!hasUnique)
+        {
+            throw ("Error: server " + intToString(i+1) +
+                   " has no unique listen port (all taken by previous servers).");
+        }
+        for (size_t j = 0; j < ports.size(); j++)
+            usedPorts.insert(ports[j]);
+    }
+}
+
 void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	std::ifstream infile(ConfigFilePath);
@@ -557,6 +606,7 @@ void StructConf(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 	infile.close();
 	checkContent(RmComments(buffer.str()), ConfigPars);
     if (!ConfigPars.empty()) ConfigPars.erase(ConfigPars.begin());
+    CheckServerPorts(ConfigPars);
 }
 
 ConfigNode GetTheServer(std::vector<ConfigNode> ConfigPars, std::string PortOrHostInConfig, std::string port)
@@ -617,11 +667,7 @@ std::vector<std::string> split_path(const std::string& path)
     return components;
 }
 
-bool startsWith(const std::string& path, const std::string& prefix)
-{
-    if (prefix.length() > path.length()) return false;
-    return path.compare(0, prefix.length(), prefix) == 0;
-}
+
 
 std::string ConfigNode::GetRightLocation(std::string path)
 {
