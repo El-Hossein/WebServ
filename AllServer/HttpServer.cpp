@@ -38,7 +38,10 @@ int BindAndListen(int server_fd, struct sockaddr_in server_addr)
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 		return (1);
 	if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
+    {
+        std::cout <<  "\033[31mFailed to bind the port \033[0m" << std::endl;
 		return  (1);
+    }
 
 	if (listen(server_fd, BACKLOG) < 0)
 		return  (1);
@@ -61,7 +64,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
     std::set<int> AllPorts = GetAllPorts(ConfigPars);
 
     size_t i = 0;
-    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it, ++i)
+    for (std::set<int>::iterator it = AllPorts.begin(); it != AllPorts.end(); ++it)
     {
         int port = *it;
 
@@ -79,6 +82,7 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
         SetUpForBind(server_addr, port);
         if (BindAndListen(server_fd, server_addr) == 1)
         {
+            i++;
             close(server_fd);
             continue;
         }
@@ -91,7 +95,8 @@ void HttpServer::setup_server(std::vector<ConfigNode> ConfigPars)
 
         std::cout << "\033[32m[+]\033[0m \033[32mServers listening on port " << port << "\033[0m" << std::endl;
     }
-
+    if (i == AllPorts.size())
+        throw "all ports are not working gl next time";
     std::cout << "------------------------------------------------------------------------------" << std::endl;
 }
 
@@ -346,6 +351,12 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 		{
 			if (request->GetClientStatus() != EndReading || e == -1)
 				return;
+            // std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ REQUEST CLIENT\033[0m" << std::endl;
+			// std::cout << "CLIENT: " <<  ctx->ident <<  std::endl;
+			// std::map<std::string, std::string> all_header = request->GetHeaders();
+			// for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
+			// 	std::cout << it->first << ": " << it->second << std::endl;
+			// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m" << std::endl;
 
 			SetUpResponse(ctx, response, request, e);
 			if (response->_cgi.gethasPendingCgi())
@@ -477,11 +488,12 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
                 continue;
 			if (ctx->marked_for_deletion)
 				continue;
-
+            // std::cout << "\033[32m[+]\033[0m CLIENT -> CTX: CLIENT: " << ctx->ident << " | CGI ID: " << ctx->cgi_pid << " | is_cgi : " << ctx->is_cgi  << std::endl;
             if (filter == EVFILT_PROC)
             {
                 if (fflags & NOTE_EXIT)
                 {
+                // std::cout << "\033[32m[+]\033[0m \033[34mEnter PROC CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_exit(ctx, ctx->req, ctx->res);
                     continue;
                 }
@@ -495,23 +507,37 @@ void HttpServer::run(std::vector<ConfigNode> ConfigPars)
 
             if (flags & EV_ERROR)
             {
+                // std::cout << "\033[31mkevent error on fd " << ctx->ident << " : fflags=" << fflags << "\033[0m" << std::endl;
                 RemoveClient(ctx->ident);
                 continue;
             }
 
+            // CGI And Normal Request
             if (ctx->is_cgi == false)
             {
                 if (filter == EVFILT_READ)
+                {
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Read client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_read(ctx, ctx->req, ctx->res);
+                }
                 else if (filter == EVFILT_WRITE)
+                {
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter Write client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_client_write(ctx, ctx->req, ctx->res, ConfigPars);
+                }
                 else if (filter == EVFILT_TIMER)
+                {
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut Client: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_timeout(ctx, *ctx->req);
+                }
             }
             else
             {
                 if (filter == EVFILT_TIMER)
+                {
+                    // std::cout << "\033[32m[+]\033[0m \033[34mEnter TimeOut CGI: " << ctx->ident << " | CGI PID: " << ctx->cgi_pid << " | IS CGI: " << ctx->is_cgi <<  "\033[0m" << std::endl;
                     handle_cgi_timeout(ctx, *ctx->req, *ctx->res);
+                }
             }
         }
 
