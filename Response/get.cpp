@@ -271,7 +271,7 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
     std::string mess;
     switch (statusCode)
     {
-        case 300: headers += " Multiple Choices"; mess = " Multiple Choices"; break;
+        case 300: if (redirectUrl.empty()) headers += " Multiple Choices"; break;
         case 301: headers += " Moved Permanently"; mess = " Moved Permanently";break;
         case 302: headers += " Moved Temporarily"; mess = " Found"; break;
         case 303: headers += " See Other"; mess = " See Other";break;
@@ -279,21 +279,37 @@ void     Response::prepareRedirectResponse(std::vector<std::string> redirect, Re
         case 307: headers += " Temporary Redirect"; mess = " Temporary Redirect";break;
         case 308: headers += " Permanent Redirect"; mess = " Permanent Redirect";break;
     }
-    staticFileBody = "<html>\n"
-            "<head><title>" + intToString(statusCode) + mess + "</title></head>\n"
-            "<body>\n"
-            "<center><h1>" + intToString(statusCode) + mess + "</h1></center>\n"
-            "<center><h1>webSERV/1.1</h1></center>\n"
-            "</body>\n"
-            "</html>\n";
+    if (statusCode != 300 && statusCode != 304)
+    {
+        staticFileBody = "<html>\n"
+                "<head><title>" + intToString(statusCode) + mess + "</title></head>\n"
+                "<body>\n"
+                "<center><h1>" + intToString(statusCode) + mess + "</h1></center>\n"
+                "<center><h1>webSERV/1.1</h1></center>\n"
+                "</body>\n"
+                "</html>\n";
+    }
+    else
+    {
+        staticFileBody = redirectUrl;
+        redirectUrl.clear();
+    }
 
     headers += "\r\n";
-    headers += "Content-Type: text/html\r\n";
-    headers += "Location: " + redirectUrl + "\r\n";
-    if (statusCode == 304 || (statusCode != 301 && statusCode != 302 && statusCode != 303 
-        && statusCode != 307 && statusCode != 308))
+    if (redirectUrl.empty())
+        headers += "Content-Type: text/plain\r\n";
+    else
+        headers += "Content-Type: text/html\r\n";
+    if ((statusCode == 301 || statusCode == 307 || statusCode == 308 || statusCode == 302 || statusCode == 303) && redirectUrl.empty())
+        headers += "Location: \r\n";
+    if (!redirectUrl.empty() && statusCode != 304)
+        headers += "Location: " + redirectUrl + "\r\n";
+    if (statusCode != 301 && statusCode != 302 && statusCode != 303 
+        && statusCode != 307 && statusCode != 308 && statusCode != 300 && statusCode != 304)
         staticFileBody.clear();
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
+    if (statusCode == 304)
+        staticFileBody.clear();
     if (req.GetHeaderValue("connection") == "keep-alive")
     {
         headers += "Connection: keep-alive\r\n";
