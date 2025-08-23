@@ -166,10 +166,7 @@ void Cgi::executeCgiScript(Request &req)
         if (!scriptDir.empty())
         {
             if (chdir(scriptDir.c_str()) == -1)
-            {
-                responseErrorcgi(500, " Internal Server Error", req);
                 std::exit(1);
-            }
         }
         fullPath = scriptFile;
         scriptFile = scriptFile.substr(scriptFile.find_last_of("/") + 1);
