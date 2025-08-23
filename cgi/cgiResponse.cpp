@@ -195,15 +195,7 @@ void Cgi::responseErrorcgi(int statusCode, std::string message, Request &req)
     else
         cgiHeader += "Content-Type: text/html\r\n";
     cgiHeader += "Content-Length: " + intToString(body.length()) + "\r\n";
-    if (req.GetHeaderValue("connection") == "keep-alive")
-    {
-        cgiHeader += "Connection: keep-alive\r\n\r\n";
-        checkConnection = keepAlive;
-    }
-    else
-    {
-        cgiHeader += "Connection: close\r\n\r\n";
-        checkConnection = _close;
-    }
+    cgiHeader += "Connection: close\r\n\r\n";
+    checkConnection = _close;
     cgiHeaderSent = 0;
 }

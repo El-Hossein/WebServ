@@ -24,16 +24,6 @@ Response::~Response()
 
 }
 
-void    Response::setE(int _e)
-{
-    _E = _e;
-}
-
-int     Response::getE()
-{
-    return _E;
-}
-
 std::string Response::getChunk()
 {
     return chunk;
@@ -168,16 +158,8 @@ void     Response::responseError(int statusCode, std::string message, Request &r
     else
         headers += "Content-Type: text/html\r\n";
     headers += "Content-Length: " + intToString(staticFileBody.size()) + "\r\n";
-    if (req.GetHeaderValue("connection") == "keep-alive")
-    {
-        headers += "Connection: keep-alive\r\n\r\n";
-        _cgi.setCheckConnection(keepAlive);
-    }
-    else
-    {
-        headers += "Connection: close\r\n\r\n";
-        _cgi.setCheckConnection(_close);
-    }
+    headers += "Connection: close\r\n\r\n";
+    _cgi.setCheckConnection(_close);
     headerSent = 0;
 }
 
