@@ -41,8 +41,6 @@ class Response
         bool    sendHeaders(size_t chunkSize);
         bool    sendCgiScript(size_t chunkSize);
 
-        void    setE(int _e);
-        int     getE();
 
         std::string                    getChunk();
         bool                           getHasMore();

@@ -167,10 +167,6 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
 
 void	SetUpResponse(EventContext* ctx, Response * res, Request	*Request, int &e)
 {
-    if (e != 200 && e != 201 && e != -1 && e != 42)
-       res->setE(e);
-    else
-       res->setE(0);
 	switch (e)
 	{
 		case 500: res->responseError(500, " Internal Server Error", *Request); return;
@@ -309,7 +305,7 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 		response->setHeaderSent(0);
 		response->_cgi.setCgiHeaderSent(0);
 		
-		if (response->_cgi.getCheckConnection() == keepAlive && response->getE() == 0)
+		if (response->_cgi.getCheckConnection() == keepAlive)
 		{
 			int fd = ctx->ident;
 			int server_port = ctx->req ? ctx->req->GetServerDetails().RealPort : -1;
