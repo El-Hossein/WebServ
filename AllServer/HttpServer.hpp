@@ -2,31 +2,25 @@
 
 #define BACKLOG 128
 
-// #include "../allincludes.hpp"
 #include "../pars_config/config.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/responseHeader.hpp"
-extern int globalKq;
 
 class Response;
 class Request;
 
 struct EventContext {
-    int ident;         // fd for client
-    pid_t cgi_pid;         //  pid for CGI
+    int ident;
+    pid_t cgi_pid;
     Request* req;
     Response* res;
     bool is_cgi;
-    bool its_cgi;
 	bool marked_for_deletion;
-	bool registered_read;
-	bool registered_write;
-	bool registered_timer;
-	std::vector<pid_t> registered_procs; // pids for which EVFILT_PROC/EVFILT_TIMER were registered // <- new
-    EventContext() : ident(-1), req(NULL), res(NULL), cgi_pid(0),
-                 is_cgi(false), its_cgi(false), marked_for_deletion(false),
-                 registered_read(false), registered_write(false),
-                 registered_timer(false) {}
+	bool    cgi_timed_out;
+	std::vector<pid_t> registered_procs;
+    EventContext() : ident(-1), cgi_pid(0),req(NULL), res(NULL), 
+                 is_cgi(false), marked_for_deletion(false),
+				 cgi_timed_out(false) {}
 };
 
 class HttpServer{
@@ -44,15 +38,16 @@ class HttpServer{
 		void RemoveClient(int client_fd);
 		void RemoveReqRes(int client_fd);
 
-		void handle_client_read(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars);
+		void handle_client_read(EventContext* ctx, Request * request, Response * response);
 		void handle_client_write(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars);
-		void handle_cgi_exit(EventContext* ctx, Request *request, Response *response, std::vector<ConfigNode> ConfigPars);
-		void handle_cgi_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars);
+		void handle_cgi_exit(EventContext* ctx, Request *request, Response *response);
+		void handle_cgi_timeout(EventContext* ctx, Request & request, Response & response);
 		void AddToKqueue(struct kevent &event, int kq, intptr_t ident, int filter, int flags, void *udata, int fflags, intptr_t data);
-		void handle_timeout(EventContext* ctx, Request & request, Response & response, std::vector<ConfigNode> ConfigPars);
+		void handle_timeout(EventContext* ctx, Request & request);
 		std::vector<EventContext*> all_contexts;
+		void FreeContexts();
 	private:
-		std::map<int, EventContext*> proc_map; 
+		int kq;
    		struct kevent events[BACKLOG];
 		std::vector<EventContext*> pending_deletions;
 		// int kq;

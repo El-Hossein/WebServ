@@ -1,20 +1,23 @@
 #include "Request.hpp"
 
-Request::Request(const int	&fd, ClientStatus Status, std::vector<ConfigNode> _ConfigPars, int &_RealPort)
-						:	ClientFd(fd),
-							Client(ReadHeader),
-							DataType(FixedLength),
-							PostObj(NULL),
-							Servers(_ConfigPars),
-							HeaderBuffer(""),
-							ContentLength(0),
-							TotalBytesRead(0),
-							KeepAlive(false),
-							RequestNotComplete(true)
+Request::Request(const int	&fd, std::vector<ConfigNode> _ConfigPars, int &_RealPort)
 {
 	ServerDetails.IsPortExist = false;
 	ServerDetails.RealPort = _RealPort;
 	SetExtentionsMap();
+	ClientFd = fd;
+	ContentType = BinaryOrRaw;
+	DataType = FixedLength;
+	Client = ReadHeader;
+	PostObj = NULL;
+	Servers = _ConfigPars;
+	HeaderBuffer = "";
+	BodyBuffer = "";
+	ContentLength = 0;
+	TotalBytesRead = 0;
+	KeepAlive = false;
+	LimitedBodySize = true;
+	RequestNotComplete = true;
 }
 
 Request::~Request() {
@@ -27,9 +30,29 @@ Request::~Request() {
 	|#----------------------------------#|
 */
 
+std::string	Request::GetUploadPath() const
+{
+	return this->UploadPath;
+}
+
+std::string	Request::GetLocation() const
+{
+	return this->Location;
+}
+
+bool	Request::GetIsCGI() const
+{
+	return this->IsCGI;
+}
+
 int		Request::GetClientFd() const
 {
 	return this->ClientFd;
+}
+
+bool	Request::GetLimitedBodySize() const
+{
+	return this->LimitedBodySize;
 }
 
 int		Request::GetClientStatus() const
@@ -47,13 +70,18 @@ std::string	Request::GetFileExtention()
 	return this->FileExtention;
 }
 
+std::string	Request::GetCgiFileName() const
+{
+	return this->cgiFileName;
+}
 
 std::map<std::string, std::string>	Request::GetHeaders() const
 {
 	return this->Headers;
 }
 
-std::string	Request::GetHeaderValue(std::string	key) const {
+std::string	Request::GetHeaderValue(std::string	key) const
+{
 	for (std::map<std::string, std::string>::const_iterator it = Headers.begin(); it != Headers.end(); it++)
 	{
 		if (key == it->first)
@@ -67,24 +95,25 @@ std::map<std::string, std::string>	Request::GetQueryParams() const
 	return this->QueryParams;
 }
 
-std::vector<std::string>	Request::GetPathParts() const
-{
-	return this->PathParts;
-}
-
 bool	Request::GetConnection() const
 {
 	return this->KeepAlive;
 }
+
+size_t    	Request::GetMaxAllowedBodySize() const
+{
+	return this->MaxAllowedBodySize;
+}
+
 
 std::string	Request::GetFullPath() const
 {
 	return FullSystemPath;
 }
 
-std::string	Request::GetUnprocessedBuffer() const
+std::string	Request::GetBodyBuffer() const
 {
-	return this->BodyUnprocessedBuffer;
+	return this->BodyBuffer;
 }
 
 size_t		Request::GetContentLength() const
@@ -122,11 +151,6 @@ _ServerDetails	Request::GetServerDetails() const
 	return this->ServerDetails;
 }
 
-time_t    Request::GetTimeOut() const
-{
-    return this->CurrentTime;
-}
-
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -135,11 +159,6 @@ time_t    Request::GetTimeOut() const
 void    Request::SetContext(EventContext* _ctx)
 {
     this->ctx = _ctx;
-}
-
-void    Request::SetTimeOut(time_t _CurrentTime)
-{
-    this->CurrentTime = _CurrentTime;
 }
 
 void	Request::SetClientStatus(ClientStatus	Status)
@@ -152,6 +171,11 @@ void	Request::SetFullSystemPath(std::string	&Path)
 	this->FullSystemPath = Path;
 }
 
+void	Request::setCgiFileName(std::string _cgiFileName)
+{
+	this->cgiFileName = _cgiFileName;
+}
+
 void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 {
 	for (std::map<std::string, std::string>::iterator it = Headers.begin(); it != Headers.end(); it++)
@@ -160,6 +184,7 @@ void	Request::SetHeaderValue(std::string	key, std::string NewValue)
 			return it->second = NewValue, (void)0;
 	}
 }
+
 
 void	Request::SetExtentionsMap(void)
 {
@@ -226,7 +251,7 @@ void	Request::SetServerDetails()
 		if (ServerDetails.ServerHost.empty() || ServerDetails.ServerPort.empty())
 			PrintError("Host Error", *this), throw 400;
 	}
-	RightServer = ConfigNode::GetServer(Servers, ServerDetails); // send {IsPortExist, ServerHost, ServerPort, RealPort}
+	RightServer = ConfigNode::GetServer(Servers, ServerDetails.RealPort);
 }
 
 /*	|#----------------------------------#|
@@ -246,7 +271,7 @@ void	Request::DecodeHexaToChar(std::string	&str)
 			pos += 1; // 1 -> size d charachter
 		}
 		else
-			PrintError("Query invalid percent-encoding", *this), throw 400;
+			PrintError("URI invalid percent-encoding", *this), throw 400;
     }
 }
 
@@ -259,37 +284,26 @@ int		Request::HexaToInt(std::string	x)
 	for (size_t i = 0; i < x.size() ; i++)
 	{
 		if (HexaChars.find(x[i]) == std::string::npos)
-			PrintError("Invalide Hexa value 1", *this), throw 400;
+			PrintError("Invalide Hexa value", *this), throw 400;
 	}
     stream << x;
     stream >> std::hex >> y;
 
 	if (y < 0)
-			PrintError("Invalide Hexa value 2", *this), throw 400;
+			PrintError("Invalide Hexa value", *this), throw 400;
     return y;
 }
-
-void	Request::CreateDirectory(std::string &FilenameDir)
-{
-	struct stat	Tmp;
-
-	if (stat(FilenameDir.c_str(), &Tmp)) // return 0 if exists || if not create it
-	{
-		if (mkdir(FilenameDir.c_str(), 0777)) // return 0 means success
-			PrintError("Could't open Directory", *this), throw 400;
-	}
-}
-
-/*	|#----------------------------------#|
-	|#			MEMBER FUNCTIONS    	#|
-	|#----------------------------------#|
-*/
 
 void	Request::PrintError(const std::string	&Err, Request	&Obj)
 {
 	std::cerr << Err << std::endl;
 	Obj.Client = EndReading;
 }
+
+/*	|#----------------------------------#|
+	|#			MEMBER FUNCTIONS    	#|
+	|#----------------------------------#|
+*/
 
 void	Request::CheckIfAllowedMethod()
 {
@@ -299,6 +313,46 @@ void	Request::CheckIfAllowedMethod()
 		PrintError("Method Not Allowed", *this), throw 405;
 }
 
+bool	Request::CheckForCgi()
+{
+	std::string	ScriptFile;
+	struct stat	stt, st;
+
+	size_t		index = FullSystemPath.find("/cgiScripts/");
+	if (index == std::string::npos)
+	    return false;
+
+	std::string	PathBeforeFolder = FullSystemPath.substr(0, index + 11);
+	if (stat(PathBeforeFolder.c_str(), &stt) == 0)
+	{
+		if (!S_ISDIR(stt.st_mode))
+			return false;
+	}
+
+	std::string PathAfterFolder = FullSystemPath.substr(index + 12);
+	if (PathAfterFolder.empty())
+	    return false;
+	size_t FirstSlash = PathAfterFolder.find("/");
+	if (FirstSlash != std::string::npos)
+	    ScriptFile = PathAfterFolder.substr(0, FirstSlash);
+	else
+	    ScriptFile = PathAfterFolder;
+
+	if (stat(FullSystemPath.c_str(), &st) == 0)
+	{
+	    if (S_ISDIR(st.st_mode))
+	        return false;
+	}
+	size_t extPos = ScriptFile.rfind(".");
+    if (extPos != std::string::npos)
+    {
+        std::string ext = ScriptFile.substr(extPos);
+        if (ext == ".cgi" || ext == ".py" || ext == ".php")
+            return true;
+    }
+	return false;
+}
+
 void	Request::GetBoundaryFromHeader()
 {
 	std::string										Boundary;
@@ -306,11 +360,11 @@ void	Request::GetBoundaryFromHeader()
 
 	size_t	pos = it->second.find("=");
 	if (pos == std::string::npos)
-		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
+		PrintError("Boundary Error", *this), throw 400;
 
 	Boundary = it->second.substr(pos + 1); // setting Boundary
-	if (Boundary.length() < 1 || Boundary.length() > 70 || !ValidBoundary(Boundary))
-		PrintError("Boundary Error, ParseBoundary()", *this), throw 400;
+	if (Boundary.size() < 1 || Boundary.size() > 69 || !ValidBoundary(Boundary))
+		PrintError("Boundary Error", *this), throw 400;
 
 	BoundaryAttri.Boundary = Boundary;
 	BoundaryAttri.BoundaryStart = "--" + Boundary + "\r\n";
@@ -319,13 +373,28 @@ void	Request::GetBoundaryFromHeader()
 
 void	Request::HandleQuery()
 {
-	size_t pos = 0;
-	std::string	Query = GetHeaderValue("query");
+	size_t			pos = 0;
+	std::string		GenDelims = ":/?#[]@";
+	std::string		SubDelims = "!$&\'()*+,;=";
+	std::string		Reserved = GenDelims + SubDelims;
+	std::string		Unreserved = "-_.~";
+	std::string		Query = GetHeaderValue("query");
 
-	// ---------		Decode Query 	 	--------- //
-	DecodeHexaToChar(Query);
-	for (size_t	i = 0; i < Query.length(); i++) // replacing each '+' with ' '
+	for (size_t i = 0; i < Query.size(); i++) // if not alpha || digit -> check if Allowed character
+	{
 		if (Query[i] == '+')	Query[i] = ' ';
+		if (!std::isalpha(Query[i]) && !std::isdigit(Query[i]))
+		{
+			if (Query[i] == '%' && i + 2 <= Query.size())
+			{
+				i += 2;
+				continue;
+			}
+			if (Reserved.find(Query[i]) == std::string::npos && Unreserved.find(Query[i]) == std::string::npos)
+				PrintError("Invalide Query", *this), throw 400;
+		}
+	}
+	DecodeHexaToChar(Query);
 	SetHeaderValue("query", Query);
 
 	// ---------	Split && Save Query Params	 	--------- //
@@ -344,34 +413,65 @@ void	Request::HandleQuery()
 			continue;
 		QueryParams.insert(make_pair(key, value));
 	}
-	// std::cout << "--->Query Params:" << std::endl; PrintHeaders(QueryParams);
+}
+
+void	Request::CheckFileExistance()
+{
+	struct stat FileStat;
+	std::string	tmp;
+	IsCGI ? tmp = PurePath(FullSystemPath) : tmp = FullSystemPath;
+    if (stat(tmp.c_str(), &FileStat) != 0)
+        Client = EndReading, throw 404;
+    if (access(tmp.c_str(), W_OK) != 0)
+        PrintError("Forbiden", *this), throw 403;
 }
 
 void   Request::HandlePath()
 {
-	std::string					UriPath = GetHeaderValue("path");
-	Location = RightServer.GetRightLocation(UriPath); // {/}
+	std::string		GenDelims = ":/?#[]@";
+	std::string		SubDelims = "!$&\'()*+,;=";
+	std::string		Reserved = GenDelims + SubDelims;
+	std::string		Unreserved = "-_.~";
+	std::string		UriPath = GetHeaderValue("path");
+	
+	UriPath = RemoveSlashs(UriPath);
+	for (size_t i = 0; i < UriPath.size(); i++) // if not alpha || digit -> check if Allowed character
+	{
+		if (!std::isalpha(UriPath[i]) && !std::isdigit(UriPath[i]))
+		{
+			if (UriPath[i] == '%' && i + 2 <= UriPath.size())
+			{
+				i += 2;
+				continue;
+			}
+			if (Reserved.find(UriPath[i]) == std::string::npos && Unreserved.find(UriPath[i]) == std::string::npos)
+				PrintError("Invalide Path", *this), throw 400;
+		}
+	}
+	DecodeHexaToChar(UriPath);
+	SetHeaderValue("path", UriPath);
+
+	Location = RightServer.GetRightLocation(UriPath);
 	std::vector<std::string>	ConfigPath = ConfigNode::getValuesForKey(RightServer, "root", Location);
-
 	if (ConfigPath.empty())
-		return ;
-	this->FullSystemPath = ConfigPath[0] + UriPath;
+		FullSystemPath = "./";
+	else
+		FullSystemPath = ConfigPath[0];
 
+	if (Location != "/")
+		UriPath.erase(0, Location.size());
+
+	FullSystemPath += UriPath;
 	std::istringstream	stream(FullSystemPath);
 	std::string			part;
 
-	FullSystemPath.clear();
 	while (std::getline(stream, part, '/'))
 	{
 		if (part == "..")
 			PrintError("Path Error", *this), throw 403; // Forbiden
-		else if (!part.empty() && part != ".")
-		{
-			PathParts.push_back(part);
-			this->FullSystemPath += "/";
-			this->FullSystemPath += part;
-		}
 	}
+	IsCGI = CheckForCgi();
+	CheckFileExistance();
 }
 
 void	Request::SplitURI()
@@ -397,7 +497,7 @@ void	Request::SplitURI()
 void	Request::ParseURI()
 {
 	std::string URI = Headers["uri"];
-	if (URI.length() > 2048)
+	if (URI.length() > 255)
 		PrintError("Request-URI too long", *this), throw 414;
 
 	SplitURI();
@@ -420,26 +520,34 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 	else if (method == "POST")		this->Method = POST;
 	else if (method == "DELETE")	this->Method = DELETE;	
 	else							PrintError("Invalide request method", *this), throw 400;
-		
+
 	Headers["method"] = method;
 
 	Headers["uri"] = URI;
 
+	if (protocol.empty())
+		PrintError("Bad Request", *this), throw 400;
 	if (protocol != "HTTP/1.1")
-		PrintError("Invalide request protocol", *this), throw 505;
+		PrintError("HTTP Version Not Supported", *this), throw 505;
 	Headers["protocol"] =  protocol;
 }
 
 void	Request::ReadHeaders(std::string Header)
 {
-	std::string			line, headerName, headerValue, LowKey;
+	std::string			line, headerName, headerValue;
+	bool				flag = false;
 	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
+		if (!flag)
+		{
+			flag = true;
+			continue;
+		}
 		size_t pos = line.find(": ");
 		if (pos == std::string::npos)
-			continue ;
+			PrintError("Bad Request", *this), throw 400;
 
 		headerName = line.substr(0, pos);
 		if (!ValidFieldName(headerName))
@@ -461,16 +569,20 @@ void	Request::PostRequiredHeaders()
 	if (Headers.find("content-length") == Headers.end() && Headers.find("transfer-encoding") == Headers.end())
 		PrintError("Missing POST headers", *this), throw 400;
 
+	if (Headers.find("transfer-encoding") != Headers.end())
+		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	if (Headers.find("content-length") != Headers.end())
 	{
 		if (!ValidContentLength(Headers["content-length"]))
 			PrintError("Invalide Content-Length", *this), throw 400;
-		SetContentLength(strtod(Headers["content-length"].c_str(), NULL));
-		this->DataType = FixedLength;
+		ContentLength = strtod(Headers["content-length"].c_str(), NULL);
+		if (DataType != Chunked)
+		{
+			if ((!ContentLength && TotalBytesRead) || ContentLength < TotalBytesRead)
+				PrintError("Malformed Request", *this), throw 400;
+			this->DataType = FixedLength;
+		}
 	}
-	
-	if (Headers.find("transfer-encoding") != Headers.end())
-		(Headers["transfer-encoding"] == "chunked") ? DataType = Chunked : throw 501; // "Not implemented"
 	
 	if (Headers.find("content-type") != Headers.end())
 	{
@@ -487,21 +599,39 @@ void	Request::PostRequiredHeaders()
 			this->ContentType = BinaryOrRaw;
 		}
 	}
+	std::vector<std::string>	PostPath = ConfigNode::getValuesForKey(RightServer, "upload_store", Location);
+	if (!PostPath.empty())
+		UploadPath = PostPath[0];
 }
 
 void	Request::ParseHeaders()
 {
 	if (Headers.find("host") == Headers.end())
 		PrintError("No Host has been found!", *this), throw 400;
+	if (Headers.find("content-length") != Headers.end() && !ValidContentLength(Headers.find("content-length")->second))
+		PrintError("Bad Request", *this), throw 400;
+
 	if (Headers.find("connection") != Headers.end())
 		(Headers.find("connection")->second == "close") ? KeepAlive = false : KeepAlive = true;
-	if (Method == POST)
-	{
-		PostRequiredHeaders();
-	}
 	SetServerDetails(); // Init localhost + port
 	ParseURI();
 	CheckIfAllowedMethod();
+	if (Method == POST)
+		PostRequiredHeaders();
+	else
+	{
+		if (BodyBuffer.size() > 0 && Headers.find("content-length") == Headers.end())
+			PrintError("Length Required", *this), throw 411; // If Body exists and the method is Get or Delete
+	}
+
+	std::vector<std::string> Vec = ConfigNode::getValuesForKey(GetRightServer(), "client_max_body_size", "");
+	if (Vec.empty())
+		LimitedBodySize = false;
+	if (LimitedBodySize)
+		MaxAllowedBodySize = std::strtod(Vec[0].c_str(), NULL);
+
+	if (LimitedBodySize && ContentLength > MaxAllowedBodySize)
+		PrintError("Request Entity Too Large", *this), throw 413;
 }
 
 void Request::ReadBodyChunk()
@@ -515,12 +645,11 @@ void Request::ReadBodyChunk()
         throw -1; // -1 is a flag
     if (BytesRead == 0)
 	{
-		std::cout << "\nThere is nothing to read no more!\n";
 		Client = EndReading;
 		return ;
 	}
 	TotalBytesRead += BytesRead;
-	BodyUnprocessedBuffer.assign(buffer, BytesRead);
+	BodyBuffer.assign(buffer, BytesRead);
 }
 
 void	Request::ReadRequestHeader()
@@ -544,28 +673,21 @@ void	Request::ReadRequestHeader()
 	if (npos == std::string::npos)
 	{
 		if (HeaderBuffer.size() > MAX_HEADER_SIZE)
-			PrintError("Header too long.", *this), throw 400;
+			PrintError("Header too long", *this), throw 400;
 		throw -1; // didn't end yet
 	}
 	else
 		RequestNotComplete = false, Client = ReadBody;
 
-	BodyUnprocessedBuffer.assign(HeaderBuffer.substr(npos + 4));
+	BodyBuffer.assign(HeaderBuffer.substr(npos + 4));
 	HeaderBuffer				= HeaderBuffer.substr(0, npos);
 
-	if (BodyUnprocessedBuffer.size() == 0)
-		Client = EndReading;
-	TotalBytesRead += BodyUnprocessedBuffer.size(); // (- 2) For CRLF
+	TotalBytesRead += BodyBuffer.size();
 
 	ReadFirstLine(HeaderBuffer); // First line
 	ReadHeaders(HeaderBuffer); // other lines
 	ParseHeaders();
 }
-
-/**
- * @brief	throw -1 If request didn't end yet.
- * 			throw 42 if completed reading request.
- */
 
 void	Request::SetUpRequest()
 {
@@ -583,5 +705,8 @@ void	Request::SetUpRequest()
 		throw -1;
 	}
 	else
-		throw 42; // Continue to Get || Delete
+	{
+		Client = EndReading;
+		throw 42;
+	}
 }

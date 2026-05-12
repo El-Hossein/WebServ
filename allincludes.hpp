@@ -22,12 +22,14 @@
 #include <sys/event.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <set>
 
 struct	_BoundarySettings
 {
 	std::string	Boundary;
 	std::string	BoundaryStart;
 	std::string	BoundaryEnd;
+	size_t		CrlfCount;
 };
 
 enum	_BoundaryStatus
@@ -58,7 +60,10 @@ struct	ChunkVars
 	};
 	_ChunkStatus	ChunkStatus;
 	size_t			BodySize;
+	size_t			BodySizeTmp;
 	std::string		Temp;
 };
 
-void AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
+void		AddToKqueue(struct kevent &event, int kq, int fd, int filter, int flags);
+std::string	intToString(int n);
+std::string RemoveSlashs(std::string path);

@@ -1,5 +1,0 @@
-<?php
-easd
-
-asd
-?>

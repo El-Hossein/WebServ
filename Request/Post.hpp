@@ -3,13 +3,6 @@
 #include "Request.hpp"
 #include "../allincludes.hpp"
 
-/**
- *
- *	Handle the Location in request for every path...
- * 
- */
-
-
 class Request;
 
 class Post
@@ -23,7 +16,6 @@ private:
 
 	bool								FirstTime;
 	bool								BodyFullyRead;
-	bool								RmvFirstCrlf;
 
 	std::map<std::string, std::string>	BodyParams;
 	std::string							UnprocessedBuffer;
@@ -32,9 +24,8 @@ private:
 
 	std::string							Dir;
 	std::string							Filename;
+	std::string							cgiFileName;
 	std::ofstream						OutFile;
-
-	size_t			MaxAllowedBodySize;
 public:
 	Post(Request	&_obj);
 	~Post();
@@ -53,5 +44,6 @@ public:
 	void	ParseChunked();
 
 	void	IsBodyFullyRead();
+	void	HandleCGI();
 	void	HandlePost();
 };

@@ -58,6 +58,23 @@ std::string	HexaToChar(std::string	Hexa)
 	return std::string(1, Helpervar); // calling constructor string with 1 character
 }
 
+std::string	PurePath(std::string &Path)
+{
+    size_t posLength = std::string::npos;
+    size_t cgiPos = Path.find(".cgi");
+    size_t phpPos = Path.find(".php");
+    size_t pyPos = Path.find(".py");
+    if (cgiPos != std::string::npos && cgiPos < phpPos && cgiPos < pyPos)
+        posLength = cgiPos + 4;
+    else if (phpPos != std::string::npos && phpPos < cgiPos && phpPos < pyPos)
+        posLength = phpPos + 4;
+    else if (pyPos != std::string::npos && pyPos < cgiPos && pyPos < phpPos)
+        posLength = pyPos + 3;
+
+    return Path.substr(0, posLength);
+}
+
+
 // --------------#	PRINTER	 #-------------- //
 
 void	PrintHeaders(std::map<std::string, std::string> Headers)
@@ -72,10 +89,10 @@ void	PrintHeaders(std::map<std::string, std::string> Headers)
 bool	ValidContentLength(const std::string& value)
 {
 	if (value.empty())					return false;
-	for (size_t i = 0; i < value.length(); i++)
+	for (size_t i = 0; i < value.size(); i++)
 	    if (!std::isdigit(value[i]))	return false;
-	size_t ret = strtod(value.c_str(), NULL);
-	if (ret < 0)						return false;
+	double ret = strtod(value.c_str(), NULL);
+	if (ret < 0 || ret > SIZE_T_MAX)	return false;
 
 	return true;
 }
@@ -98,15 +115,20 @@ bool	ValidFieldValue(const std::string& value)
     return true;
 }
 
-bool	ValidBoundary(const std::string	&value)
+bool	ValidBoundary(std::string	&value)
 {
-	for (size_t	i = 0; i < value.length(); i++)
+	const std::string	&BChars = "\'()+_,-./:=? ";
+
+	if (value.size() > 2 && (value.front() == '"' && value.back() == '"'))
 	{
-		if (!std::isalnum(value[i]) || !std::isprint(value[i]))
+		value.erase(0, 1);
+		value.pop_back();
+	}
+	for (size_t	i = 0; i < value.size(); i++)
+	{
+		if (!std::isalnum(value[i]))
 		{
-			if (value[i] != '(' && value[i] != ')' && value[i] != '+' && value[i] != '-' &&
-				value[i] != '_'	&& value[i] != ',' && value[i] != '.' && value[i] != ':' &&
-				value[i] != '=' && value[i] != '?')
+			if (BChars.find(value[i]) == std::string::npos)
 					return false;
 		}
 	}
@@ -117,10 +139,10 @@ void	TrimSpaces(std::string& str)
 {
     size_t start = 0;
 
-    while (start < str.length() && std::isspace(static_cast<unsigned char>(str[start])))
+    while (start < str.size() && std::isspace(static_cast<unsigned char>(str[start])))
         ++start;
 
-    size_t end = str.length();
+    size_t end = str.size();
 
     while (end > start && std::isspace(static_cast<unsigned char>(str[end - 1])))
         --end;
@@ -130,28 +152,14 @@ void	TrimSpaces(std::string& str)
 
 // --------------#	COUNTERS	 #-------------- //
 
-size_t	CrlfCounter(std::string	&str)
+size_t	CrlfCounter(std::string	&str, size_t pos)
 {
-	std::string	CRLF("\n\r");
-	size_t Pos = 0, Count = 0;
-	
-	while ((Pos = str.find(CRLF, Pos))!= std::string::npos)
+	size_t Count = 0;
+
+	for (size_t i = 0; i + 1 < pos; i++)
 	{
-		Pos += CRLF.length();
-		Count++;
+		if (str[i] == '\r' && str[i + 1] == '\n')
+			Count++;
 	}
 	return Count;
-}
-
-std::string	RemoveCrlf(std::string BodyContent)
-{
-	if (BodyContent.size() > 2)
-	{
-		if (BodyContent[BodyContent.size() - 2] == '\r' && BodyContent[BodyContent.size() - 2] == '\n')
-		{
-			BodyContent.pop_back(), BodyContent.pop_back();
-			std::cout << "done popping the CRLF\n\n";
-		}
-	}
-	return BodyContent;
 }
