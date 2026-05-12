@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../cgi/cgiHeader.hpp"
+#include "../Cgi/cgiHeader.hpp"
 
 class Response
 {

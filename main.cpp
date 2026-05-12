@@ -1,4 +1,4 @@
-#include "./pars_config/config.hpp"
+#include "./ConfigParsing/config.hpp"
 #include "./AllServer/HttpServer.hpp"
 
 int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	std::string ConfigFilePath;
 	signal(SIGPIPE, SIG_IGN);
 
-	ConfigFilePath = (argc == 2) ? argv[1] : "./default/default.conf"; // use default config if not configuration provided
+	ConfigFilePath = (argc == 2) ? argv[1] : "./DefaultConfig/default.conf"; // use default config if not configuration provided
 
 	std::vector<ConfigNode> ConfigPars;
 	ConfigNode obj;
