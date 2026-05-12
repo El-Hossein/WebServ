@@ -151,11 +151,6 @@ _ServerDetails	Request::GetServerDetails() const
 	return this->ServerDetails;
 }
 
-time_t    Request::GetTimeOut() const
-{
-    return this->CurrentTime;
-}
-
 /*	|#----------------------------------#|
 	|#			 	SETTERS    			#|
 	|#----------------------------------#|
@@ -164,11 +159,6 @@ time_t    Request::GetTimeOut() const
 void    Request::SetContext(EventContext* _ctx)
 {
     this->ctx = _ctx;
-}
-
-void    Request::SetTimeOut(time_t _CurrentTime)
-{
-    this->CurrentTime = _CurrentTime;
 }
 
 void	Request::SetClientStatus(ClientStatus	Status)
@@ -535,6 +525,8 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 
 	Headers["uri"] = URI;
 
+	if (protocol.empty())
+		PrintError("Bad Request", *this), throw 400;
 	if (protocol != "HTTP/1.1")
 		PrintError("HTTP Version Not Supported", *this), throw 505;
 	Headers["protocol"] =  protocol;
@@ -542,14 +534,20 @@ void	Request::ReadFirstLine(std::string	FirstLine)
 
 void	Request::ReadHeaders(std::string Header)
 {
-	std::string			line, headerName, headerValue, LowKey;
+	std::string			line, headerName, headerValue;
+	bool				flag = false;
 	std::istringstream	stream(Header);
 
 	while (std::getline(stream, line))
 	{
+		if (!flag)
+		{
+			flag = true;
+			continue;
+		}
 		size_t pos = line.find(": ");
 		if (pos == std::string::npos)
-			continue ;
+			PrintError("Bad Request", *this), throw 400;
 
 		headerName = line.substr(0, pos);
 		if (!ValidFieldName(headerName))

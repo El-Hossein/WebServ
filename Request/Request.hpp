@@ -68,7 +68,6 @@ private:
 	bool						LimitedBodySize;
 	bool						KeepAlive;
 	bool						RequestNotComplete;
-	time_t						CurrentTime;
 
 public:
 	Request(const int	&, std::vector<ConfigNode>, int &);
@@ -99,7 +98,6 @@ public:
 	ConfigNode							&GetRightServer();
 	_BoundarySettings					GetBoundarySettings() const;
 	_ServerDetails						GetServerDetails() const;
-	time_t    							GetTimeOut() const;
 
 	// ---------		SETTERS 	 	--------- //
     void	SetContext(EventContext* ctx);
@@ -109,7 +107,6 @@ public:
 	void	SetContentLength(const size_t	Length);
 	void	SetClientStatus(ClientStatus	Status);
 	void	SetServerDetails();
-	void    SetTimeOut(time_t CurrentTime);
 	void	setCgiFileName(std::string _cgiFileName);
 	
 	// ---------	MEMBER FUNCTIONS 	--------- //
