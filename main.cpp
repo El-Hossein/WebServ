@@ -1,9 +1,6 @@
 #include "./pars_config/config.hpp"
 #include "./AllServer/HttpServer.hpp"
 
-
-
-
 int ConfigeFileFunc(std::string ConfigFilePath, std::vector<ConfigNode> &ConfigPars)
 {
 	try
@@ -49,26 +46,20 @@ int StartServerFunc(std::vector<ConfigNode> ConfigPars)
 
 int main(int argc, char **argv)
 {
-	if (argc <= 2)
-	{
-		signal(SIGPIPE, SIG_IGN);
-		std::string ConfigFilePath;
-		if (argc == 2)
-			ConfigFilePath = argv[1];
-		else
-			ConfigFilePath = "./default/default.conf";
-		std::vector<ConfigNode> ConfigPars;
-		ConfigNode obj;
-		if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
-			return 1;
-		if (StartServerFunc(ConfigPars) == 1)
-			return 1;
-	}
-	else
-	{
-		std::cerr << "./webserv [configuration file]" << std::endl;
-		return (1);
-	}
+	if (argc > 2)
+		return std::cerr << "./webserv [configuration file]" << std::endl, 1;
+
+	std::string ConfigFilePath;
+	signal(SIGPIPE, SIG_IGN);
+
+	ConfigFilePath = (argc == 2) ? argv[1] : "./default/default.conf"; // use default config if not configuration provided
+
+	std::vector<ConfigNode> ConfigPars;
+	ConfigNode obj;
+	if (ConfigeFileFunc(ConfigFilePath, ConfigPars) == 1)
+		return 1;
+	if (StartServerFunc(ConfigPars) == 1)
+		return 1;
+
 	return 0;
 }
-
