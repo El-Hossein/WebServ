@@ -193,6 +193,5 @@ void Cgi::executeCgiScript(Request &req)
         EV_SET(&kev, pid, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 10, req.ctx);
         if (kevent(kq, &kev, 1, NULL, 0, NULL) == -1)
             std::cout << "\033[31mkevent failed for pid " << pid << ": " << strerror(errno) << " EVFILT_TIMER CGI\033[0m" << std::endl;
-		req.SetTimeOut(std::time(NULL));
     }
 }

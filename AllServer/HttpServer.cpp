@@ -144,7 +144,6 @@ void HttpServer::accept_new_client_fd(int server_fd, std::vector<ConfigNode> Con
     int server_port = ntohs(server_addr.sin_port);
 
     Request* req = new Request(client_fd, ConfigPars, server_port);
-    req->SetTimeOut(std::time(NULL));
     Response* res = new Response(client_fd, kq);
 
 	EventContext* ctx = new EventContext;
@@ -275,7 +274,6 @@ void HttpServer::RemoveReqRes(int client_fd)
 
 void HttpServer::handle_client_write(EventContext* ctx, Request * request, Response * response, std::vector<ConfigNode> ConfigPars)
 {
-	request->SetTimeOut(std::time(NULL));
     struct kevent kev;
 
     EV_SET(&kev, request->GetClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
@@ -319,7 +317,6 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 			ctx->res = new_response;
 			ctx->is_cgi = 0;
 			ctx->cgi_pid = 0;
-			new_request->SetTimeOut(std::time(NULL));
 			struct kevent ev;
             EV_SET(&ev, fd, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
             kevent(kq, &ev, 1, NULL, 0, NULL);
@@ -338,7 +335,6 @@ void HttpServer::handle_client_write(EventContext* ctx, Request * request, Respo
 
 void HttpServer::handle_client_read(EventContext* ctx, Request * request, Response * response)
 {
-		request->SetTimeOut(std::time(NULL));
         struct kevent kev;
 
         EV_SET(&kev, request->GetClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
@@ -348,12 +344,6 @@ void HttpServer::handle_client_read(EventContext* ctx, Request * request, Respon
 		{
 			if (request->GetClientStatus() != EndReading || e == -1)
 				return;
-            // std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ REQUEST CLIENT\033[0m" << std::endl;
-			// std::cout << "CLIENT: " <<  ctx->ident <<  std::endl;
-			// std::map<std::string, std::string> all_header = request->GetHeaders();
-			// for (std::map<std::string, std::string>::const_iterator it = all_header.begin(); it != all_header.end(); it++)
-			// 	std::cout << it->first << ": " << it->second << std::endl;
-			// std::cout << "\033[34m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m" << std::endl;
 
 			SetUpResponse(ctx, response, request, e);
 			if (response->_cgi.gethasPendingCgi())
@@ -388,7 +378,6 @@ void HttpServer::handle_cgi_exit(EventContext* ctx, Request * request, Response 
 
             EV_SET(&kev, response->getClientFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_SECONDS, 30, ctx);
             kevent(kq, &kev, 1, NULL, 0, NULL);
-			request->SetTimeOut(std::time(NULL));
 			ctx->is_cgi = false;
 		}
 		response->_cgi.sethasPendingCgi(false);
@@ -421,7 +410,6 @@ void HttpServer::handle_cgi_timeout(EventContext* ctx, Request & request, Respon
             std::remove(response._cgi.getinfile().c_str());
         if (!response._cgi.getoutfile().empty())
             std::remove(response._cgi.getoutfile().c_str());
-        request.SetTimeOut(std::time(NULL));
         struct kevent ev;
         int client_fd = response.getClientFd();
         AddToKqueue(ev, kq, client_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, ctx, 0, 0);
@@ -449,9 +437,6 @@ void HttpServer::handle_timeout(EventContext* ctx, Request & request)
         kevent(kq, &kev, 1, NULL, 0, NULL);
 		return;
     }
-
-	// time_t currentTime = time(NULL);
-	// if(currentTime - request.GetTimeOut() >= 30)
     RemoveClient(ctx->ident);
 }
 
